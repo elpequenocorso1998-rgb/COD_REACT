@@ -16,6 +16,7 @@ import {
 } from './pamplona.js'
 import { mulberry32 } from './math.js'
 import { createSkyMaterial } from './shaders/sky.js'
+import { SpatialGrid } from './spatial-grid.js'
 import {
   SUN_DIR, SUN_DIR_NORMALIZED, SUN_COLOR, SUN_INTENSITY, SUN_GLOW_COLOR, SUN_MESH_COLOR,
   SHADOW_MAP_SIZE, SHADOW_CAMERA_NEAR, SHADOW_CAMERA_FAR, SHADOW_CAMERA_BOUNDS,
@@ -391,14 +392,23 @@ export function createWorld(scene) {
   // ---------------------------------------------------------------------
   // collidesAt SIN allocations: reutilizamos un vector y comprobamos
   // directamente contra cada AABB expandiéndolo in-place con un margen.
+  //
+  // SPATIAL HASH: en lugar de iterar los 100+ colliders lineales (O(n) por
+  // llamada, ~5000 checks/frame en oleada 10), usamos un SpatialGrid que
+  // solo revisa las celdas que toca el query (O(k), k≈1-3). Se construye
+  // una sola vez tras añadir todos los colliders.
   // ---------------------------------------------------------------------
   const _p = new THREE.Vector3()
   const _center = new THREE.Vector3()
   const _size = new THREE.Vector3()
+  const grid = new SpatialGrid(4)
+  for (const c of colliders) grid.insert(c.box, c.type)
+
   function collidesAt(x, z, radius = 0.4) {
     _p.set(x, 1, z)
-    // Colliders AABB.
-    for (const c of colliders) {
+    // Colliders AABB via spatial hash (O(k) en vez de O(n)).
+    const candidates = grid.query(x, z, radius)
+    for (const c of candidates) {
       c.box.getCenter(_center)
       c.box.getSize(_size)
       // Expandimos el margen in-place (sin clone).
@@ -410,7 +420,7 @@ export function createWorld(scene) {
       const dz = Math.abs(_p.z - _center.z)
       if (dx <= hx && dy <= hy && dz <= hz) return true
     }
-    // Colliders circulares (plaza de toros).
+    // Colliders circulares (plaza de toros): pocos, lineal es fine.
     for (const c of circleColliders) {
       const dx = x - c.cx
       const dz = z - c.cz
