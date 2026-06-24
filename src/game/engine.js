@@ -43,6 +43,12 @@ export function createEngine() {
   let mounted = false
   let container = null
   let prevState = null
+  // Flag de pérdida de contexto WebGL: sesiones largas o cambio de pestaña
+  // pueden hacer que el driver pierda el contexto. Lo manejamos para no
+  // crashes; el renderer de Three.js re-sube recursos al reanudar.
+  let contextLost = false
+  let onContextLost = null
+  let onContextRestored = null
 
   const store = useGameStore
 
@@ -154,6 +160,29 @@ export function createEngine() {
     window.addEventListener('resize', onResize)
     window.addEventListener('keydown', onKeyDown)
 
+    // --- Pérdida de contexto WebGL ---
+    // El driver puede perder el contexto en sesiones largas o al cambiar
+    // de pestaña. preventDefault() permite la restauración; Three.js
+    // re-sube geometrías/texturas/programas al siguiente render.
+    onContextLost = (e) => {
+      e.preventDefault()
+      contextLost = true
+      if (rafId) cancelAnimationFrame(rafId)
+      if (audio) audio.setMuted(true)
+    }
+    onContextRestored = () => {
+      contextLost = false
+      // El delta del clock será grande tras la pérdida; el clamp a 0.05
+      // en loop() evita explosiones de física.
+      if (clock) clock.getDelta()
+      if (audio && store.getState().gameState === GAME_STATES.PLAYING) {
+        audio.setMuted(false)
+      }
+      rafId = requestAnimationFrame(loop)
+    }
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost, false)
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored, false)
+
     mounted = true
     prevState = store.getState().gameState
     store.getState().setLoading(false)
@@ -168,7 +197,7 @@ export function createEngine() {
   const _sunScreen = new THREE.Vector3()
 
   function loop() {
-    if (!mounted) return
+    if (!mounted || contextLost) return
     rafId = requestAnimationFrame(loop)
 
     const dt = Math.min(clock.getDelta(), 0.05)
@@ -303,6 +332,10 @@ export function createEngine() {
     if (rafId) cancelAnimationFrame(rafId)
     window.removeEventListener('resize', onResize)
     window.removeEventListener('keydown', onKeyDown)
+    if (onContextLost && renderer) {
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost, false)
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored, false)
+    }
     if (player) player.dispose()
     if (enemies) enemies.dispose()
     if (particles) particles.dispose()
