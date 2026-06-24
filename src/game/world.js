@@ -280,52 +280,78 @@ export function createWorld(scene) {
   })
 
   // ---------------------------------------------------------------------
-  // ÁRBOLES.
+  // ÁRBOLES (InstancedMesh: antes 18 troncos + 72 hojas = 90 meshes/draw
+  // calls; ahora 2 InstancedMesh = 2 draw calls).
   // ---------------------------------------------------------------------
   const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 })
   const leavesMat = new THREE.MeshStandardMaterial({
     color: 0x2a4a2a, roughness: 0.8, metalness: 0.05
   })
-  for (let i = 0; i < 18; i++) {
+  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 8)
+  const leafGeo = new THREE.SphereGeometry(1, 10, 10) // unidad, escala por-instancia
+  const TREE_COUNT = 18
+  const LEAVES_PER_TREE = 4
+  const trunkInst = new THREE.InstancedMesh(trunkGeo, trunkMat, TREE_COUNT)
+  trunkInst.castShadow = true
+  const leavesInst = new THREE.InstancedMesh(leafGeo, leavesMat, TREE_COUNT * LEAVES_PER_TREE)
+  leavesInst.castShadow = true
+  const _treeMat = new THREE.Matrix4()
+  const _treePos = new THREE.Vector3()
+  const _treeQuat = new THREE.Quaternion()
+  const _treeScale = new THREE.Vector3()
+  const _leafScale = new THREE.Vector3()
+  let trunkIdx = 0, leafIdx = 0
+  for (let i = 0; i < TREE_COUNT; i++) {
     const a = rng() * Math.PI * 2
     const r = 18 + rng() * 20
     const x = Math.cos(a) * r
     const z = Math.sin(a) * r
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.2, 0.3, 3, 8), trunkMat
-    )
-    trunk.position.set(x, 1.5, z); trunk.castShadow = true; scene.add(trunk)
-    for (let j = 0; j < 4; j++) {
-      const leaves = new THREE.Mesh(
-        new THREE.SphereGeometry(1.2 + rng() * 0.4, 10, 10), leavesMat
-      )
-      leaves.position.set(
+    _treePos.set(x, 1.5, z)
+    _treeQuat.identity()
+    _treeScale.set(1, 1, 1)
+    _treeMat.compose(_treePos, _treeQuat, _treeScale)
+    trunkInst.setMatrixAt(trunkIdx++, _treeMat)
+    for (let j = 0; j < LEAVES_PER_TREE; j++) {
+      const radius = 1.2 + rng() * 0.4
+      _treePos.set(
         x + (rng() - 0.5) * 1.5,
         3.5 + rng() * 1.5,
         z + (rng() - 0.5) * 1.5
       )
-      leaves.castShadow = true; scene.add(leaves)
+      _leafScale.set(radius, radius, radius)
+      _treeMat.compose(_treePos, _treeQuat, _leafScale)
+      leavesInst.setMatrixAt(leafIdx++, _treeMat)
     }
   }
+  trunkInst.instanceMatrix.needsUpdate = true
+  leavesInst.instanceMatrix.needsUpdate = true
+  scene.add(trunkInst, leavesInst)
 
   // ---------------------------------------------------------------------
-  // ESCOMBROS y detalle.
+  // ESCOMBROS y detalle (InstancedMesh: antes 80 meshes/draw calls;
+  // ahora 1 InstancedMesh = 1 draw call).
   // ---------------------------------------------------------------------
   const debrisMat = new THREE.MeshStandardMaterial({ color: 0x6a5a3a, roughness: 0.95 })
-  for (let i = 0; i < 80; i++) {
+  const debrisGeo = new THREE.DodecahedronGeometry(1, 0) // unidad, escala por-instancia
+  const DEBRIS_COUNT = 80
+  const debrisInst = new THREE.InstancedMesh(debrisGeo, debrisMat, DEBRIS_COUNT)
+  debrisInst.castShadow = true
+  debrisInst.receiveShadow = true
+  let debrisIdx = 0
+  for (let i = 0; i < DEBRIS_COUNT; i++) {
     const s = 0.1 + rng() * 0.4
-    const mesh = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(s, 0), debrisMat
-    )
-    mesh.position.set(
+    _treePos.set(
       (rng() - 0.5) * (FLOOR_SIZE - 8),
       s * 0.5,
       (rng() - 0.5) * (FLOOR_SIZE - 8)
     )
-    mesh.rotation.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI)
-    mesh.castShadow = true; mesh.receiveShadow = true
-    scene.add(mesh)
+    _treeQuat.setFromEuler(new THREE.Euler(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI))
+    _treeScale.set(s, s, s)
+    _treeMat.compose(_treePos, _treeQuat, _treeScale)
+    debrisInst.setMatrixAt(debrisIdx++, _treeMat)
   }
+  debrisInst.instanceMatrix.needsUpdate = true
+  scene.add(debrisInst)
 
   // Algunos bidones y cajas dispersos como cobertura táctica.
   const crateTex = makeCrateTextures(256)
