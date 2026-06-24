@@ -186,6 +186,10 @@ export function createEnemyManager(scene, world, _particles) {
   return {
     spawn, update, reset, dispose, handleShot,
     get count() { return enemies.filter((e) => !e.dead).length },
+    // allCleared: true cuando no quedan enemigos vivos NI cadaveres
+    // (los cadaveres tardan 2s en hundirse y desaparecer). Se usa para
+    // evitar que la siguiente oleada spawnee encima de cuerpos.
+    get allCleared() { return enemies.length === 0 },
     set onKilled(fn) { onKilledCb = fn },
     set onReachPlayer(fn) { onReachPlayerCb = fn }
   }

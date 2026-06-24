@@ -284,7 +284,13 @@ export function createEngine() {
 
   function checkWaveProgress() {
     const st = store.getState()
-    if (st.gameState === GAME_STATES.PLAYING && st.enemiesRemaining === 0) {
+    // Solo spawneamos la siguiente oleada cuando no quedan enemigos vivos
+    // NI cadaveres animandose (allCleared). Antes bastaba con
+    // enemiesRemaining === 0, lo que spawneaba la nueva oleada mientras
+    // los cuerpos de la anterior aun se hundian (solapamiento visual).
+    if (st.gameState === GAME_STATES.PLAYING
+        && st.enemiesRemaining === 0
+        && enemies.allCleared) {
       spawnWave(st.wave + 1)
     }
   }
