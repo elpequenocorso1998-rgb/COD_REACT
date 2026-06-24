@@ -37,7 +37,8 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
       mesh: m,
       vel: new THREE.Vector3(),
       life: 0, maxLife: 1, gravity: 0, fade: false, scaleRate: 0,
-      active: false
+      active: false,
+      _idx: i // índice en el pool para release O(1) (antes usaba indexOf O(n))
     })
     freeList.push(i)
   }
@@ -51,12 +52,13 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     return p
   }
 
-  // Libera una partícula al final de su vida.
+  // Libera una partícula al final de su vida. O(1) usando _idx
+  // (antes era pool.indexOf(p) → O(n) con hasta 62k comparaciones/seg).
   function release(p) {
     if (!p.active) return
     p.active = false
     p.mesh.visible = false
-    freeList.push(pool.indexOf(p))
+    freeList.push(p._idx)
   }
 
   // ---------------------------------------------------------------------

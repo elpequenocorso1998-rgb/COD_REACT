@@ -43,6 +43,7 @@ export function createEngine() {
   let world, player, enemies, particles, audio
   let sunMesh = null
   let cinematicPass = null
+  let ssaoPass = null
   let rafId = null
   let mounted = false
   let container = null
@@ -92,13 +93,14 @@ export function createEngine() {
     const renderPass = new RenderPass(scene, camera)
     composer.addPass(renderPass)
 
-    const ssaoPass = new SSAOPass(
+    const ssaoPassLocal = new SSAOPass(
       scene, camera, container.clientWidth, container.clientHeight
     )
-    ssaoPass.kernelRadius = 0.5
-    ssaoPass.minDistance = 0.001
-    ssaoPass.maxDistance = 0.1
-    composer.addPass(ssaoPass)
+    ssaoPassLocal.kernelRadius = 0.5
+    ssaoPassLocal.minDistance = 0.001
+    ssaoPassLocal.maxDistance = 0.1
+    composer.addPass(ssaoPassLocal)
+    ssaoPass = ssaoPassLocal
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(container.clientWidth, container.clientHeight),
@@ -272,6 +274,9 @@ export function createEngine() {
     camera.updateProjectionMatrix()
     renderer.setSize(w, h)
     composer.setSize(w, h)
+    // SSAO necesita su propio setSize (antes no se llamaba: sampling a
+    // resolución incorrecta tras resize → artifact visual).
+    if (ssaoPass) ssaoPass.setSize(w, h)
     // Actualizamos el uniform de resolución para el grano de filme.
     if (cinematicPass) cinematicPass.uniforms.resolution.value.set(w, h)
   }
@@ -410,22 +415,27 @@ const CinematicShader = {
 
       // --- God rays: radial blur desde la posición del sol ---
       // 16 samples (antes 32) para mejorar rendimiento.
+      // Early-out cuando intensidad ~0 (sol detrás de cámara): antes el
+      // loop de 16 muestras corría siempre aunque el resultado se
+      // multiplicara por 0 (desperdicio de GPU).
       vec2 sunDir = uv - sunScreenPos;
       vec3 godRays = vec3(0.0);
-      const int SAMPLES = 16;
-      float illum = 0.0;
-      for (int i = 0; i < SAMPLES; i++) {
-        float t = float(i) / float(SAMPLES);
-        vec2 offset = sunScreenPos + sunDir * t;
-        float decay = pow(1.0 - t, 2.0);
-        // Sin branch if: usamos step para descartar muestras fuera de pantalla.
-        float inBounds = step(0.0, offset.x) * step(offset.x, 1.0)
-                       * step(0.0, offset.y) * step(offset.y, 1.0);
-        vec3 s = texture2D(tDiffuse, offset).rgb;
-        float lum = dot(s, vec3(0.299, 0.587, 0.114));
-        illum += smoothstep(0.6, 1.0, lum) * decay * inBounds;
+      if (godRaysIntensity > 0.001) {
+        const int SAMPLES = 16;
+        float illum = 0.0;
+        for (int i = 0; i < SAMPLES; i++) {
+          float t = float(i) / float(SAMPLES);
+          vec2 offset = sunScreenPos + sunDir * t;
+          float decay = pow(1.0 - t, 2.0);
+          // Sin branch if: usamos step para descartar muestras fuera de pantalla.
+          float inBounds = step(0.0, offset.x) * step(offset.x, 1.0)
+                         * step(0.0, offset.y) * step(offset.y, 1.0);
+          vec3 s = texture2D(tDiffuse, offset).rgb;
+          float lum = dot(s, vec3(0.299, 0.587, 0.114));
+          illum += smoothstep(0.6, 1.0, lum) * decay * inBounds;
+        }
+        godRays = vec3(1.0, 0.85, 0.6) * illum * godRaysIntensity / float(SAMPLES);
       }
-      godRays = vec3(1.0, 0.85, 0.6) * illum * godRaysIntensity / float(SAMPLES);
       color.rgb += godRays;
 
       // --- Viñeta ---

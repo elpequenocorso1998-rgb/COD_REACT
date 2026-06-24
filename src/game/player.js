@@ -126,12 +126,30 @@ export function createPlayer(scene, camera, world, particles) {
 
   if (!scene.children.includes(camera)) scene.add(camera)
 
+  // Cache del canvas del renderer (antes se hacía querySelector en cada
+  // mousemove y mousedown: consulta DOM en evento de alta frecuencia).
+  const canvas = renderer.domElement
+  canvas.classList.add('game-canvas')
+
   const raycaster = new THREE.Raycaster()
   raycaster.far = WEAPON.raycastFar
   let onShootCallback = null
 
   // --- Timeout del muzzle flash (para poder cancelarlo en dispose) ---
   let muzzleTimeout = null
+
+  // Vectores temporales reutilizados por shoot/spawnWallImpact/ejectShell
+  // (antes se allocaban 4-5 Vector3 + 1 Ray por disparo → GC pressure).
+  const _origin = new THREE.Vector3()
+  const _dir = new THREE.Vector3()
+  const _muzzleWorld = new THREE.Vector3()
+  const _right = new THREE.Vector3()
+  const _up = new THREE.Vector3(0, 1, 0)
+  const _shellPos = new THREE.Vector3()
+  const _shellVel = new THREE.Vector3()
+  const _impactRay = new THREE.Ray()
+  const _impactPoint = new THREE.Vector3()
+  const _impactNormal = new THREE.Vector3()
 
   // ---------------------------------------------------------------------
   // INPUT.
@@ -183,8 +201,7 @@ export function createPlayer(scene, camera, world, particles) {
   }
 
   function isPointerLocked() {
-    const el = document.querySelector('canvas.game-canvas')
-    return el !== null && document.pointerLockElement === el
+    return canvas !== null && document.pointerLockElement === canvas
   }
 
   // ---------------------------------------------------------------------
@@ -192,17 +209,16 @@ export function createPlayer(scene, camera, world, particles) {
   // ---------------------------------------------------------------------
   function shoot() {
     if (!isPointerLocked()) return
-    const origin = new THREE.Vector3()
-    camera.getWorldPosition(origin)
-    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    camera.getWorldPosition(_origin)
+    _dir.set(0, 0, -1).applyQuaternion(camera.quaternion)
 
     const moving = Math.abs(velocity.x) + Math.abs(velocity.z)
     const spread = recoil * 0.4 + Math.min(moving * 0.005, 0.04)
-    dir.x += (Math.random() - 0.5) * spread
-    dir.y += (Math.random() - 0.5) * spread
-    dir.normalize()
+    _dir.x += (Math.random() - 0.5) * spread
+    _dir.y += (Math.random() - 0.5) * spread
+    _dir.normalize()
 
-    raycaster.set(origin, dir)
+    raycaster.set(_origin, _dir)
 
     // Retroceso visual + subida de la cámara.
     recoil = Math.min(recoil + WEAPON.recoilPerShot, WEAPON.recoilMax)
@@ -218,44 +234,46 @@ export function createPlayer(scene, camera, world, particles) {
       muzzleLight.intensity = 0; muzzleSprite.material.opacity = 0
     }, 50)
 
-    const muzzleWorld = new THREE.Vector3()
-    muzzleSprite.getWorldPosition(muzzleWorld)
-    particles.spawnMuzzleBurst(muzzleWorld, dir)
-    particles.spawnSmoke(muzzleWorld, 1)
-    ejectShell(origin)
+    muzzleSprite.getWorldPosition(_muzzleWorld)
+    particles.spawnMuzzleBurst(_muzzleWorld, _dir)
+    particles.spawnSmoke(_muzzleWorld, 1)
+    ejectShell(_origin)
 
     if (onShootCallback) {
-      const hitEnemy = onShootCallback(origin, dir)
-      if (!hitEnemy) spawnWallImpact(origin, dir)
+      const hitEnemy = onShootCallback(_origin, _dir)
+      if (!hitEnemy) spawnWallImpact(_origin, _dir)
     }
   }
 
   function ejectShell(origin) {
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
-    const up = new THREE.Vector3(0, 1, 0)
-    const pos = origin.clone().add(right.clone().multiplyScalar(0.2)).add(up.clone().multiplyScalar(-0.1))
-    particles.spawnSparks(pos, right.clone().multiplyScalar(2).add(up.clone().multiplyScalar(1)))
+    _right.set(1, 0, 0).applyQuaternion(camera.quaternion)
+    _shellPos.copy(origin).addScaledVector(_right, 0.2).addScaledVector(_up, -0.1)
+    _shellVel.copy(_right).multiplyScalar(2).addScaledVector(_up, 1)
+    particles.spawnSparks(_shellPos, _shellVel)
   }
 
   function spawnWallImpact(origin, dir) {
-    const ray = new THREE.Ray(origin, dir)
-    let closest = null, closestDist = Infinity
+    _impactRay.set(origin, dir)
+    let closestDist = Infinity
+    let hit = false
     for (const c of world.colliders) {
-      const hit = ray.intersectBox(c.box, new THREE.Vector3())
-      if (hit) {
-        const d = origin.distanceTo(hit)
-        if (d < closestDist) { closestDist = d; closest = hit }
+      // intersectBox escribe en _impactPoint si hay intersección.
+      if (_impactRay.intersectBox(c.box, _impactPoint)) {
+        const d = origin.distanceTo(_impactPoint)
+        if (d < closestDist) {
+          closestDist = d
+          _impactNormal.copy(dir).negate()
+          hit = true
+        }
       }
     }
-    if (closest) {
-      const normal = dir.clone().negate()
-      particles.spawnSparks(closest, normal)
+    if (hit) {
+      particles.spawnSparks(_impactPoint, _impactNormal)
     }
   }
 
   function requestPointerLock() {
-    const el = document.querySelector('canvas.game-canvas')
-    el?.requestPointerLock?.()
+    canvas?.requestPointerLock?.()
   }
   function exitPointerLock() { document.exitPointerLock?.() }
 
