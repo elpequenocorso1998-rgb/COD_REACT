@@ -244,8 +244,8 @@ export function createAudioSystem() {
   function dispose() {
     ambientNodes.forEach(n => { try { n.stop && n.stop(); n.disconnect() } catch (e) {} })
     ambientNodes = []
-    if (shootDelay) { try { shootDelay.disconnect() } catch (e) {} ; shootDelay = null }
-    if (shootFeedback) { try { shootFeedback.disconnect() } catch (e) {} ; shootFeedback = null }
+    if (shootDelay) { try { shootDelay.disconnect() } catch (e) {}  shootDelay = null }
+    if (shootFeedback) { try { shootFeedback.disconnect() } catch (e) {}  shootFeedback = null }
     if (ctx) {
       try { ctx.close() } catch (e) {}
       ctx = null

@@ -10,7 +10,7 @@ import { buildHumanoid, animateWalk } from './humanoid.js'
    - Dispose de materiales clonados al eliminar enemigos muertos.
    - Doble bobbing eliminado: solo animateWalk mueve la cadera.
    ========================================================================= */
-export function createEnemyManager(scene, world, particles) {
+export function createEnemyManager(scene, world, _particles) {
   const enemies = []
   let onKilledCb = null
   let onReachPlayerCb = null

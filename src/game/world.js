@@ -479,6 +479,6 @@ export function createWorld(scene) {
     SUN_DIR: SUN_DIR_NORMALIZED,
     collidesAt,
     updateLamps,
-    update(dt) {}
+    update() {}
   }
 }
