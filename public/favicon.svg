@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a2536"/>
+      <stop offset="1" stop-color="#0a0f18"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd24d"/>
+      <stop offset="1" stop-color="#c89020"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="10" fill="url(#bg)"/>
+  <!-- Escudo -->
+  <path d="M32 8 L52 14 L52 32 C52 44 43 52 32 56 C21 52 12 44 12 32 L12 14 Z"
+        fill="#15202e" stroke="url(#gold)" stroke-width="2"/>
+  <!-- Mira táctica (crosshair) -->
+  <circle cx="32" cy="30" r="9" fill="none" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="32" y1="14" x2="32" y2="22" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="32" y1="38" x2="32" y2="46" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="16" y1="30" x2="24" y2="30" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="40" y1="30" x2="48" y2="30" stroke="url(#gold)" stroke-width="2"/>
+  <circle cx="32" cy="30" r="1.6" fill="url(#gold)"/>
+</svg>
