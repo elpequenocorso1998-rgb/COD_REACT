@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { mulberry32 } from './math.js'
+import { PRNG_SEEDS } from './constants.js'
 
 /* =========================================================================
    Factoría de texturas PBR procedurales.
@@ -8,23 +10,12 @@ import * as THREE from 'three'
    devuelve un objeto { map, normalMap, roughnessMap } listo para usar.
    ========================================================================= */
 
-// PRNG determinista para que las texturas sean iguales entre builds.
-function mulberry32(a) {
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 /* ---------------------------------------------------------------------------
    Suelo de hormigón: gris con grietas, manchas de aceite y ruido fino.
    El normal map simula baches y juntas.
    --------------------------------------------------------------------------- */
 export function makeConcreteTextures(size = 512) {
-  const rng = mulberry32(42)
+  const rng = mulberry32(PRNG_SEEDS.concrete)
 
   // --- COLOR MAP ---
   const colorCanvas = document.createElement('canvas')
@@ -137,7 +128,7 @@ export function makeConcreteTextures(size = 512) {
    Metal pintado (rojo) para bidones: con rayas y óxido.
    --------------------------------------------------------------------------- */
 export function makeBarrelTexture(size = 256) {
-  const rng = mulberry32(7)
+  const rng = mulberry32(PRNG_SEEDS.barrel)
   const c = document.createElement('canvas')
   c.width = size; c.height = size
   const ctx = c.getContext('2d')
@@ -172,7 +163,7 @@ export function makeBarrelTexture(size = 256) {
    Madera vieja para cajas.
    --------------------------------------------------------------------------- */
 export function makeCrateTextures(size = 256) {
-  const rng = mulberry32(99)
+  const rng = mulberry32(PRNG_SEEDS.crate)
   // Color
   const cc = document.createElement('canvas')
   cc.width = cc.height = size
@@ -227,7 +218,7 @@ export function makeCrateTextures(size = 256) {
    Metal oscuro para armas: rayado longitudinal + desgaste.
    --------------------------------------------------------------------------- */
 export function makeGunMetalTexture(size = 256) {
-  const rng = mulberry32(123)
+  const rng = mulberry32(PRNG_SEEDS.gunMetal)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
@@ -257,7 +248,7 @@ export function makeGunMetalTexture(size = 256) {
    Tejido para uniformes de enemigos: camuflaje urbano.
    --------------------------------------------------------------------------- */
 export function makeUniformTexture(size = 256) {
-  const rng = mulberry32(7)
+  const rng = mulberry32(PRNG_SEEDS.uniform)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
@@ -288,7 +279,7 @@ export function makeUniformTexture(size = 256) {
    Piel para cabezas de enemigos.
    --------------------------------------------------------------------------- */
 export function makeSkinTexture(size = 128) {
-  const rng = mulberry32(55)
+  const rng = mulberry32(PRNG_SEEDS.skin)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')

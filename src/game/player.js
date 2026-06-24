@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import { makeGunMetalTexture } from './textures.js'
+import { MOVEMENT, WEAPON, PLAYER } from './config.js'
+import { FOV, SPRINT_FOV } from './constants.js'
 
 /* =========================================================================
    Jugador (FPS controller) con controles suaves y responsivos.
@@ -10,6 +12,10 @@ import { makeGunMetalTexture } from './textures.js'
    - Retroceso aplicado al viewmodel entero (no a piezas sueltas).
    - Crouch suave (lerp de altura, sin teleport).
    - Right Ctrl también funciona para crouch.
+   - Constantes de movimiento/arma/jugador centralizadas en config.js
+     (antes mágicas por todo el fichero).
+   - makeMuzzleTexture movido a módulo (antes se recreaba como closure por
+     cada player).
    ========================================================================= */
 export function createPlayer(scene, camera, world, particles) {
   // --- Estado físico ---
@@ -26,12 +32,12 @@ export function createPlayer(scene, camera, world, particles) {
   // --- Rotación de cámara (con smoothing) ---
   let targetYaw = 0, targetPitch = 0
   let yaw = 0, pitch = 0
-  const SMOOTH = 0.35
-  const SENS = 0.0022
+  const SMOOTH = MOVEMENT.camSmooth
+  const SENS = MOVEMENT.mouseSens
 
   // --- FOV dinámico ---
-  const baseFov = 78
-  const sprintFov = 88
+  const baseFov = FOV
+  const sprintFov = SPRINT_FOV
   let currentFov = baseFov
 
   // --- Arma ---
@@ -41,11 +47,11 @@ export function createPlayer(scene, camera, world, particles) {
   // Auto-fire con acumulador (sin setInterval).
   let isFiring = false
   let fireAccumulator = 0
-  const FIRE_INTERVAL = 0.1 // 100ms entre disparos.
+  const FIRE_INTERVAL = WEAPON.fireInterval // 100ms entre disparos.
 
-  const startPos = new THREE.Vector3(0, 1.7, 0)
-  const STAND_HEIGHT = 1.7
-  const CROUCH_HEIGHT = 1.1
+  const startPos = new THREE.Vector3(0, PLAYER.standHeight, 0)
+  const STAND_HEIGHT = PLAYER.standHeight
+  const CROUCH_HEIGHT = PLAYER.crouchHeight
   let currentHeight = STAND_HEIGHT
 
   // ---------------------------------------------------------------------
@@ -70,38 +76,41 @@ export function createPlayer(scene, camera, world, particles) {
   const rifleGroup = new THREE.Group()
   viewmodel.add(rifleGroup)
 
-  const rifleBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.13, 0.7), metalMat)
+  // Track de geometrías del viewmodel para dispose (antes se leaks).
+  const rifleGeos = []
+
+  const rifleBody = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.1, 0.13, 0.7)), rifleGeos[rifleGeos.length - 1]), metalMat)
   rifleBody.position.set(0.2, -0.18, -0.45); rifleGroup.add(rifleBody)
 
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.025, 0.5, 12), darkMetalMat)
+  const barrel = new THREE.Mesh((rifleGeos.push(new THREE.CylinderGeometry(0.022, 0.025, 0.5, 12)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0.2, -0.16, -0.85); rifleGroup.add(barrel)
 
-  const muzzleTip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 12), darkMetalMat)
+  const muzzleTip = new THREE.Mesh((rifleGeos.push(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 12)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2; muzzleTip.position.set(0.2, -0.16, -1.12); rifleGroup.add(muzzleTip)
 
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.12), polymerMat)
+  const mag = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.08, 0.22, 0.12)), rifleGeos[rifleGeos.length - 1]), polymerMat)
   mag.position.set(0.2, -0.32, -0.35); mag.rotation.x = 0.2; rifleGroup.add(mag)
 
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.18, 0.09), polymerMat)
+  const grip = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.07, 0.18, 0.09)), rifleGeos[rifleGeos.length - 1]), polymerMat)
   grip.position.set(0.2, -0.3, -0.18); grip.rotation.x = -0.3; rifleGroup.add(grip)
 
-  const trigger = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.008, 8, 16, Math.PI), darkMetalMat)
+  const trigger = new THREE.Mesh((rifleGeos.push(new THREE.TorusGeometry(0.025, 0.008, 8, 16, Math.PI)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   trigger.position.set(0.2, -0.22, -0.22); trigger.rotation.x = Math.PI / 2; rifleGroup.add(trigger)
 
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.11, 0.28), polymerMat)
+  const stock = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.08, 0.11, 0.28)), rifleGeos[rifleGeos.length - 1]), polymerMat)
   stock.position.set(0.2, -0.18, -0.05); rifleGroup.add(stock)
-  const stockTube = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 8), darkMetalMat)
+  const stockTube = new THREE.Mesh((rifleGeos.push(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 8)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   stockTube.rotation.x = Math.PI / 2; stockTube.position.set(0.2, -0.16, 0.12); rifleGroup.add(stockTube)
 
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.5), darkMetalMat)
+  const rail = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.04, 0.02, 0.5)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   rail.position.set(0.2, -0.1, -0.45); rifleGroup.add(rail)
 
-  const sightFrame = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.02), darkMetalMat)
+  const sightFrame = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.06, 0.06, 0.02)), rifleGeos[rifleGeos.length - 1]), darkMetalMat)
   sightFrame.position.set(0.2, -0.07, -0.45); rifleGroup.add(sightFrame)
   const sightDot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2020 }))
   sightDot.position.set(0.2, -0.07, -0.46); rifleGroup.add(sightDot)
 
-  const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.3), polymerMat)
+  const handguard = new THREE.Mesh((rifleGeos.push(new THREE.BoxGeometry(0.09, 0.07, 0.3)), rifleGeos[rifleGeos.length - 1]), polymerMat)
   handguard.position.set(0.2, -0.16, -0.6); rifleGroup.add(handguard)
 
   // Muzzle flash.
@@ -117,9 +126,8 @@ export function createPlayer(scene, camera, world, particles) {
 
   if (!scene.children.includes(camera)) scene.add(camera)
 
-  // --- RAYCAST ---
   const raycaster = new THREE.Raycaster()
-  raycaster.far = 200
+  raycaster.far = WEAPON.raycastFar
   let onShootCallback = null
 
   // --- Timeout del muzzle flash (para poder cancelarlo en dispose) ---
@@ -138,7 +146,7 @@ export function createPlayer(scene, camera, world, particles) {
       case 'ControlLeft': case 'ControlRight': isCrouching = true; break
       case 'Space':
         if (canJump) {
-          velocity.y = 6.8
+          velocity.y = MOVEMENT.jump
           canJump = false
         }
         break
@@ -158,7 +166,7 @@ export function createPlayer(scene, camera, world, particles) {
   let mouseDeltaX = 0, mouseDeltaY = 0
   const onMouseMove = (e) => {
     if (!isPointerLocked()) return
-    const sens = sprinting ? SENS * 0.85 : SENS
+    const sens = sprinting ? SENS * MOVEMENT.mouseSensSprintMul : SENS
     mouseDeltaX += e.movementX * sens
     mouseDeltaY += e.movementY * sens
     viewmodelSwayX += e.movementX * 0.00015
@@ -197,9 +205,9 @@ export function createPlayer(scene, camera, world, particles) {
     raycaster.set(origin, dir)
 
     // Retroceso visual + subida de la cámara.
-    recoil = Math.min(recoil + 0.045, 0.14)
-    targetPitch += 0.012
-    targetYaw += (Math.random() - 0.5) * 0.008
+    recoil = Math.min(recoil + WEAPON.recoilPerShot, WEAPON.recoilMax)
+    targetPitch += WEAPON.pitchKick
+    targetYaw += (Math.random() - 0.5) * WEAPON.yawKick
 
     muzzleLight.intensity = 6
     muzzleSprite.material.opacity = 1
@@ -283,12 +291,12 @@ export function createPlayer(scene, camera, world, particles) {
     // --- 3. Velocidades objetivo según estado ---
     const moving = wishDir.lengthSq() > 0
     let maxSpeed
-    if (isCrouching) maxSpeed = 2.5
-    else if (sprinting && moveForward) maxSpeed = 9.5
-    else maxSpeed = 5.5
+    if (isCrouching) maxSpeed = MOVEMENT.crouch
+    else if (sprinting && moveForward) maxSpeed = MOVEMENT.sprint
+    else maxSpeed = MOVEMENT.walk
 
-    const groundAccel = 80
-    const airAccel = 12
+    const groundAccel = MOVEMENT.groundAccel
+    const airAccel = MOVEMENT.airAccel
     const accelMag = canJump ? groundAccel : airAccel
 
     const desiredVx = worldWishX * maxSpeed
@@ -297,7 +305,7 @@ export function createPlayer(scene, camera, world, particles) {
     velocity.z += (desiredVz - velocity.z) * Math.min(1, accelMag * dt / maxSpeed)
 
     if (!moving && canJump) {
-      const friction = 10
+      const friction = MOVEMENT.friction
       const drop = friction * dt
       const speed = Math.hypot(velocity.x, velocity.z)
       if (speed > 0) {
@@ -309,11 +317,11 @@ export function createPlayer(scene, camera, world, particles) {
     }
 
     // --- 4. Gravedad ---
-    velocity.y -= 20 * dt
+    velocity.y -= MOVEMENT.gravity * dt
 
     // --- 5. Colisiones por ejes separados ---
     const pos = camera.position
-    const bodyRadius = 0.45
+    const bodyRadius = PLAYER.bodyRadius
 
     const nx = pos.x + velocity.x * dt
     if (!world.collidesAt(nx, pos.z, bodyRadius)) pos.x = nx
@@ -366,7 +374,7 @@ export function createPlayer(scene, camera, world, particles) {
     viewmodelRotY = -viewmodelSwayX * 8
 
     // Retroceso aplicado al grupo entero del rifle (no a piezas sueltas).
-    recoil *= 0.85
+    recoil *= WEAPON.recoilRecover
     rifleGroup.position.z = recoil
     rifleGroup.rotation.x = -recoil * 1.2
 
@@ -412,26 +420,11 @@ export function createPlayer(scene, camera, world, particles) {
     muzzleSprite.material.dispose()
     gunTex.dispose()
     sightDot.material.dispose()
-  }
-
-  function makeMuzzleTexture() {
-    const c = document.createElement('canvas')
-    c.width = c.height = 128
-    const ctx = c.getContext('2d')
-    const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 60)
-    grad.addColorStop(0, 'rgba(255,255,220,1)')
-    grad.addColorStop(0.25, 'rgba(255,200,80,0.95)')
-    grad.addColorStop(0.6, 'rgba(255,120,30,0.5)')
-    grad.addColorStop(1, 'rgba(255,80,0,0)')
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128)
-    ctx.strokeStyle = 'rgba(255,220,150,0.9)'; ctx.lineWidth = 3
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2 + Math.random() * 0.3
-      const len = 30 + Math.random() * 30
-      ctx.beginPath(); ctx.moveTo(64, 64)
-      ctx.lineTo(64 + Math.cos(a) * len, 64 + Math.sin(a) * len); ctx.stroke()
-    }
-    return new THREE.CanvasTexture(c)
+    // Geometrías del rifle (antes no se liberaban: leak al recrear player).
+    for (const g of rifleGeos) g.dispose()
+    rifleGeos.length = 0
+    // Quitamos el viewmodel de la cámara (antes quedaba colgando).
+    if (viewmodel.parent === camera) camera.remove(viewmodel)
   }
 
   return {
@@ -439,4 +432,28 @@ export function createPlayer(scene, camera, world, particles) {
     requestPointerLock, exitPointerLock,
     set onShoot(fn) { onShootCallback = fn }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Textura del muzzle flash (a nivel módulo, antes era un closure recreated
+// por cada player). Dibuja un destello radial con rayos.
+// ---------------------------------------------------------------------------
+function makeMuzzleTexture() {
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const ctx = c.getContext('2d')
+  const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 60)
+  grad.addColorStop(0, 'rgba(255,255,220,1)')
+  grad.addColorStop(0.25, 'rgba(255,200,80,0.95)')
+  grad.addColorStop(0.6, 'rgba(255,120,30,0.5)')
+  grad.addColorStop(1, 'rgba(255,80,0,0)')
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128)
+  ctx.strokeStyle = 'rgba(255,220,150,0.9)'; ctx.lineWidth = 3
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.random() * 0.3
+    const len = 30 + Math.random() * 30
+    ctx.beginPath(); ctx.moveTo(64, 64)
+    ctx.lineTo(64 + Math.cos(a) * len, 64 + Math.sin(a) * len); ctx.stroke()
+  }
+  return new THREE.CanvasTexture(c)
 }

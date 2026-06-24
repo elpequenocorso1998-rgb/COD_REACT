@@ -13,6 +13,10 @@ import { createParticleSystem } from './particles.js'
 import { createEnvironment } from './environment.js'
 import { createAudioSystem } from './audio.js'
 import { useGameStore, GAME_STATES } from './store.js'
+import {
+  FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE
+} from './constants.js'
+import { WAVE_SCALING } from './config.js'
 
 /* =========================================================================
    Motor del juego.
@@ -61,7 +65,7 @@ export function createEngine() {
     scene.background = new THREE.Color(0x07090e)
 
     camera = new THREE.PerspectiveCamera(
-      78, container.clientWidth / container.clientHeight, 0.05, 600
+      FOV, container.clientWidth / container.clientHeight, CAMERA_NEAR, CAMERA_FAR
     )
 
     // --- RENDERER ---
@@ -122,7 +126,7 @@ export function createEngine() {
     // --- SISTEMAS DEL JUEGO ---
     world = createWorld(scene)
     createEnvironment(scene, renderer)
-    particles = createParticleSystem(scene, { max: 250 })
+    particles = createParticleSystem(scene, { max: MAX_PARTICLES })
     player = createPlayer(scene, camera, world, particles)
     enemies = createEnemyManager(scene, world, particles)
     audio = createAudioSystem()
@@ -301,13 +305,13 @@ export function createEngine() {
   }
 
   function spawnWave(n) {
-    const count = 4 + n * 2
+    const count = WAVE_BASE + n * WAVE_PER_WAVE
     store.getState().startWave(n, count)
     for (let i = 0; i < count; i++) {
-      const hp = 50 + n * 15
-      const speed = 2.0 + n * 0.15
-      const dmg = 8 + n * 2
-      enemies.spawn(hp, speed, dmg, n * 10 + 90)
+      const hp = 50 + n * WAVE_SCALING.hpPerWave
+      const speed = 2.0 + n * WAVE_SCALING.speedPerWave
+      const dmg = 8 + n * WAVE_SCALING.damagePerWave
+      enemies.spawn(hp, speed, dmg, n * WAVE_SCALING.pointsPerWave + 90)
     }
   }
 
@@ -339,6 +343,7 @@ export function createEngine() {
     if (player) player.dispose()
     if (enemies) enemies.dispose()
     if (particles) particles.dispose()
+    if (world) world.dispose()
     if (audio) audio.dispose()
     if (composer) composer.dispose()
     if (renderer) {

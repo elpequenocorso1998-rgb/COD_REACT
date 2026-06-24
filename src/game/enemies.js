@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { buildHumanoid, animateWalk } from './humanoid.js'
+import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
 
 /* =========================================================================
    Manager de enemigos (usando el humanoide anatómico).
@@ -181,6 +181,10 @@ export function createEnemyManager(scene, world, _particles) {
       e.torso.material.dispose()
     }
     enemies.length = 0
+    // Liberamos los recursos compartidos del humanoide (materiales y
+    // geometrías compartidas entre todos los enemigos). Antes nunca se
+    // liberaban, causando un leak al recrear el engine.
+    disposeHumanoidShared()
   }
 
   return {

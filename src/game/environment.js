@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { createSkyMaterial } from './shaders/sky.js'
+import { SUN_DIR, SUN_MESH_COLOR, SUN_GLOW_COLOR, SUN_COLOR, SUN_INTENSITY } from './constants.js'
 
 /* =========================================================================
    Generación de environment map procedural.
@@ -8,62 +10,37 @@ import * as THREE from 'three'
    procedural a partir del cielo + sol y lo convertimos a PMREM
    (Prefiltered Mipmap Radiance Environment Map) para que los materiales
    MeshStandardMaterial lo usen automáticamente como `scene.environment`.
+
+   Mejoras:
+   - Shader de cielo y SUN_DIR compartidos con world.js (antes duplicados).
+   - dispose() del envMap para no泄漏 memoria al recrear el engine.
    ========================================================================= */
 export function createEnvironment(scene, renderer) {
   // --- 1. Creamos una escena miniatura con el cielo y el sol ---
   const skyScene = new THREE.Scene()
 
-  // Cielo con shader (mismo que el mundo).
-  const skyMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    uniforms: {
-      top:    { value: new THREE.Color(0x2a4a7a) },
-      middle: { value: new THREE.Color(0xc88a5a) },
-      bottom: { value: new THREE.Color(0x2a1a1a) }
-    },
-    vertexShader: `
-      varying vec3 vWorldPosition;
-      void main() {
-        vec4 wp = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = wp.xyz;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 top;
-      uniform vec3 middle;
-      uniform vec3 bottom;
-      varying vec3 vWorldPosition;
-      void main() {
-        float h = normalize(vWorldPosition).y;
-        float t = clamp(h, -1.0, 1.0);
-        vec3 col;
-        if (t > 0.0) col = mix(middle, top, pow(t, 0.6));
-        else col = mix(middle, bottom, pow(-t, 0.5));
-        gl_FragColor = vec4(col, 1.0);
-      }
-    `
-  })
+  // Cielo con el mismo shader que el mundo (compartido en shaders/sky.js).
+  const skyMat = createSkyMaterial()
   skyScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), skyMat))
 
   // Sol emisivo dentro de la escena del env map.
-  // Misma dirección que la luz direccional y el mesh del mundo.
+  // Misma dirección que la luz direccional y el mesh del mundo (SUN_DIR).
   const sun = new THREE.Mesh(
     new THREE.SphereGeometry(8, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xfff0c0 })
+    new THREE.MeshBasicMaterial({ color: SUN_MESH_COLOR })
   )
-  sun.position.set(80, 120, 60)
+  sun.position.copy(SUN_DIR)
   skyScene.add(sun)
   const sunGlow = new THREE.Mesh(
     new THREE.SphereGeometry(16, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffaa50, transparent: true, opacity: 0.5 })
+    new THREE.MeshBasicMaterial({ color: SUN_GLOW_COLOR, transparent: true, opacity: 0.5 })
   )
-  sunGlow.position.copy(sun.position)
+  sunGlow.position.copy(SUN_DIR)
   skyScene.add(sunGlow)
 
   // Luz direccional fake para que el env map tenga brillos definidos.
-  const dl = new THREE.DirectionalLight(0xffd9a8, 2)
-  dl.position.set(80, 120, 60)
+  const dl = new THREE.DirectionalLight(SUN_COLOR, SUN_INTENSITY)
+  dl.position.copy(SUN_DIR)
   skyScene.add(dl)
   skyScene.add(new THREE.AmbientLight(0x8899aa, 0.5))
 
@@ -82,9 +59,12 @@ export function createEnvironment(scene, renderer) {
   // usarán automáticamente para calcular reflexiones.
   scene.environment = envMap
 
-  // Limpieza.
+  // Limpieza de los recursos efímeros.
   pmrem.dispose()
   cubeCam.renderTarget.dispose()
+  skyMat.dispose()
+  sun.material.dispose()
+  sunGlow.material.dispose()
 
   return envMap
 }

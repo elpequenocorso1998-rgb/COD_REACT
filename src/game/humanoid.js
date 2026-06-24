@@ -30,7 +30,7 @@ let _matSkin, _matUniform, _matPants, _matHair, _matEye, _matBoot, _matBelt
 let _matVest, _matHelmet, _matGloves, _matBrow, _matMouth
 let _geoHead, _geoNeck, _geoTorso, _geoHip, _geoUpperArm, _geoLowerArm
 let _geoHand, _geoThigh, _geoShin, _geoFoot, _geoHair, _geoNose, _geoMouth
-let _geoVest, _geoHelmet, _geoCalf
+let _geoVest, _geoHelmet, _geoCalf, _geoEar
 
 function initShared() {
   if (_matSkin) return
@@ -73,6 +73,32 @@ function initShared() {
   _geoHelmet = new THREE.SphereGeometry(0.16, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.7)
   // Pantorrilla con botas.
   _geoCalf = new THREE.CylinderGeometry(0.075, 0.06, 0.15, 8)
+  // Orejas (antes se creaba una geometría por enemigo: leak acumulativo).
+  _geoEar = new THREE.SphereGeometry(0.022, 8, 8)
+}
+
+// Dispose de los recursos compartidos. Debe llamarse al destruir el engine
+// (antes los materiales/geometrías compartidas nunca se liberaban, lo que
+// provocaba un leak al recrear el engine en hot-reload / remontaje).
+export function disposeHumanoidShared() {
+  if (!_matSkin) return
+  const mats = [_matSkin, _matUniform, _matPants, _matHair, _matEye, _matBoot, _matBelt,
+    _matVest, _matHelmet, _matGloves, _matBrow, _matMouth]
+  const geos = [_geoHead, _geoNeck, _geoTorso, _geoHip, _geoUpperArm, _geoLowerArm,
+    _geoHand, _geoThigh, _geoShin, _geoFoot, _geoHair, _geoNose, _geoMouth,
+    _geoVest, _geoHelmet, _geoCalf, _geoEar]
+  for (const m of mats) m.dispose()
+  for (const g of geos) g.dispose()
+  // Liberamos las texturas de piel/uniforme (el resto de materiales no tienen map).
+  _matSkin.map?.dispose()
+  _matUniform.map?.dispose()
+  _matSkin = null; _matUniform = null
+  _matPants = null; _matHair = null; _matEye = null; _matBoot = null; _matBelt = null
+  _matVest = null; _matHelmet = null; _matGloves = null; _matBrow = null; _matMouth = null
+  _geoHead = null; _geoNeck = null; _geoTorso = null; _geoHip = null
+  _geoUpperArm = null; _geoLowerArm = null; _geoHand = null; _geoThigh = null
+  _geoShin = null; _geoFoot = null; _geoHair = null; _geoNose = null; _geoMouth = null
+  _geoVest = null; _geoHelmet = null; _geoCalf = null; _geoEar = null
 }
 
 /* ---------------------------------------------------------------------------
@@ -170,11 +196,10 @@ export function buildHumanoid() {
   const mouth = new THREE.Mesh(_geoMouth, _matMouth)
   mouth.position.set(0, -0.06, 0.135); head.add(mouth)
 
-  // Orejas.
-  const earGeo = new THREE.SphereGeometry(0.022, 8, 8)
-  const earL = new THREE.Mesh(earGeo, _matSkin)
+  // Orejas (geometría compartida, antes se creaba una por enemigo).
+  const earL = new THREE.Mesh(_geoEar, _matSkin)
   earL.position.set(-0.135, 0, 0); earL.scale.z = 0.4; head.add(earL)
-  const earR = new THREE.Mesh(earGeo, _matSkin)
+  const earR = new THREE.Mesh(_geoEar, _matSkin)
   earR.position.set(0.135, 0, 0); earR.scale.z = 0.4; head.add(earR)
 
   // --- BRAZOS ---

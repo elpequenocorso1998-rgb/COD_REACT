@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, GAME_STATES } from './game/store.js'
 import { createEngine } from './game/engine.js'
 
@@ -52,19 +53,20 @@ export default function App() {
    HUD: vida, munición, crosshair, marcador, hitmarkers.
    ========================================================================= */
 function HUD() {
-  const health = useGameStore((s) => s.health)
-  const maxHealth = useGameStore((s) => s.maxHealth)
-  const ammo = useGameStore((s) => s.ammo)
-  const reserve = useGameStore((s) => s.reserve)
-  const reloading = useGameStore((s) => s.reloading)
-  const score = useGameStore((s) => s.score)
-  const wave = useGameStore((s) => s.wave)
-  const enemiesRemaining = useGameStore((s) => s.enemiesRemaining)
-  const firing = useGameStore((s) => s.firing)
-  const hitmarkers = useGameStore((s) => s.hitmarkers)
-  const killmarkers = useGameStore((s) => s.killmarkers)
-  const damageFlash = useGameStore((s) => s.damageFlash)
-  const damageDirections = useGameStore((s) => s.damageDirections)
+  // Consolidamos los 13 selectors en uno solo con useShallow para reducir
+  // suscripciones y re-renders (antes cada selector creaba una suscripción
+  // independiente a zustand).
+  const {
+    health, maxHealth, ammo, reserve, reloading, score, wave,
+    enemiesRemaining, firing, hitmarkers, killmarkers,
+    damageFlash, damageDirections
+  } = useGameStore(useShallow((s) => ({
+    health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
+    reloading: s.reloading, score: s.score, wave: s.wave,
+    enemiesRemaining: s.enemiesRemaining, firing: s.firing,
+    hitmarkers: s.hitmarkers, killmarkers: s.killmarkers,
+    damageFlash: s.damageFlash, damageDirections: s.damageDirections
+  })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
   const lowHealth = hpPct <= 30

@@ -14,6 +14,14 @@ import {
   buildSanFerdinandBanners,
   buildFountain
 } from './pamplona.js'
+import { mulberry32 } from './math.js'
+import { createSkyMaterial } from './shaders/sky.js'
+import {
+  SUN_DIR, SUN_DIR_NORMALIZED, SUN_COLOR, SUN_INTENSITY, SUN_GLOW_COLOR, SUN_MESH_COLOR,
+  SHADOW_MAP_SIZE, SHADOW_CAMERA_NEAR, SHADOW_CAMERA_FAR, SHADOW_CAMERA_BOUNDS,
+  SHADOW_BIAS, SHADOW_NORMAL_BIAS,
+  FOG_COLOR, FOG_DENSITY, FLOOR_SIZE, PRNG_SEEDS
+} from './constants.js'
 
 /* =========================================================================
    Mundo: Pamplona.
@@ -38,10 +46,6 @@ import {
    - Niebla con color que coincide con el horizonte del cielo.
    ========================================================================= */
 
-// Dirección del sol unificada para luz, mesh y environment map.
-const SUN_DIR = new THREE.Vector3(80, 120, 60)
-const SUN_DIR_NORMALIZED = SUN_DIR.clone().normalize()
-
 export function createWorld(scene) {
   const colliders = []
   // Collider circular de la plaza de toros: { cx, cz, rOuter, rInner }.
@@ -56,20 +60,20 @@ export function createWorld(scene) {
   const hemi = new THREE.HemisphereLight(0xffd9a8, 0x3a2a1a, 0.7)
   scene.add(hemi)
 
-  const sun = new THREE.DirectionalLight(0xffd0a0, 2.4)
+  const sun = new THREE.DirectionalLight(SUN_COLOR, SUN_INTENSITY)
   sun.position.copy(SUN_DIR)
   sun.target.position.set(0, 0, 0)
   scene.add(sun.target)
   sun.castShadow = true
-  sun.shadow.mapSize.set(2048, 2048)
-  sun.shadow.camera.near = 1
-  sun.shadow.camera.far = 350
-  sun.shadow.camera.left = -110
-  sun.shadow.camera.right = 110
-  sun.shadow.camera.top = 110
-  sun.shadow.camera.bottom = -110
-  sun.shadow.bias = -0.0004
-  sun.shadow.normalBias = 0.02
+  sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE)
+  sun.shadow.camera.near = SHADOW_CAMERA_NEAR
+  sun.shadow.camera.far = SHADOW_CAMERA_FAR
+  sun.shadow.camera.left = -SHADOW_CAMERA_BOUNDS
+  sun.shadow.camera.right = SHADOW_CAMERA_BOUNDS
+  sun.shadow.camera.top = SHADOW_CAMERA_BOUNDS
+  sun.shadow.camera.bottom = -SHADOW_CAMERA_BOUNDS
+  sun.shadow.bias = SHADOW_BIAS
+  sun.shadow.normalBias = SHADOW_NORMAL_BIAS
   scene.add(sun)
 
   const fill = new THREE.DirectionalLight(0x8a6a4a, 0.4)
@@ -79,7 +83,6 @@ export function createWorld(scene) {
   // ---------------------------------------------------------------------
   // SUELO: adoquines.
   // ---------------------------------------------------------------------
-  const FLOOR_SIZE = 220
   const tex = makeConcreteTextures(512)
   // Recoloreamos a tono adoquín. IMPORTANTE: alineamos repeat de color,
   // normal y roughness para que las juntas coincidan.
@@ -156,7 +159,7 @@ export function createWorld(scene) {
   // ---------------------------------------------------------------------
   // CALLEJONES: más casas formando calles estrechas hacia el exterior.
   // ---------------------------------------------------------------------
-  const rng = mulberry32(1337)
+  const rng = mulberry32(PRNG_SEEDS.world)
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2
     const r = 55 + rng() * 5
@@ -362,66 +365,28 @@ export function createWorld(scene) {
   // ---------------------------------------------------------------------
   // CIELO: gradiente esférico con sol.
   // Niebla con color que coincide con el horizonte del cielo.
+  // El shader de cielo está compartido en shaders/sky.js (antes duplicado
+  // aquí y en environment.js).
   // ---------------------------------------------------------------------
-  scene.fog = new THREE.FogExp2(0x3a2a1a, 0.008)
+  scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY)
 
   const skyGeo = new THREE.SphereGeometry(500, 32, 16)
-  const skyMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    uniforms: {
-      top:    { value: new THREE.Color(0x2a4a7a) },
-      middle: { value: new THREE.Color(0xc88a5a) },
-      bottom: { value: new THREE.Color(0x2a1a1a) }
-    },
-    vertexShader: `
-      varying vec3 vWorldPosition;
-      void main() {
-        vec4 wp = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = wp.xyz;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 top;
-      uniform vec3 middle;
-      uniform vec3 bottom;
-      varying vec3 vWorldPosition;
-      void main() {
-        float h = normalize(vWorldPosition).y;
-        float t = clamp(h, -1.0, 1.0);
-        vec3 col;
-        if (t > 0.0) col = mix(middle, top, pow(t, 0.6));
-        else col = mix(middle, bottom, pow(-t, 0.5));
-        gl_FragColor = vec4(col, 1.0);
-      }
-    `
-  })
+  const skyMat = createSkyMaterial()
   scene.add(new THREE.Mesh(skyGeo, skyMat))
 
   // Sol: disco emisivo + glow. Posición unificada con la luz direccional.
   const sunMesh = new THREE.Mesh(
     new THREE.SphereGeometry(10, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xfff0c0 })
+    new THREE.MeshBasicMaterial({ color: SUN_MESH_COLOR })
   )
   sunMesh.position.copy(SUN_DIR).multiplyScalar(2.5)
   scene.add(sunMesh)
   const sunGlow = new THREE.Mesh(
     new THREE.SphereGeometry(18, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffaa50, transparent: true, opacity: 0.4 })
+    new THREE.MeshBasicMaterial({ color: SUN_GLOW_COLOR, transparent: true, opacity: 0.4 })
   )
   sunGlow.position.copy(sunMesh.position)
   scene.add(sunGlow)
-
-  // PRNG determinista.
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = (a + 0x6D2B79F5) | 0
-      let t = a
-      t = Math.imul(t ^ (t >>> 15), t | 1)
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-    }
-  }
 
   // ---------------------------------------------------------------------
   // collidesAt SIN allocations: reutilizamos un vector y comprobamos
@@ -479,6 +444,33 @@ export function createWorld(scene) {
     SUN_DIR: SUN_DIR_NORMALIZED,
     collidesAt,
     updateLamps,
-    update() {}
+    update() {},
+    dispose
+  }
+
+  // Dispose de todos los materiales/geometrías/texturas del mundo.
+  // Antes el world no se liberaba, causando un leak al recrear el engine.
+  // Hacemos traversing del scene: player/enemies/particles ya se habrán
+  // disposed y quitado antes (engine.dispose los llama antes que world),
+  // así que solo quedan objetos del mundo + cámara (que no tiene geo/mat).
+  function dispose() {
+    const disposedMats = new Set()
+    scene.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.geometry?.dispose()
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+        for (const m of mats) {
+          if (m && !disposedMats.has(m)) {
+            m.dispose()
+            disposedMats.add(m)
+          }
+        }
+      }
+    })
+    // Texturas (no están en el traverse como objetos, hay que liberarlas a mano).
+    tex.map.dispose(); tex.normalMap.dispose(); tex.roughnessMap.dispose()
+    sillarTex.dispose(); roofTex.dispose(); woodTex.dispose()
+    crateTex.map.dispose(); crateTex.normalMap.dispose()
+    barrelTex.dispose()
   }
 }

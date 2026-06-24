@@ -1,4 +1,6 @@
 import * as THREE from 'three'
+import { mulberry32 } from './math.js'
+import { PRNG_SEEDS } from './constants.js'
 
 /* =========================================================================
    Constructor de edificios de Pamplona.
@@ -14,22 +16,11 @@ import * as THREE from 'three'
    - Murallas (con almenas).
    ========================================================================= */
 
-// PRNG determinista.
-function mulberry32(a) {
-  return function () {
-    a |= 0; a = (a + 0x6D2B79F5) | 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 // --- Texturas procedurales ---
 
 // Sillar: bloques de piedra caliza crema con juntas marcadas.
 export function makeSillarTexture(size = 512) {
-  const rng = mulberry32(11)
+  const rng = mulberry32(PRNG_SEEDS.sillar)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
@@ -78,7 +69,7 @@ export function makeSillarTexture(size = 512) {
 
 // Teja cerámica curva (terracota).
 export function makeRoofTexture(size = 256) {
-  const rng = mulberry32(33)
+  const rng = mulberry32(PRNG_SEEDS.roof)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
@@ -122,7 +113,7 @@ export function makeRoofTexture(size = 256) {
 
 // Madera para contraventanas y puertas.
 export function makeWoodTexture(size = 256, baseColor = '#5a3a1c') {
-  const rng = mulberry32(7)
+  const rng = mulberry32(PRNG_SEEDS.wood)
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
@@ -263,7 +254,7 @@ export function buildPamplonaHouse({
         )
         balcony.position.set(x, y - winH / 2 - 0.05, depth / 2 + 0.2)
         group.add(balcony)
-        // Barandilla:若干 barrotes verticales.
+        // Barandilla: varios barrotes verticales.
         const railH = 0.7
         const railTop = new THREE.Mesh(
           new THREE.BoxGeometry(winW + 0.6, 0.04, 0.04), balconyMat
@@ -305,7 +296,6 @@ export function buildPamplonaHouse({
    --------------------------------------------------------------------------- */
 export function buildBullring(sillarTex, roofTex) {
   const group = new THREE.Group()
-  const colliders = []
   const radius = 28
   const wallH = 8
 
@@ -361,14 +351,10 @@ export function buildBullring(sillarTex, roofTex) {
   shell.position.y = (wallH + 1) / 2
   group.add(shell)
 
-  // Collider: anillo AABB aproximado.
-  const colBox = new THREE.Box3(
-    new THREE.Vector3(-radius - 1, 0, -radius - 1),
-    new THREE.Vector3(radius + 1, wallH, radius + 1)
-  )
-  colliders.push(colBox)
-
-  return { group, colliders }
+  // Sin colliders AABB: la plaza de toros es circular y world.js la modela
+  // con un circleCollider (más preciso que un AABB). Antes se calculaba un
+  // colBox aprox que world.js ignoraba (código muerto).
+  return { group, colliders: [] }
 }
 
 /* ---------------------------------------------------------------------------

@@ -3,9 +3,7 @@ import { useGameStore, GAME_STATES } from '../src/game/store.js'
 
 /* Tests del store: cubren acciones puras y el fix de timeouts cancelables. */
 
-let store
 beforeEach(() => {
-  store = useGameStore.getState()
   useGameStore.getState().reset()
   // Forzamos estado PLAYING para takeDamage.
   useGameStore.setState({ gameState: GAME_STATES.PLAYING })
