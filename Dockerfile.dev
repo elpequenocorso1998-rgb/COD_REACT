@@ -1,0 +1,17 @@
+# Etapa de DESARROLLO con hot-reload de Vite.
+# Uso: docker compose up dev
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalamos dependencias primero para cachear.
+COPY package.json package-lock.json* ./
+RUN npm install --no-audit --no-fund
+
+# El código fuente se monta como volumen en docker-compose,
+# por eso aquí no hace falta copiarlo.
+
+EXPOSE 9432
+
+# Arrancamos Vite en modo dev.
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,31 @@
+# docker-compose.yml
+# Levanta el juego en un contenedor y lo publica en el puerto 9432 del host.
+# Uso:
+#   docker compose up --build      (modo producción, sirve estáticos con nginx)
+#   docker compose up watch        (modo dev con hot-reload)
+services:
+  game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: serve         # etapa de producción (nginx). Cámbialo a 'build' para depurar.
+    container_name: modern_warfare
+    ports:
+      - "9432:9432"          # host:contenedor
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+
+  # Servicio opcional de desarrollo con Vite HMR.
+  # Se activa con: docker compose up dev
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: modern_warfare_dev
+    ports:
+      - "9432:9432"
+    volumes:
+      - .:/app               # sincroniza tu código con el contenedor (HMR)
+      - /app/node_modules    # evita que node_modules del host pise el del contenedor
+    profiles: ["dev"]        # solo arranca si se pide explícitamente

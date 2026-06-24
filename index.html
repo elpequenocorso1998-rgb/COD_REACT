@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Three.js requiere un crosshair y UI fija: bloqueamos el zoom táctil -->
+    <title>Modern Warfare React</title>
+    <style>
+      /* Reset global para que el canvas ocupe toda la ventana.
+         El cuerpo usa un fondo oscuro para evitar parpadeos mientras carga el motor. */
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        color: #fff;
+        user-select: none;
+      }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

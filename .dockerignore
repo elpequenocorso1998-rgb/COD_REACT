@@ -1,0 +1,12 @@
+# Excluimos del contexto de build todo lo que no hace falta.
+# Esto acelera los builds de Docker y evita que node_modules del host
+# (si existiera) pise el del contenedor.
+node_modules
+dist
+.git
+.gitignore
+*.log
+.DS_Store
+.env
+.vscode
+.idea
