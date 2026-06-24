@@ -477,6 +477,7 @@ export function createWorld(scene) {
   return {
     colliders,
     sunMesh,
+    sun,
     SUN_DIR: SUN_DIR_NORMALIZED,
     collidesAt,
     updateLamps,

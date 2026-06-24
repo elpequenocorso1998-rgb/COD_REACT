@@ -17,6 +17,7 @@ import {
   FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE
 } from './constants.js'
 import { WAVE_SCALING } from './config.js'
+import { FpsSampler, applyQuality } from './quality.js'
 
 /* =========================================================================
    Motor del juego.
@@ -54,6 +55,9 @@ export function createEngine() {
   let contextLost = false
   let onContextLost = null
   let onContextRestored = null
+  // Medidor de FPS para escalado de calidad dinámico.
+  let fpsSampler = null
+  let bloomPassRef = null
 
   const store = useGameStore
 
@@ -107,6 +111,7 @@ export function createEngine() {
       0.7, 0.4, 0.85
     )
     composer.addPass(bloomPass)
+    bloomPassRef = bloomPass
 
     cinematicPass = new ShaderPass(CinematicShader)
     // Inicializamos el uniform de resolución correctamente.
@@ -193,6 +198,16 @@ export function createEngine() {
     prevState = store.getState().gameState
     store.getState().setLoading(false)
 
+    // Escalado de calidad dinámico: medimos FPS durante 60 frames y
+    // ajustamos SSAO/bloom/god rays/shadow map al perfil detectado.
+    // En GPUs modestas esto evita <30 FPS persistentes.
+    fpsSampler = new FpsSampler(60, (quality) => {
+      applyQuality(quality, renderer, {
+        ssaoPass, bloomPass: bloomPassRef, cinematicPass,
+        sun: world.sun
+      })
+    })
+
     loop()
   }
 
@@ -208,6 +223,9 @@ export function createEngine() {
 
     const dt = Math.min(clock.getDelta(), 0.05)
     const state = store.getState().gameState
+
+    // Escalado de calidad: samplea FPS hasta detectar el perfil.
+    if (fpsSampler) fpsSampler.sample(dt)
 
     // Detectar transiciones de estado para mutear audio y liberar pointer.
     if (state !== prevState) {
