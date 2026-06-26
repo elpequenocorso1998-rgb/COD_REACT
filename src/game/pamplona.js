@@ -523,3 +523,195 @@ export function buildFountain(sillarTex) {
   const colliders = [new THREE.Box3().setFromObject(basin)]
   return { group, colliders }
 }
+
+/* ---------------------------------------------------------------------------
+   Casa pamplonesa con INTERIOR transitable (Fase 1.6).
+   --------------------------------------------------------------------------
+   A diferencia de buildPamplonaHouse (sólida), esta construye 4 muros con
+   puerta de entrada + ventanas, dejando el interior vacío para que el
+   jugador pueda entrar y disparar desde las ventanas. Incluye:
+   - Piso interior.
+   - Escalera a planta superior con barandilla.
+   - Azotea abierta para combate vertical (snipers).
+   - Tejado solo encima de la planta baja; la azotea queda abierta.
+
+   Solo los muros exteriores (con puerta) son colliders. El interior es
+   totalmente transitable.
+   --------------------------------------------------------------------------- */
+export function buildPamplonaHouseInterior({
+  width = 8, height = 9, depth = 7,
+  sillarTex, woodTex
+}) {
+  const group = new THREE.Group()
+  const colliders = []
+
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: sillarTex.clone(),
+    color: 0xd8c9a0, roughness: 0.92, metalness: 0.05
+  })
+  wallMat.map.repeat.set(width / 3, height / 3)
+
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: woodTex.clone(),
+    color: 0x4a3018, roughness: 0.85, metalness: 0.05
+  })
+  floorMat.map.repeat.set(width / 2, depth / 2)
+
+  const wallThickness = 0.3
+  const w = width / 2
+  const d = depth / 2
+
+  // --- Piso interior (planta baja) ---
+  const floor = new THREE.Mesh(
+    new THREE.BoxGeometry(width - wallThickness * 2, 0.1, depth - wallThickness * 2),
+    floorMat
+  )
+  floor.position.y = 0.05
+  floor.receiveShadow = true
+  group.add(floor)
+
+  // --- Muro frontal con puerta ---
+  // La puerta es un hueco de 1.4m de ancho × 2.4m de alto.
+  const doorW = 1.4, doorH = 2.4
+  const sideW = (width - doorW) / 2
+  // Lado izquierdo de la puerta.
+  const wallFrontL = new THREE.Mesh(
+    new THREE.BoxGeometry(sideW, height, wallThickness),
+    wallMat
+  )
+  wallFrontL.position.set(-(doorW / 2 + sideW / 2), height / 2, d)
+  wallFrontL.castShadow = true; wallFrontL.receiveShadow = true
+  group.add(wallFrontL)
+  colliders.push(new THREE.Box3().setFromObject(wallFrontL))
+  // Lado derecho de la puerta.
+  const wallFrontR = new THREE.Mesh(
+    new THREE.BoxGeometry(sideW, height, wallThickness),
+    wallMat
+  )
+  wallFrontR.position.set(doorW / 2 + sideW / 2, height / 2, d)
+  wallFrontR.castShadow = true; wallFrontR.receiveShadow = true
+  group.add(wallFrontR)
+  colliders.push(new THREE.Box3().setFromObject(wallFrontR))
+  // Dintel sobre la puerta.
+  const lintelH = height - doorH
+  const lintel = new THREE.Mesh(
+    new THREE.BoxGeometry(doorW, lintelH, wallThickness),
+    wallMat
+  )
+  lintel.position.set(0, doorH + lintelH / 2, d)
+  lintel.castShadow = true
+  group.add(lintel)
+  colliders.push(new THREE.Box3().setFromObject(lintel))
+
+  // --- Muro trasero (con ventana) ---
+  const wallBack = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, wallThickness),
+    wallMat
+  )
+  wallBack.position.set(0, height / 2, -d)
+  wallBack.castShadow = true; wallBack.receiveShadow = true
+  group.add(wallBack)
+  colliders.push(new THREE.Box3().setFromObject(wallBack))
+
+  // --- Muros laterales (con ventanas) ---
+  // Para simplicidad, los muros laterales son sólidos (sin ventanas).
+  const wallL = new THREE.Mesh(
+    new THREE.BoxGeometry(wallThickness, height, depth),
+    wallMat
+  )
+  wallL.position.set(-w, height / 2, 0)
+  wallL.castShadow = true; wallL.receiveShadow = true
+  group.add(wallL)
+  colliders.push(new THREE.Box3().setFromObject(wallL))
+
+  const wallR = new THREE.Mesh(
+    new THREE.BoxGeometry(wallThickness, height, depth),
+    wallMat
+  )
+  wallR.position.set(w, height / 2, 0)
+  wallR.castShadow = true; wallR.receiveShadow = true
+  group.add(wallR)
+  colliders.push(new THREE.Box3().setFromObject(wallR))
+
+  // --- Ventanas en muro frontal (junto a la puerta) ---
+  // Huecos cuadrados con marco de madera (no son colliders).
+  const shutterMat = new THREE.MeshStandardMaterial({
+    map: woodTex, color: 0x6a3a20, roughness: 0.8, metalness: 0.1
+  })
+  for (const side of [-1, 1]) {
+    const win = new THREE.Mesh(
+      new THREE.BoxGeometry(1.0, 1.2, 0.1),
+      new THREE.MeshStandardMaterial({
+        color: 0x223344, emissive: 0x0a1525, emissiveIntensity: 0.3,
+        metalness: 0.9, roughness: 0.1, envMapIntensity: 2.5
+      })
+    )
+    win.position.set(side * (doorW / 2 + sideW / 2), 1.5, d + 0.05)
+    group.add(win)
+    // Contraventanas.
+    const shutter = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 1.2, 0.05), shutterMat
+    )
+    shutter.position.set(side * (doorW / 2 + sideW / 2) - 0.3, 1.5, d + 0.08)
+    shutter.rotation.y = 0.2
+    group.add(shutter)
+  }
+
+  // --- Piso de planta superior (azotea) ---
+  const upperFloorH = height * 0.55
+  const upperFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(width - wallThickness * 2, 0.1, depth - wallThickness * 2),
+    floorMat
+  )
+  upperFloor.position.y = upperFloorH
+  upperFloor.receiveShadow = true
+  group.add(upperFloor)
+
+  // --- Escalera interior a la azotea ---
+  // Rampa inclinada desde el piso hasta upperFloorH.
+  const stairLen = upperFloorH * 1.8
+  const stair = new THREE.Mesh(
+    new THREE.BoxGeometry(1.0, 0.1, stairLen),
+    floorMat
+  )
+  stair.position.set(0, upperFloorH / 2, -d / 2 + stairLen / 2 + 0.2)
+  stair.rotation.x = -Math.atan2(upperFloorH, stairLen)
+  stair.receiveShadow = true
+  group.add(stair)
+
+  // --- Barandilla de la azotea (para no caerse) ---
+  const railMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1a, metalness: 0.85, roughness: 0.4, envMapIntensity: 1.5
+  })
+  const railH = 1.0
+  for (const side of [-1, 1]) {
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, railH, depth - wallThickness * 2),
+      railMat
+    )
+    rail.position.set(side * (w - 0.1), upperFloorH + railH / 2, 0)
+    group.add(rail)
+  }
+  // Barandilla frontal (con hueco para la escalera).
+  const railFrontL = new THREE.Mesh(
+    new THREE.BoxGeometry(width / 2 - 0.7, railH, 0.05), railMat
+  )
+  railFrontL.position.set(-(width / 4 + 0.35), upperFloorH + railH / 2, d - 0.1)
+  group.add(railFrontL)
+  const railFrontR = new THREE.Mesh(
+    new THREE.BoxGeometry(width / 2 - 0.7, railH, 0.05), railMat
+  )
+  railFrontR.position.set(width / 4 + 0.35, upperFloorH + railH / 2, d - 0.1)
+  group.add(railFrontR)
+
+  // --- Cornisa superior ---
+  const cornice = new THREE.Mesh(
+    new THREE.BoxGeometry(width + 0.3, 0.3, depth + 0.3),
+    wallMat
+  )
+  cornice.position.y = height + 0.15
+  cornice.castShadow = true
+  group.add(cornice)
+
+  return { group, colliders }
+}

@@ -9,6 +9,7 @@ import {
   makeRoofTexture,
   makeWoodTexture,
   buildPamplonaHouse,
+  buildPamplonaHouseInterior,
   buildBullring,
   buildCityWall,
   buildSanFerdinandBanners,
@@ -134,24 +135,27 @@ export function createWorld(scene) {
   // Anillo de casas en 4 lados dejando callejones de entrada.
   // ---------------------------------------------------------------------
   const houses = [
-    { x: -14, z: -25, w: 10, h: 10, d: 7, floors: 3, rotY: 0 },
-    { x: 0, z: -25, w: 10, h: 11, d: 7, floors: 3, rotY: 0 },
-    { x: 14, z: -25, w: 10, h: 10, d: 7, floors: 3, rotY: 0 },
-    { x: -14, z: 25, w: 10, h: 10, d: 7, floors: 3, rotY: Math.PI },
-    { x: 0, z: 25, w: 10, h: 12, d: 7, floors: 4, rotY: Math.PI },
-    { x: 14, z: 25, w: 10, h: 10, d: 7, floors: 3, rotY: Math.PI },
-    { x: -25, z: -14, w: 7, h: 10, d: 10, floors: 3, rotY: Math.PI / 2 },
-    { x: -25, z: 0, w: 7, h: 11, d: 10, floors: 3, rotY: Math.PI / 2 },
-    { x: -25, z: 14, w: 7, h: 10, d: 10, floors: 3, rotY: Math.PI / 2 },
-    { x: 25, z: -14, w: 7, h: 10, d: 10, floors: 3, rotY: -Math.PI / 2 },
-    { x: 25, z: 0, w: 7, h: 12, d: 10, floors: 4, rotY: -Math.PI / 2 },
-    { x: 25, z: 14, w: 7, h: 10, d: 10, floors: 3, rotY: -Math.PI / 2 }
+    { x: -14, z: -25, w: 10, h: 10, d: 7, floors: 3, rotY: 0, interior: true },
+    { x: 0, z: -25, w: 10, h: 11, d: 7, floors: 3, rotY: 0, interior: false },
+    { x: 14, z: -25, w: 10, h: 10, d: 7, floors: 3, rotY: 0, interior: true },
+    { x: -14, z: 25, w: 10, h: 10, d: 7, floors: 3, rotY: Math.PI, interior: false },
+    { x: 0, z: 25, w: 10, h: 12, d: 7, floors: 4, rotY: Math.PI, interior: true },
+    { x: 14, z: 25, w: 10, h: 10, d: 7, floors: 3, rotY: Math.PI, interior: true },
+    { x: -25, z: -14, w: 7, h: 10, d: 10, floors: 3, rotY: Math.PI / 2, interior: false },
+    { x: -25, z: 0, w: 7, h: 11, d: 10, floors: 3, rotY: Math.PI / 2, interior: false },
+    { x: -25, z: 14, w: 7, h: 10, d: 10, floors: 3, rotY: Math.PI / 2, interior: false },
+    { x: 25, z: -14, w: 7, h: 10, d: 10, floors: 3, rotY: -Math.PI / 2, interior: false },
+    { x: 25, z: 0, w: 7, h: 12, d: 10, floors: 4, rotY: -Math.PI / 2, interior: false },
+    { x: 25, z: 14, w: 7, h: 10, d: 10, floors: 3, rotY: -Math.PI / 2, interior: false }
   ]
   houses.forEach((cfg) => {
-    const { group, colliders: c } = buildPamplonaHouse({
-      width: cfg.w, height: cfg.h, depth: cfg.d, floors: cfg.floors,
-      sillarTex, roofTex, woodTex
-    })
+    // Fase 1.6: las casas marcadas 'interior' usan buildPamplonaHouseInterior
+    // (muros con puerta + ventanas + escalera a azotea). El resto son sólidas.
+    const builder = cfg.interior ? buildPamplonaHouseInterior : buildPamplonaHouse
+    const { group, colliders: c } = builder(cfg.interior
+      ? { width: cfg.w, height: cfg.h, depth: cfg.d, floors: cfg.floors, sillarTex, woodTex }
+      : { width: cfg.w, height: cfg.h, depth: cfg.d, floors: cfg.floors, sillarTex, roofTex, woodTex }
+    )
     group.position.set(cfg.x, 0, cfg.z)
     group.rotation.y = cfg.rotY
     // ACTUALIZAMOS matrices antes de setFromObject para que el AABB

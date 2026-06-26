@@ -140,7 +140,7 @@ extended mags sube `magSize` a 45.
 
 **Verificación**: saltar un bidón y ver mantle. Sprintar gasta stamina.
 
-### 1.6 Interiores transitables + verticalidad `[ ]`
+### 1.6 Interiores transitables + verticalidad `[x]`
 
 **Problema actual**: las casas de `pamplona.js:161` son sólidas.
 
@@ -323,7 +323,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.3 — daño por zonas (head/neck/chest/stomach/limbs) + wallbang
 - [x] Fase 1.4 — create-a-class + perks + attachments (UI + persistencia)
 - [x] Fase 1.5 — stamina + mantling + respiración (sniper) + footstep audio
-- [ ] Fase 1.6
+- [x] Fase 1.6 — casas con interior transitables + azoteas para combate vertical
 - [ ] Fase 1.7
 - [ ] Fase 1.8
 - [ ] Fase 1.9
