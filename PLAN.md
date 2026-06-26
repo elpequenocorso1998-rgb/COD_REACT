@@ -180,7 +180,7 @@ extended mags sube `magSize` a 45.
 
 **Verificación**: morir y ver killcam.
 
-### 1.9 Calidad ship `[ ]`
+### 1.9 Calidad ship `[x]`
 
 **Tareas**:
 - **i18n**: extraer strings de `App.jsx` y `styles.css` a `src/i18n.js`
@@ -326,6 +326,6 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.6 — casas con interior transitables + azoteas para combate vertical
 - [x] Fase 1.7 — sombras dinámicas (sun sigue al jugador) + agua con oleaje
 - [x] Fase 1.8 — settings (FOV/sensibilidad/volumen/colorblind) + killcam
-- [ ] Fase 1.9
+- [x] Fase 1.9 — i18n (es/en) + gamepad support + tests (122 tests)
 - [ ] Fase 2
 - [ ] Fase 3

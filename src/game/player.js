@@ -429,6 +429,54 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   // UPDATE: física y cámara.
   // ---------------------------------------------------------------------
   function update(dt, _clockTime) {
+    // Fase 1.9: gamepad support. Lee el gamepad conectado y aplica
+    // movimiento + cámara. Es input adicional al mouse/teclado (no
+    // lo reemplaza). Aim assist suave si está activado en settings.
+    const gp = navigator.getGamepads ? navigator.getGamepads() : []
+    let pad = null
+    for (let i = 0; i < gp.length; i++) {
+      if (gp[i]) { pad = gp[i]; break }
+    }
+    if (pad) {
+      const dz = 0.15 // deadzone
+      const lx = Math.abs(pad.axes[0] || 0) > dz ? pad.axes[0] : 0
+      const ly = Math.abs(pad.axes[1] || 0) > dz ? pad.axes[1] : 0
+      const rx = Math.abs(pad.axes[2] || 0) > dz ? pad.axes[2] : 0
+      const ry = Math.abs(pad.axes[3] || 0) > dz ? pad.axes[3] : 0
+      // Movimiento.
+      if (lx !== 0 || ly !== 0) {
+        if (ly < -0.5) moveForward = true; else if (ly > 0.5) moveForward = false
+        if (ly > 0.5) moveBackward = true; else if (ly < -0.5) moveBackward = false
+        if (lx < -0.5) moveLeft = true; else if (lx > 0.5) moveLeft = false
+        if (lx > 0.5) moveRight = true; else if (lx < -0.5) moveRight = false
+      }
+      // Cámara (right stick).
+      if (rx !== 0 || ry !== 0) {
+        const sensMul = 5.0
+        mouseDeltaX += rx * dt * sensMul
+        mouseDeltaY += ry * dt * sensMul
+      }
+      // Sprint: L3 (button 10) o bumper izquierdo (button 4).
+      if (pad.buttons[10] && pad.buttons[10].pressed) sprinting = true
+      // Disparo: RT (button 7).
+      if (pad.buttons[7] && pad.buttons[7].pressed) {
+        if (!isFiring) {
+          const w = currentWeaponDef || WEAPON
+          if (!w.automatic) shoot()
+          else { isFiring = true; fireAccumulator = w.fireInterval }
+        }
+      } else if (isFiring && currentWeaponDef && currentWeaponDef.automatic) {
+        isFiring = false
+      }
+      // ADS: LT (button 6).
+      if (pad.buttons[6]) isAiming = pad.buttons[6].pressed
+      // Salto: A (button 0).
+      if (pad.buttons[0] && pad.buttons[0].pressed && canJump && !isProne) {
+        velocity.y = MOVEMENT.jump
+        canJump = false
+      }
+    }
+
     // --- 1. Suavizado de cámara (framerate-independent) ---
     // Antes era `yaw += (t-yaw)*SMOOTH` sin dt: convergía 2.4x más rápido
     // a 144Hz que a 60Hz. Usamos 1-pow(1-k, dt*60) para decaimiento

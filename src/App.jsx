@@ -5,6 +5,7 @@ import { createEngine } from './game/engine.js'
 import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
 import { getLoadout, saveLoadout } from './game/loadout.js'
 import { getSettings, saveSettings } from './game/settings.js'
+import { t } from './i18n.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -87,7 +88,7 @@ export default function App() {
 
       {loading && (
         <div className="loading">
-          CARGANDO MOTORES...
+          {t('menu.loading')}
           <div className="bar" />
         </div>
       )}
@@ -336,11 +337,11 @@ function Scoreboard({ kills, deaths, score, wave }) {
 function MainMenu({ onStart, onOpenLoadout, onOpenSettings }) {
   return (
     <div className="menu">
-      <h1>Modern Warfare</h1>
-      <h2>React Edition</h2>
-      <button onClick={onStart}>Jugar</button>
-      <button onClick={onOpenLoadout}>Create-a-Class</button>
-      <button onClick={onOpenSettings}>Settings</button>
+      <h1>{t('menu.title')}</h1>
+      <h2>{t('menu.subtitle')}</h2>
+      <button onClick={onStart}>{t('menu.play')}</button>
+      <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
+      <button onClick={onOpenSettings}>{t('menu.settings')}</button>
       <div className="stats">
         Sobrevive a oleadas infinitas de enemigos.<br />
         Apunta con el ratón, dispara con click izq., recarga con R.
@@ -362,9 +363,9 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings }) {
 function PauseMenu({ onResume, onQuit }) {
   return (
     <div className="menu">
-      <h1>Pausa</h1>
-      <button onClick={onResume}>Continuar</button>
-      <button onClick={onQuit}>Salir al menú</button>
+      <h1>{t('menu.pause')}</h1>
+      <button onClick={onResume}>{t('menu.resume')}</button>
+      <button onClick={onQuit}>{t('menu.quit')}</button>
     </div>
   )
 }
@@ -374,14 +375,14 @@ function GameOverMenu({ onRestart }) {
   const wave = useGameStore((s) => s.wave)
   return (
     <div className="menu">
-      <div className="killcam-banner">KILLCAM</div>
-      <h1>Misión fallida</h1>
-      <h2>HAS CAÍDO EN COMBATE</h2>
+      <div className="killcam-banner">{t('menu.killcam')}</div>
+      <h1>{t('menu.gameover')}</h1>
+      <h2>{t('menu.gameover.subtitle')}</h2>
       <div className="stats">
-        Puntuación final: <strong style={{ color: '#ffd24d' }}>{score.toLocaleString()}</strong><br />
-        Oleada alcanzada: <strong style={{ color: '#ffd24d' }}>{wave}</strong>
+        {t('menu.gameover.score')}: <strong style={{ color: '#ffd24d' }}>{score.toLocaleString()}</strong><br />
+        {t('menu.gameover.wave')}: <strong style={{ color: '#ffd24d' }}>{wave}</strong>
       </div>
-      <button onClick={onRestart}>Reintentar</button>
+      <button onClick={onRestart}>{t('menu.gameover.retry')}</button>
     </div>
   )
 }
@@ -402,10 +403,10 @@ function SettingsScreen({ onClose, onApply }) {
 
   return (
     <div className="menu settings-screen">
-      <h1>Settings</h1>
+      <h1>{t('settings.title')}</h1>
       <div className="settings-content">
         <div className="settings-row">
-          <label>FOV</label>
+          <label>{t('settings.fov')}</label>
           <input
             type="range" min="60" max="110" step="1"
             value={settings.fov}
@@ -414,7 +415,7 @@ function SettingsScreen({ onClose, onApply }) {
           <span className="settings-value">{settings.fov}°</span>
         </div>
         <div className="settings-row">
-          <label>Sensibilidad X</label>
+          <label>{t('settings.sensX')}</label>
           <input
             type="range" min="0.0005" max="0.006" step="0.0001"
             value={settings.mouseSensX}
@@ -423,7 +424,7 @@ function SettingsScreen({ onClose, onApply }) {
           <span className="settings-value">{settings.mouseSensX.toFixed(4)}</span>
         </div>
         <div className="settings-row">
-          <label>Sensibilidad Y</label>
+          <label>{t('settings.sensY')}</label>
           <input
             type="range" min="0.0005" max="0.006" step="0.0001"
             value={settings.mouseSensY}
@@ -432,7 +433,7 @@ function SettingsScreen({ onClose, onApply }) {
           <span className="settings-value">{settings.mouseSensY.toFixed(4)}</span>
         </div>
         <div className="settings-row">
-          <label>Volumen master</label>
+          <label>{t('settings.masterVolume')}</label>
           <input
             type="range" min="0" max="1" step="0.05"
             value={settings.masterVolume}
@@ -441,31 +442,31 @@ function SettingsScreen({ onClose, onApply }) {
           <span className="settings-value">{Math.round(settings.masterVolume * 100)}%</span>
         </div>
         <div className="settings-row">
-          <label>Calidad gráfica</label>
+          <label>{t('settings.quality')}</label>
           <select
             value={settings.quality}
             onChange={(e) => update({ quality: e.target.value })}
           >
-            <option value="auto">Auto</option>
-            <option value="low">Baja</option>
-            <option value="medium">Media</option>
-            <option value="high">Alta</option>
+            <option value="auto">{t('settings.quality.auto')}</option>
+            <option value="low">{t('settings.quality.low')}</option>
+            <option value="medium">{t('settings.quality.medium')}</option>
+            <option value="high">{t('settings.quality.high')}</option>
           </select>
         </div>
         <div className="settings-row">
-          <label>Colorblind</label>
+          <label>{t('settings.colorblind')}</label>
           <select
             value={settings.colorblind}
             onChange={(e) => update({ colorblind: e.target.value })}
           >
-            <option value="off">Off</option>
+            <option value="off">{t('settings.colorblind.off')}</option>
             <option value="protanopia">Protanopia</option>
             <option value="deuteranopia">Deuteranopia</option>
             <option value="tritanopia">Tritanopia</option>
           </select>
         </div>
         <div className="settings-row">
-          <label>Aim assist</label>
+          <label>{t('settings.aimAssist')}</label>
           <input
             type="range" min="0" max="1" step="0.1"
             value={settings.aimAssist}
@@ -474,7 +475,7 @@ function SettingsScreen({ onClose, onApply }) {
           <span className="settings-value">{Math.round(settings.aimAssist * 100)}%</span>
         </div>
         <div className="settings-row">
-          <label>Mostrar FPS</label>
+          <label>{t('settings.showFps')}</label>
           <input
             type="checkbox"
             checked={settings.showFps}
@@ -482,7 +483,7 @@ function SettingsScreen({ onClose, onApply }) {
           />
         </div>
       </div>
-      <button onClick={onClose}>Volver</button>
+      <button onClick={onClose}>{t('menu.back')}</button>
     </div>
   )
 }
@@ -529,11 +530,11 @@ function CreateAClassScreen({ onClose }) {
 
   return (
     <div className="menu loadout-screen">
-      <h1>Create-a-Class</h1>
+      <h1>{t('loadout.title')}</h1>
       <div className="loadout-content">
         {/* Primary weapon */}
         <div className="loadout-section">
-          <div className="loadout-section-title">Arma principal</div>
+          <div className="loadout-section-title">{t('loadout.primary')}</div>
           <div className="loadout-grid">
             {weaponIds.map((id) => (
               <button
@@ -549,7 +550,7 @@ function CreateAClassScreen({ onClose }) {
 
         {/* Attachments */}
         <div className="loadout-section">
-          <div className="loadout-section-title">Attachments</div>
+          <div className="loadout-section-title">{t('loadout.attachments')}</div>
           <div className="loadout-attachments">
             {ATTACHMENT_SLOTS.map((slot) => {
               const current = loadout.primaryAttachments[slot]
@@ -583,7 +584,7 @@ function CreateAClassScreen({ onClose }) {
 
         {/* Secondary */}
         <div className="loadout-section">
-          <div className="loadout-section-title">Arma secundaria</div>
+          <div className="loadout-section-title">{t('loadout.secondary')}</div>
           <div className="loadout-grid">
             {weaponIds.map((id) => (
               <button
@@ -599,7 +600,7 @@ function CreateAClassScreen({ onClose }) {
 
         {/* Perks */}
         <div className="loadout-section">
-          <div className="loadout-section-title">Perks</div>
+          <div className="loadout-section-title">{t('loadout.perks')}</div>
           {['blue', 'red', 'green'].map((cat) => (
             <div key={cat} className="loadout-perk-row">
               <div className={`loadout-perk-cat ${cat}`}>{cat.toUpperCase()}</div>
@@ -620,7 +621,7 @@ function CreateAClassScreen({ onClose }) {
         </div>
       </div>
 
-      <button onClick={onClose}>Volver</button>
+      <button onClick={onClose}>{t('menu.back')}</button>
     </div>
   )
 }
