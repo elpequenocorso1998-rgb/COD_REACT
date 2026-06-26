@@ -801,3 +801,76 @@ canvas { display: block; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* =========================================================================
+   Fase 2 — Multijugador
+   ========================================================================= */
+.mp-connect {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 20px 0;
+}
+.mp-url-input {
+  background: #1a2433;
+  color: #fff;
+  border: 1px solid rgba(255, 210, 77, 0.4);
+  padding: 10px 14px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  border-radius: 3px;
+  width: 280px;
+}
+.mp-url-input:focus {
+  outline: none;
+  border-color: #ffd24d;
+  box-shadow: 0 0 10px rgba(255, 210, 77, 0.4);
+}
+
+/* --- Killfeed MP --- */
+.killfeed {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  text-align: right;
+}
+.killfeed-row {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 2px;
+  color: #ddd;
+}
+.killfeed-row .killer { color: #6aa0ff; }
+.killfeed-row .victim { color: #ff8080; }
+.killfeed-row .weapon { color: #ffd24d; margin: 0 6px; }
+
+/* --- Team scores MP --- */
+.team-scores {
+  position: absolute;
+  top: 60px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 20px;
+  border-radius: 4px;
+  font-family: 'Oswald', sans-serif;
+}
+.team-score {
+  font-size: 24px;
+  font-weight: 700;
+}
+.team-score.axis { color: #ff8080; }
+.team-score.allies { color: #6aa0ff; }
+.team-vs {
+  font-size: 14px;
+  color: #888;
+}

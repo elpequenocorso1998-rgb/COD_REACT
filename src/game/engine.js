@@ -17,6 +17,7 @@ import { createStreakManager } from './streaks.js'
 import { createGrenadeSystem } from './grenades.js'
 import { createDecalSystem } from './decals.js'
 import { NavMesh } from './navmesh.js'
+import { createRemotePlayerManager } from './remote-players.js'
 import { useGameStore, GAME_STATES } from './store.js'
 import {
   FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE,
@@ -57,6 +58,9 @@ export function createEngine() {
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals
   let navmesh = null
   let sunMesh = null
+  let remotePlayers = null
+  let netClientRef = null
+  let netInputTimer = 0
   // Fase 1.8: buffer circular para killcam (posiciones de cámara).
   const KILLCAM_BUFFER_SIZE = 150 // ~5s a 30fps de sampleo
   const KILLCAM_SAMPLE_INTERVAL = 1 / 30
@@ -468,6 +472,25 @@ export function createEngine() {
       // Fase 1.7: sombras siguen al jugador (aproximación CSM).
       if (world.updateShadows) world.updateShadows(player.getPosition())
       particles.update(dt)
+      // Fase 2: actualiza jugadores remotos (interpolación entre snapshots).
+      if (remotePlayers) remotePlayers.update(dt)
+      // Fase 2: envía input del player local al servidor MP (60Hz).
+      if (netClientRef && netClientRef.connected) {
+        netInputTimer += dt
+        if (netInputTimer >= 1 / 60) {
+          netInputTimer = 0
+          const pos = player.getPosition()
+          netClientRef.sendInput({
+            pos: { x: pos.x, y: pos.y, z: pos.z },
+            yaw: player.getYaw(),
+            pitch: 0,
+            weapon: st.currentWeapon,
+            firing: st.firing,
+            alive: st.health > 0,
+            health: st.health
+          })
+        }
+      }
       // Minimap: rotate-with-player, enemigos como puntos rojos.
       if (minimap) {
         minimap.update(dt, player.getPosition(), player.getYaw(), enemies, st.uavActive)
@@ -643,6 +666,44 @@ export function createEngine() {
     player.requestPointerLock()
   }
 
+  // Fase 2: arranca una partida multijugador (TDM).
+  // Conecta el cliente de red al game loop: envía inputs del player local,
+  // recibe snapshots y los pasa al remote player manager.
+  function startMPGame(netClient) {
+    audio.init()
+    audio.setMuted(false)
+    audio.startMusic()
+    store.getState().reset()
+    netClientRef = netClient
+    // En MP no spawneamos bots: solo jugadores remotos.
+    enemies.reset()
+    particles.reset()
+    if (grenades) grenades.reset()
+    if (decals) decals.reset()
+    player.reset()
+    player.setWeapon(store.getState().getCurrentWeapon())
+    // Crea el manager de jugadores remotos si no existe.
+    if (!remotePlayers) {
+      remotePlayers = createRemotePlayerManager(scene)
+    }
+    // Registra callbacks del netClient.
+    netClient.on('onSnapshot', ({ players }) => {
+      if (remotePlayers) remotePlayers.updateSnapshot(players)
+    })
+    netClient.on('onRespawn', (msg) => {
+      if (msg.id === netClient.clientId) {
+        // Respawn del player local.
+        player.reset()
+        // Posición de spawn del servidor.
+        if (msg.pos) {
+          const pos = player.getPosition()
+          pos.set(msg.pos.x, msg.pos.y, msg.pos.z)
+        }
+      }
+    })
+    player.requestPointerLock()
+  }
+
   function resumeGame() {
     store.getState().setState(GAME_STATES.PLAYING)
     audio.setMuted(false)
@@ -740,6 +801,7 @@ export function createEngine() {
     if (streaks) streaks.dispose()
     if (grenades) grenades.dispose()
     if (decals) decals.dispose()
+    if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()
     // envMap PMREM: antes se leak-eaba en cada recreación del engine.
     if (envMap) { envMap.dispose(); envMap = null }
@@ -757,7 +819,7 @@ export function createEngine() {
     if (audio && audio.setMasterVolume) audio.setMasterVolume(settings.masterVolume)
   }
 
-  return { mount, dispose, startGame, resumeGame, quitToMenu, spawnWave, applySettings,
+  return { mount, dispose, startGame, startMPGame, resumeGame, quitToMenu, spawnWave, applySettings,
     set onMinimapReady(fn) { onMinimapReady = fn } }
 }
 

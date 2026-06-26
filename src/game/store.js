@@ -27,7 +27,9 @@ export const GAME_STATES = {
   MENU: 'menu',
   PLAYING: 'playing',
   PAUSED: 'paused',
-  GAMEOVER: 'gameover'
+  GAMEOVER: 'gameover',
+  LOBBY: 'lobby',     // Fase 2: lobby multijugador
+  MATCH_OVER: 'match_over' // Fase 2: fin de partida MP
 }
 
 // Contador monótono para IDs de hitmarkers/killmarkers/damageDirections.
@@ -123,7 +125,18 @@ export const useGameStore = create((set, get) => {
 
     // --- Stamina (Fase 1.5) ---
     stamina: 100,
-    maxStamina: 100
+    maxStamina: 100,
+
+    // --- Multijugador (Fase 2) ---
+    mpConnected: false,            // true si conectado al servidor MP
+    mpClientId: null,              // nuestro ID en el servidor
+    mpTeam: null,                  // 'axis' | 'allies'
+    mpTeamScores: { axis: 0, allies: 0 }, // kills por equipo
+    mpScoreLimit: 75,              // límite de kills para ganar
+    mpKillfeed: [],                // últimos kills [{killer, victim, weapon, headshot, t}]
+    mpRemotePlayers: [],           // estado de jugadores remotos (del último snapshot)
+    mpMatchOver: false,            // partida terminada
+    mpWinner: null                 // equipo ganador
     }
   }
 
@@ -136,6 +149,25 @@ export const useGameStore = create((set, get) => {
 
     // Fase 1.5: actualiza la stamina (llamado cada frame desde engine).
     setStamina: (stamina, maxStamina) => set({ stamina, maxStamina }),
+
+    // Fase 2: acciones multijugador.
+    setMpConnected: (connected) => set({ mpConnected: connected }),
+    setMpInit: (clientId, team, scoreLimit, teamScores) => set({
+      mpClientId: clientId, mpTeam: team, mpScoreLimit: scoreLimit,
+      mpTeamScores: teamScores || { axis: 0, allies: 0 },
+      mpConnected: true, mpMatchOver: false, mpWinner: null
+    }),
+    setMpSnapshot: (players, teams) => set({
+      mpRemotePlayers: players, mpTeamScores: teams
+    }),
+    addMpKill: (kill) => set((s) => ({
+      mpKillfeed: [...s.mpKillfeed, { ...kill, t: Date.now() }].slice(-5)
+    })),
+    setMpMatchOver: (winner, teams) => set({
+      mpMatchOver: true, mpWinner: winner, mpTeamScores: teams || { axis: 0, allies: 0 },
+      gameState: GAME_STATES.MATCH_OVER
+    }),
+    clearMpKillfeed: () => set({ mpKillfeed: [] }),
 
     // Cambia de arma: guarda la munición del arma actual y carga la de la nueva.
     switchWeapon: (weaponId) => {

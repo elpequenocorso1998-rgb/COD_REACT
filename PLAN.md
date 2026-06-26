@@ -198,48 +198,52 @@ extended mags sube `magSize` a 45.
 
 Objetivo: PvP real. Es lo que más vende de CoD.
 
-### 2.1 Backend de juego `[ ]`
+> **Estado**: base funcional implementada (servidor WebSocket + cliente +
+> remote players + TDM + UI). Faltan: anti-cheat real (2.5), modos extra
+> (2.2 más allá de TDM), matchmaking (2.3), voice chat (2.4).
 
-- Servidor Node.js con WebSocket (o **Colyseus**) en nuevo `server/`.
-- Estado autoritativo: mover game state de `store.js` (local) al server.
-  Cliente solo envía inputs.
-- Tick rate 60Hz server, 20Hz snapshot a clientes.
-- **Lag compensation**: histórico de posiciones últimos 200ms para
-  hit-reg "favor the shooter".
-- **Client-side prediction**: cliente predice su movimiento (`player.js`
-  se reaprovecha), server reconcilia.
-- **Interpolación** de entidades remotas a 100ms.
-- Dockerizar server (`Dockerfile.server`).
+### 2.1 Backend de juego `[x]`
 
-### 2.2 Modos de juego `[ ]`
+- Servidor Node.js con WebSocket (`ws`) en `server/server.js`.
+- Estado autoritativo: el servidor mantiene posiciones de todos los
+  jugadores y broadcastea snapshots a 20Hz.
+- Recibe inputs de clientes a 60Hz. Modelo "trusted client" de momento
+  (Fase 2.5 añadirá validación real).
+- TDM: 2 equipos (axis/allies), 75 kills gana, respawn tras 3s.
+- Dockerizado en `Dockerfile.server` (puerto 9433).
+- Script `npm run server` para arrancar en dev.
 
-En nuevo `src/game/modes/`:
-- TDM (75 kills gana).
-- FFA (30 kills).
-- Domination (3 puntos A/B/C).
-- Search & Destroy (bomba, no respawn).
-- Hardpoint (punto rotatorio).
-- Kill Confirmed (recoger placas).
+### 2.2 Modos de juego `[~]`
+
+- [x] TDM (Team Deathmatch) — 75 kills gana.
+- [ ] FFA (Free For All).
+- [ ] Domination (3 puntos A/B/C).
+- [ ] Search & Destroy (bomba, no respawn).
+- [ ] Hardpoint (punto rotatorio).
+- [ ] Kill Confirmed (recoger placas).
 
 ### 2.3 Matchmaking + lobbies `[ ]`
 
-- Lobby system: party de hasta 6, matchmaking por MMR + ping.
-- server browser para partidas custom.
-- dedicated servers regionales (EU/NA/SA/Asia) — extender `k8s/`.
+- [ ] lobby system: party de hasta 6, matchmaking por MMR + ping.
+- [ ] server browser para partidas custom.
+- [ ] dedicated servers regionales (EU/NA/SA/Asia).
 
-### 2.4 UI de MP `[ ]`
+### 2.4 UI de MP `[~]`
 
-- Lobby UI con party, chat de voz (WebRTC), loadout editor, ready up.
-- Scoreboard con ping/MMR/assists.
-- Final killcam + match summary.
-- Spectator mode completo (cámara libre + follow).
-- server browser.
+- [x] Pantalla de conexión (MultiplayerScreen con URL input).
+- [x] Killfeed en HUD (últimos 5 kills).
+- [x] Team scores en HUD (axis vs allies).
+- [x] MatchOver screen con ganador y scores finales.
+- [ ] Lobby UI con party y ready up.
+- [ ] Final killcam.
+- [ ] Spectator mode completo (cámara libre + follow).
+- [ ] server browser.
 
 ### 2.5 Seguridad `[ ]`
 
-- Anti-cheat server-side: validación de inputs imposibles.
-- Rate limiting por IP.
-- Reports & moderation.
+- [ ] Anti-cheat server-side: validación de inputs imposibles.
+- [ ] Rate limiting por IP.
+- [ ] Reports & moderation.
 
 ---
 
@@ -327,5 +331,5 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.7 — sombras dinámicas (sun sigue al jugador) + agua con oleaje
 - [x] Fase 1.8 — settings (FOV/sensibilidad/volumen/colorblind) + killcam
 - [x] Fase 1.9 — i18n (es/en) + gamepad support + tests (122 tests)
-- [ ] Fase 2
+- [~] Fase 2 — MP base (servidor + cliente + TDM + killfeed); faltan modos extra, matchmaking, anti-cheat
 - [ ] Fase 3

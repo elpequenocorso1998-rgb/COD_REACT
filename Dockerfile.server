@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Solo necesitamos 'ws' que ya está en node_modules del cliente. Copiamos
+# package.json y node_modules.
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev
+
+COPY server/ ./server/
+
+EXPOSE 9433
+
+# Usuario no-root para seguridad.
+RUN addgroup -S mw && adduser -S mw -G mw
+USER mw
+
+CMD ["node", "server/server.js"]

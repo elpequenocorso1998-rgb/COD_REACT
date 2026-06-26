@@ -6,6 +6,7 @@ import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
 import { getLoadout, saveLoadout } from './game/loadout.js'
 import { getSettings, saveSettings } from './game/settings.js'
 import { t } from './i18n.js'
+import { createNetClient } from './net/client.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -49,6 +50,8 @@ export default function App() {
   const loading = useGameStore((s) => s.loading)
   const [loadoutOpen, setLoadoutOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mpOpen, setMpOpen] = useState(false)
+  const netClientRef = useRef(null)
 
   const engineRef = useRef(null)
   const containerRef = useRef(null)
@@ -95,11 +98,12 @@ export default function App() {
 
       {/* Solo mostramos el menú cuando ya no estamos cargando: antes el
           botón "Jugar" podía clickarse antes de que el engine montara. */}
-      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && (
+      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && !mpOpen && (
         <MainMenu
           onStart={() => engineRef.current?.startGame()}
           onOpenLoadout={() => setLoadoutOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenMultiplayer={() => setMpOpen(true)}
         />
       )}
       {!loading && gameState === GAME_STATES.MENU && loadoutOpen && (
@@ -109,6 +113,42 @@ export default function App() {
         <SettingsScreen
           onClose={() => setSettingsOpen(false)}
           onApply={(s) => engineRef.current?.applySettings(s)}
+        />
+      )}
+      {!loading && gameState === GAME_STATES.MENU && mpOpen && (
+        <MultiplayerScreen
+          onClose={() => setMpOpen(false)}
+          onConnect={(url) => {
+            const client = createNetClient(url)
+            netClientRef.current = client
+            client.on('onInit', (msg) => {
+              useGameStore.getState().setMpInit(msg.clientId, msg.team, msg.scoreLimit, msg.teams)
+              useGameStore.getState().setState(GAME_STATES.PLAYING)
+              engineRef.current?.startMPGame(client)
+              setMpOpen(false)
+            })
+            client.on('onSnapshot', ({ players, teams }) => {
+              useGameStore.getState().setMpSnapshot(players, teams)
+            })
+            client.on('onKill', (msg) => {
+              useGameStore.getState().addMpKill({
+                killer: msg.killerName, victim: msg.victimName,
+                weapon: msg.weapon, headshot: msg.headshot
+              })
+            })
+            client.on('onMatchOver', (msg) => {
+              useGameStore.getState().setMpMatchOver(msg.winner, msg.teams)
+            })
+            client.connect()
+          }}
+        />
+      )}
+      {gameState === GAME_STATES.MATCH_OVER && (
+        <MatchOverScreen
+          onQuit={() => {
+            if (netClientRef.current) { netClientRef.current.disconnect(); netClientRef.current = null }
+            useGameStore.getState().setState(GAME_STATES.MENU)
+          }}
         />
       )}
       {gameState === GAME_STATES.PLAYING && <HUD />}
@@ -334,12 +374,13 @@ function Scoreboard({ kills, deaths, score, wave }) {
 /* =========================================================================
    Menús: principal, pausa y game over.
    ========================================================================= */
-function MainMenu({ onStart, onOpenLoadout, onOpenSettings }) {
+function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer }) {
   return (
     <div className="menu">
       <h1>{t('menu.title')}</h1>
       <h2>{t('menu.subtitle')}</h2>
       <button onClick={onStart}>{t('menu.play')}</button>
+      <button onClick={onOpenMultiplayer}>Multiplayer</button>
       <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
       <button onClick={onOpenSettings}>{t('menu.settings')}</button>
       <div className="stats">
@@ -484,6 +525,54 @@ function SettingsScreen({ onClose, onApply }) {
         </div>
       </div>
       <button onClick={onClose}>{t('menu.back')}</button>
+    </div>
+  )
+}
+
+/* =========================================================================
+   Multiplayer — pantalla de conexión al servidor MP (Fase 2).
+   ========================================================================= */
+function MultiplayerScreen({ onClose, onConnect }) {
+  const [url, setUrl] = useState('ws://localhost:9433')
+
+  return (
+    <div className="menu">
+      <h1>Multiplayer</h1>
+      <h2>Team Deathmatch</h2>
+      <div className="stats">
+        Conéctate a un servidor para jugar TDM 6v6.<br />
+        Primero arranque el servidor: <code>npm run server</code>
+      </div>
+      <div className="mp-connect">
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="ws://host:9433"
+          className="mp-url-input"
+        />
+        <button onClick={() => onConnect(url)}>Conectar</button>
+      </div>
+      <button onClick={onClose}>{t('menu.back')}</button>
+    </div>
+  )
+}
+
+/* =========================================================================
+   MatchOver — pantalla de fin de partida MP (Fase 2).
+   ========================================================================= */
+function MatchOverScreen({ onQuit }) {
+  const winner = useGameStore((s) => s.mpWinner)
+  const scores = useGameStore((s) => s.mpTeamScores)
+  return (
+    <div className="menu">
+      <h1>{winner === 'axis' ? 'AXIS WINS' : 'ALLIES WINS'}</h1>
+      <h2>Match Over</h2>
+      <div className="stats">
+        Axis: <strong style={{ color: '#ff8080' }}>{scores.axis}</strong> kills<br />
+        Allies: <strong style={{ color: '#6aa0ff' }}>{scores.allies}</strong> kills
+      </div>
+      <button onClick={onQuit}>Volver al menú</button>
     </div>
   )
 }
