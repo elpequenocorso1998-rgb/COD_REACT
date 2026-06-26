@@ -207,6 +207,7 @@ export function buildHumanoid() {
 
   // --- BRAZOS ---
   // Hombro → brazo superior → codo → brazo inferior → mano.
+  // Devolvemos los meshes para hit-testing por zona (Fase 1.3).
   function buildArm(side) {
     const sign = side === 'L' ? -1 : 1
     const shoulder = new THREE.Group()
@@ -227,13 +228,14 @@ export function buildHumanoid() {
     const hand = new THREE.Mesh(_geoHand, _matGloves)
     hand.position.y = -0.26; hand.castShadow = true; elbow.add(hand)
 
-    return { shoulder, elbow }
+    return { shoulder, elbow, upperArm, lowerArm, hand }
   }
   const armL = buildArm('L')
   const armR = buildArm('R')
 
   // --- PIERNAS ---
   // Cadera → muslo → rodilla → espinilla → pantorrilla con bota → pie.
+  // Devolvemos los meshes para hit-testing por zona (Fase 1.3).
   function buildLeg(side) {
     const sign = side === 'L' ? -1 : 1
     const hip = new THREE.Group()
@@ -258,7 +260,7 @@ export function buildHumanoid() {
     const foot = new THREE.Mesh(_geoFoot, _matBoot)
     foot.position.set(0, -0.4, 0.05); foot.castShadow = true; knee.add(foot)
 
-    return { hip, knee }
+    return { hip, knee, thigh, shin, calf, foot }
   }
   const legL = buildLeg('L')
   const legR = buildLeg('R')
@@ -267,6 +269,14 @@ export function buildHumanoid() {
     root, hips, spine, chest, neck, head,
     armL, armR, legL, legR,
     headMesh, torsoMesh, vestMesh: vest, helmetMesh: helmet,
+    hipMesh,
+    // Meshes de brazos y piernas para hit-testing por zona (Fase 1.3).
+    limbMeshes: [
+      armL.upperArm, armL.lowerArm, armL.hand,
+      armR.upperArm, armR.lowerArm, armR.hand,
+      legL.thigh, legL.shin, legL.calf, legL.foot,
+      legR.thigh, legR.shin, legR.calf, legR.foot
+    ],
     perEnemyGeos
   }
 }

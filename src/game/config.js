@@ -221,6 +221,26 @@ export const WEAPONS = {
 // existente que importa WEAPON directamente.
 export const WEAPON = WEAPONS.m4
 
+// --- Multiplicadores de daño por zona (Fase 1.3) ---
+// CoD usa head×4, neck×2, chest×1, stomach×1.1, limbs×0.8.
+// Se aplican sobre el bodyDamage/headDamage del arma.
+export const DAMAGE_MULTIPLIERS = {
+  head: 4.0,
+  neck: 2.0,
+  chest: 1.0,
+  stomach: 1.1,
+  arm: 0.8,
+  leg: 0.8
+}
+
+// --- Penetración de balas (Fase 1.3) ---
+// Multiplicador de daño al atravesar un collider antes de golpear al enemío.
+// wall = muro de piedra/sillar (poca penetración), crate = madera/metal.
+export const PENETRATION = {
+  wall: 0.3,
+  crate: 0.6
+}
+
 // --- Tipos de enemigo ---
 // Cada oleada mezcla tipos según el progreso. Antes todos los enemigos
 // eran melee caminantes idénticos; ahora hay variedad.

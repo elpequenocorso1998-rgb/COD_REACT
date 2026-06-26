@@ -78,7 +78,7 @@ Parecen zombies, no soldados.
 
 **Verificación**: bots flanquean, se cubren, mueren con ragdoll natural.
 
-### 1.3 Sistema de daño por zonas + ballistics `[ ]`
+### 1.3 Sistema de daño por zonas + ballistics `[x]`
 
 **Problema actual**: `enemies.js:111 handleShot` solo distingue
 head/body. Hitscan puro, sin penetración.
@@ -320,7 +320,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] PLAN.md escrito
 - [x] Fase 1.1 — viewmodels por arma (m4, ak47, mp5, sniper, shotgun, lmg, pistol)
 - [x] Fase 1.2 — IA táctica (state machine) + navmesh A* + ragdoll verlet + suppress
-- [ ] Fase 1.3
+- [x] Fase 1.3 — daño por zonas (head/neck/chest/stomach/limbs) + wallbang
 - [ ] Fase 1.4
 - [ ] Fase 1.5
 - [ ] Fase 1.6

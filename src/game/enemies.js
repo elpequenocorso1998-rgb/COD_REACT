@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
-import { WEAPON, ENEMY_TYPES, WAVE_SCALING } from './config.js'
+import { WEAPON, ENEMY_TYPES, WAVE_SCALING, DAMAGE_MULTIPLIERS, PENETRATION } from './config.js'
 import { createAIController } from './ai.js'
 import { createRagdoll } from './ragdoll.js'
 
@@ -48,8 +48,31 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     // Marca qué partes son "head" para el headshot.
     humanoid.headMesh.userData.part = 'head'
     humanoid.helmetMesh.userData.part = 'head'
-    humanoid.torsoMesh.userData.part = 'body'
-    humanoid.vestMesh.userData.part = 'body'
+    humanoid.torsoMesh.userData.part = 'chest'
+    humanoid.vestMesh.userData.part = 'chest'
+    // Fase 1.3: stomach = cadera (parte baja del torso).
+    if (humanoid.hipMesh) {
+      humanoid.hipMesh.userData.enemy = null
+      humanoid.hipMesh.userData.part = 'stomach'
+    }
+    // Fase 1.3: brazos y piernas como zonas con multiplier de limb.
+    if (humanoid.limbMeshes) {
+      for (const m of humanoid.limbMeshes) {
+        m.userData.enemy = null
+        // Distinguimos arm/leg por la posición Y del mesh en mundo.
+        // Simplificación: cualquier mesh de limb se marca como 'arm' o 'leg'
+        // según si está en la mitad superior o inferior del cuerpo.
+        m.userData.part = 'arm' // por defecto; lo refinamos abajo
+      }
+      // Refinamos: los meshes de piernas (thigh/shin/calf/foot) son 'leg'.
+      // Los identificamos por nombre o por posición. Aquí usamos el hecho
+      // de que legL/legR.thigh etc. están en la lista en orden conocido:
+      // [armL.upperArm, armL.lowerArm, armL.hand, armR..., legL.thigh...]
+      const limbs = humanoid.limbMeshes
+      for (let i = 12; i < limbs.length; i++) {
+        limbs[i].userData.part = 'leg'
+      }
+    }
 
     // Escala por tipo (boss más grande, runner más pequeño).
     if (typeDef && typeDef.scale && typeDef.scale !== 1.0) {
@@ -63,6 +86,8 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       helmet: humanoid.helmetMesh,
       torso: humanoid.torsoMesh,
       vest: humanoid.vestMesh,
+      stomach: humanoid.hipMesh || null,
+      limbs: humanoid.limbMeshes || [],
       perEnemyGeos: humanoid.perEnemyGeos,
       materials: [torsoMat, vestMat],
       maxHp: hp, hp, speed, damage, points,
@@ -112,6 +137,9 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     e.helmet.userData.enemy = e
     e.torso.userData.enemy = e
     e.vest.userData.enemy = e
+    // Fase 1.3: stomach y limbs también son hit-targets.
+    if (e.stomach) e.stomach.userData.enemy = e
+    for (const m of e.limbs) m.userData.enemy = e
     // Inicializa el estado IA del bot.
     aiController.init(e)
     scene.add(e.group)
@@ -120,9 +148,14 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
 
   const raycaster = new THREE.Raycaster()
   raycaster.far = WEAPON.raycastFar
+  // Fase 1.3: vector scratch para wallbang (raycast contra colliders).
+  const _wbRay = new THREE.Ray()
+  const _wbPoint = new THREE.Vector3()
   // handleShot: originVec/dirVec son el rayo; onHit callback por impacto.
   // weaponDef opcional: si se pasa, usa sus bodyDamage/headDamage/raycastFar
   // (para soportar múltiples armas con stats distintos).
+  // Fase 1.3: aplica DAMAGE_MULTIPLIERS por zona y PENETRATION si el
+  // disparo atraviesa un collider antes de golpear al enemigo (wallbang).
   function handleShot(originVec, dirVec, onHit, weaponDef = null) {
     const far = weaponDef ? weaponDef.raycastFar : WEAPON.raycastFar
     const bodyDmg = weaponDef ? weaponDef.bodyDamage : WEAPON.bodyDamage
@@ -133,8 +166,11 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     _targets.length = 0
     for (const e of enemies) {
       if (e.dead) continue
-      // Cabeza, casco (headshots), torso y chaleco (body shots).
+      // Fase 1.3: además de head/helmet/torso/vest, incluimos stomach y
+      // limbs como hit-targets con su propio multiplier de daño.
       _targets.push(e.head, e.helmet, e.torso, e.vest)
+      if (e.stomach) _targets.push(e.stomach)
+      for (const m of e.limbs) _targets.push(m)
     }
     const hits = raycaster.intersectObjects(_targets, false)
     if (hits.length === 0) return false
@@ -143,15 +179,50 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     const enemy = hit.object.userData.enemy
     if (!enemy || enemy.dead) return false
 
-    const isHead = hit.object.userData.part === 'head'
-    const dmg = isHead ? headDmg : bodyDmg
+    // Fase 1.3: daño por zona con multiplier.
+    const part = hit.object.userData.part || 'chest'
+    const isHead = part === 'head'
+    // Daño base: head usa headDmg, resto usa bodyDmg.
+    let dmg = isHead ? headDmg : bodyDmg
+    // Multiplier por zona (head×4, neck×2, chest×1, stomach×1.1, limbs×0.8).
+    // Nota: headDmg ya incluye el bonus de headshot del arma, así que para
+    // head NO aplicamos el multiplier 4.0 adicional (evitaríamos doble bonus).
+    if (!isHead) {
+      const mul = DAMAGE_MULTIPLIERS[part] || 1.0
+      dmg *= mul
+    }
+
+    // Fase 1.3: wallbang. Si hay un collider entre el origen y el punto
+    // de impacto, el daño se reduce según el material (PENETRATION).
+    let blockType = null
+    if (world && world.colliders) {
+      _wbRay.set(originVec, dirVec)
+      let closestBlockDist = Infinity
+      for (const c of world.colliders) {
+        if (_wbRay.intersectBox(c.box, _wbPoint)) {
+          const d = originVec.distanceTo(_wbPoint)
+          if (d < closestBlockDist && d < hit.distance) {
+            closestBlockDist = d
+            blockType = c.type
+          }
+        }
+      }
+      if (blockType) {
+        // El disparo atravesó un collider antes de golpear al enemigo.
+        const penMul = PENETRATION[blockType] || 0.3
+        dmg *= penMul
+      }
+    }
+
     enemy.hp -= dmg
     enemy.hitFlash = 0.12
 
     if (onHit) {
       _hitNormal.copy(dirVec).negate()
       _hitPoint.copy(hit.point)
-      onHit(enemy, isHead, _hitPoint, _hitNormal)
+      // Marcamos el tipo de impacto para el hitmarker (wallbang si penetró).
+      const hitType = (blockType ? 'wallbang' : (isHead ? 'headshot' : part))
+      onHit(enemy, isHead, _hitPoint, _hitNormal, hitType)
     }
 
     if (enemy.hp <= 0) killEnemy(enemy, enemy.points, dirVec)

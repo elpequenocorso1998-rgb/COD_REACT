@@ -262,17 +262,19 @@ export function createEngine() {
         audio.playShoot()
       }
       const weaponDef = store.getState().getCurrentWeapon()
-      const hitEnemy = enemies.handleShot(originVec, dirVec, (enemy, isHead, hitPoint, hitNormal) => {
+      const hitEnemy = enemies.handleShot(originVec, dirVec, (enemy, isHead, hitPoint, hitNormal, hitType) => {
         const wasKill = enemy.hp <= 0
-        // Hitmarker: body/headshot aquí; kill lo reproduce onKilled (evita doble).
+        // Fase 1.3: hitType distingue head/body/wallbang/limb/stomach.
+        const markerType = wasKill ? 'kill' : (hitType || (isHead ? 'headshot' : 'body'))
+        const points = isHead ? 25 : (hitType === 'wallbang' ? 30 : 10)
         if (!wasKill) {
-          store.getState().registerHit(isHead ? 25 : 10, isHead ? 'headshot' : 'body')
-          audio.playHitMarker(isHead ? 'headshot' : 'body')
+          store.getState().registerHit(points, markerType)
+          audio.playHitMarker(markerType)
           audio.playHitFlesh()
         } else {
           // En kill registramos el hit como 'kill' pero el sonido de kill
           // marker lo reproduce el callback onKilled (junto con playKill).
-          store.getState().registerHit(isHead ? 25 : 10, 'kill')
+          store.getState().registerHit(points, 'kill')
         }
         particles.spawnBlood(hitPoint, hitNormal)
         // Splat de sangre en el suelo si el impacto fue bajo.
