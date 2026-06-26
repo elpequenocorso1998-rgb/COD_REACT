@@ -587,3 +587,114 @@ canvas { display: block; }
   font-size: 12px;
   color: #666;
 }
+
+/* =========================================================================
+   Fase 1.4 — Create-a-class
+   ========================================================================= */
+.loadout-screen {
+  overflow-y: auto;
+  padding: 40px 20px;
+}
+.loadout-screen h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+.loadout-content {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.loadout-section {
+  background: rgba(10, 15, 24, 0.6);
+  border: 1px solid rgba(255, 210, 77, 0.2);
+  border-radius: 4px;
+  padding: 16px;
+}
+.loadout-section-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  color: #ffd24d;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 210, 77, 0.2);
+  padding-bottom: 6px;
+}
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+.loadout-item {
+  background: linear-gradient(180deg, #1a2433, #0e1620);
+  color: #cdd6e0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+  text-align: left;
+}
+.loadout-item:hover {
+  background: linear-gradient(180deg, #243447, #182434);
+  border-color: rgba(255, 210, 77, 0.4);
+  color: #fff;
+}
+.loadout-item.selected {
+  background: linear-gradient(180deg, #3a5070, #2a3a52);
+  border-color: #ffd24d;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(255, 210, 77, 0.4);
+}
+.loadout-item.small {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.loadout-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.loadout-attachment-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.loadout-attachment-label {
+  width: 80px;
+  font-size: 11px;
+  color: #8aa0b3;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.loadout-attachment-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+.loadout-perk-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.loadout-perk-cat {
+  width: 60px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 4px;
+  border-radius: 2px;
+}
+.loadout-perk-cat.blue { background: rgba(80, 130, 220, 0.3); color: #6aa0ff; }
+.loadout-perk-cat.red { background: rgba(220, 80, 80, 0.3); color: #ff8080; }
+.loadout-perk-cat.green { background: rgba(80, 200, 100, 0.3); color: #80ff90; }

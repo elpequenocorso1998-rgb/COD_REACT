@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { PLAYER, WEAPONS, WEAPON } from './config.js'
+import { PLAYER, WEAPONS } from './config.js'
 import { addXP, recordKill, recordDeath, recordWave, getProgress } from './progression.js'
+import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon } from './loadout.js'
 
 /* =========================================================================
    Store global del juego (Zustand).
@@ -63,29 +64,32 @@ export const useGameStore = create((set, get) => {
   }
 
   // Estado inicial derivado de config (single source of truth).
-  const initialState = () => ({
-    // --- Estado general ---
-    gameState: GAME_STATES.MENU,    // pantalla activa
-    loading: true,                  // true mientras Three.js monta la escena
-    score: 0,                       // puntuación total
-    wave: 1,                        // oleada actual
-    enemiesRemaining: 0,            // enemigos vivos en la oleada
+  // Fase 1.4: usa el loadout del jugador (perks + attachments aplicados).
+  const initialState = () => {
+    const loadout = getLoadout()
+    const primary = getPrimaryWeapon(loadout)
+    const maxHp = getEffectiveMaxHealth(loadout)
+    return {
+      // --- Estado general ---
+      gameState: GAME_STATES.MENU,    // pantalla activa
+      loading: true,                  // true mientras Three.js monta la escena
+      score: 0,                       // puntuación total
+      wave: 1,                        // oleada actual
+      enemiesRemaining: 0,            // enemigos vivos en la oleada
 
-    // --- Jugador ---
-    health: PLAYER.maxHealth,
-    maxHealth: PLAYER.maxHealth,
+      // --- Jugador ---
+      health: maxHp,
+      maxHealth: maxHp,
 
-    // --- Arma ---
-    // Arma actual (id del catálogo WEAPONS). ammo/reserve son los del arma
-    // equipada; al cambiar de arma se guardan los del arma anterior y se
-    // cargan los de la nueva.
-    currentWeapon: 'm4',
-    weaponAmmo: { m4: WEAPONS.m4.magSize },      // munición por arma {id: balas en cargador}
-    weaponReserve: { m4: WEAPONS.m4.reserveStart }, // reserva por arma {id: balas de respaldo}
-    ammo: WEAPON.magSize,
-    magSize: WEAPON.magSize,
-    reserve: WEAPON.reserveStart,
-    reloading: false,
+      // --- Arma ---
+      // Fase 1.4: arma inicial = primary del loadout (con attachments).
+      currentWeapon: loadout.primary,
+      weaponAmmo: { [loadout.primary]: primary.magSize },
+      weaponReserve: { [loadout.primary]: primary.reserveStart },
+      ammo: primary.magSize,
+      magSize: primary.magSize,
+      reserve: primary.reserveStart,
+      reloading: false,
 
     // --- Feedback visual ---
     firing: false,                  // crosshair se ensancha
@@ -116,7 +120,8 @@ export const useGameStore = create((set, get) => {
     playerXP: getProgress().xp,
     playerXPNeeded: getProgress().xpNeeded,
     levelUpFlash: null               // {level, unlocks} efímero al subir de nivel
-  })
+    }
+  }
 
   return {
     ...initialState(),
@@ -150,7 +155,8 @@ export const useGameStore = create((set, get) => {
     },
 
     // Devuelve la definición del arma equipada actualmente.
-    getCurrentWeapon: () => WEAPONS[get().currentWeapon],
+    // Fase 1.4: aplica el loadout (attachments + perks) al arma equipada.
+    getCurrentWeapon: () => applyLoadoutToWeapon(get().currentWeapon, getLoadout()),
 
     // Disparo: consume 1 bala y marca el crosshair como "firing".
     fire: () => {
@@ -376,21 +382,25 @@ export const useGameStore = create((set, get) => {
     reset: () => {
       clearPendingTimeouts()
       const prog = getProgress()
+      // Fase 1.4: aplica el loadout del jugador (perks + attachments).
+      const loadout = getLoadout()
+      const primary = getPrimaryWeapon(loadout)
+      const maxHp = getEffectiveMaxHealth(loadout)
       set({
         gameState: GAME_STATES.PLAYING,
         score: 0,
         wave: 1,
         enemiesRemaining: 0,
-        health: PLAYER.maxHealth,
-        maxHealth: PLAYER.maxHealth,
+        health: maxHp,
+        maxHealth: maxHp,
         lastDamageAt: 0,
-        // Armas: volvemos al arma por defecto (M4) con munición llena.
-        currentWeapon: 'm4',
-        weaponAmmo: { m4: WEAPONS.m4.magSize },
-        weaponReserve: { m4: WEAPONS.m4.reserveStart },
-        ammo: WEAPONS.m4.magSize,
-        magSize: WEAPONS.m4.magSize,
-        reserve: WEAPONS.m4.reserveStart,
+        // Fase 1.4: arma inicial = primary del loadout (con attachments).
+        currentWeapon: loadout.primary,
+        weaponAmmo: { [loadout.primary]: primary.magSize },
+        weaponReserve: { [loadout.primary]: primary.reserveStart },
+        ammo: primary.magSize,
+        magSize: primary.magSize,
+        reserve: primary.reserveStart,
         reloading: false,
         firing: false,
         hitmarkers: [],

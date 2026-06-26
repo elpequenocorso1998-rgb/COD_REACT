@@ -1,7 +1,9 @@
-import { useEffect, useRef, Component } from 'react'
+import { useEffect, useRef, useState, Component } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, GAME_STATES } from './game/store.js'
 import { createEngine } from './game/engine.js'
+import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
+import { getLoadout, saveLoadout } from './game/loadout.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -43,6 +45,7 @@ class ErrorBoundary extends Component {
 export default function App() {
   const gameState = useGameStore((s) => s.gameState)
   const loading = useGameStore((s) => s.loading)
+  const [loadoutOpen, setLoadoutOpen] = useState(false)
 
   const engineRef = useRef(null)
   const containerRef = useRef(null)
@@ -89,8 +92,14 @@ export default function App() {
 
       {/* Solo mostramos el menú cuando ya no estamos cargando: antes el
           botón "Jugar" podía clickarse antes de que el engine montara. */}
-      {!loading && gameState === GAME_STATES.MENU && (
-        <MainMenu onStart={() => engineRef.current?.startGame()} />
+      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && (
+        <MainMenu
+          onStart={() => engineRef.current?.startGame()}
+          onOpenLoadout={() => setLoadoutOpen(true)}
+        />
+      )}
+      {!loading && gameState === GAME_STATES.MENU && loadoutOpen && (
+        <CreateAClassScreen onClose={() => setLoadoutOpen(false)} />
       )}
       {gameState === GAME_STATES.PLAYING && <HUD />}
       {gameState === GAME_STATES.PAUSED && (
@@ -306,12 +315,13 @@ function Scoreboard({ kills, deaths, score, wave }) {
 /* =========================================================================
    Menús: principal, pausa y game over.
    ========================================================================= */
-function MainMenu({ onStart }) {
+function MainMenu({ onStart, onOpenLoadout }) {
   return (
     <div className="menu">
       <h1>Modern Warfare</h1>
       <h2>React Edition</h2>
       <button onClick={onStart}>Jugar</button>
+      <button onClick={onOpenLoadout}>Create-a-Class</button>
       <div className="stats">
         Sobrevive a oleadas infinitas de enemigos.<br />
         Apunta con el ratón, dispara con click izq., recarga con R.
@@ -319,7 +329,7 @@ function MainMenu({ onStart }) {
       <div className="controls">
         <strong>Movimiento:</strong> WASD · SHIFT correr · SHIFT×2 sprint táctico · CTRL agacharse/slide · Z prone · SPACE saltar<br />
         <strong>Lean:</strong> Q izquierda · E derecha<br />
-        <strong>Combate:</strong> Click izq. disparar · Click der. apuntar (ADS) · R recargar<br />
+        <strong>Combate:</strong> Click izq. disparar · Click der. apuntar (ADS) · R recarga<br />
         <strong>Armas:</strong> Shift+1-7 cambiar (M4/AK/MP5/Sniper/Shotgun/LMG/Pistol)<br />
         <strong>Granadas:</strong> G frag · X flash · C humo<br />
         <strong>Killstreaks:</strong> 4 UAV · 5 Airstrike · 6 Heli · 7 Gunship<br />
@@ -351,6 +361,144 @@ function GameOverMenu({ onRestart }) {
         Oleada alcanzada: <strong style={{ color: '#ffd24d' }}>{wave}</strong>
       </div>
       <button onClick={onRestart}>Reintentar</button>
+    </div>
+  )
+}
+
+/* =========================================================================
+   CreateAClass — editor de loadout (Fase 1.4).
+   Permite elegir primary, attachments por slot, secondary, y 3 perks.
+   Se persiste en localStorage via loadout.js.
+   ========================================================================= */
+function CreateAClassScreen({ onClose }) {
+  const [loadout, setLoadoutState] = useState(() => getLoadout())
+
+  const update = (patch) => {
+    const next = { ...loadout, ...patch }
+    setLoadoutState(next)
+    saveLoadout(next)
+  }
+
+  const updatePrimaryAttachments = (slot, attId) => {
+    const next = { ...loadout }
+    next.primaryAttachments = { ...loadout.primaryAttachments }
+    if (attId === null) delete next.primaryAttachments[slot]
+    else next.primaryAttachments[slot] = attId
+    setLoadoutState(next)
+    saveLoadout(next)
+  }
+
+  const updatePerk = (slot, perkId) => {
+    const next = {
+      ...loadout,
+      perks: { ...loadout.perks, [slot]: perkId }
+    }
+    setLoadoutState(next)
+    saveLoadout(next)
+  }
+
+  const weaponIds = Object.keys(WEAPONS)
+  const perkList = Object.values(PERKS)
+  const perksByCategory = {
+    blue: perkList.filter((p) => p.category === 'blue'),
+    red: perkList.filter((p) => p.category === 'red'),
+    green: perkList.filter((p) => p.category === 'green')
+  }
+
+  return (
+    <div className="menu loadout-screen">
+      <h1>Create-a-Class</h1>
+      <div className="loadout-content">
+        {/* Primary weapon */}
+        <div className="loadout-section">
+          <div className="loadout-section-title">Arma principal</div>
+          <div className="loadout-grid">
+            {weaponIds.map((id) => (
+              <button
+                key={id}
+                className={`loadout-item ${loadout.primary === id ? 'selected' : ''}`}
+                onClick={() => update({ primary: id })}
+              >
+                {WEAPONS[id].name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Attachments */}
+        <div className="loadout-section">
+          <div className="loadout-section-title">Attachments</div>
+          <div className="loadout-attachments">
+            {ATTACHMENT_SLOTS.map((slot) => {
+              const current = loadout.primaryAttachments[slot]
+              const options = Object.values(ATTACHMENTS).filter((a) => a.slot === slot)
+              return (
+                <div key={slot} className="loadout-attachment-slot">
+                  <div className="loadout-attachment-label">{slot}</div>
+                  <div className="loadout-attachment-options">
+                    <button
+                      className={`loadout-item small ${!current ? 'selected' : ''}`}
+                      onClick={() => updatePrimaryAttachments(slot, null)}
+                    >
+                      —
+                    </button>
+                    {options.map((a) => (
+                      <button
+                        key={a.id}
+                        className={`loadout-item small ${current === a.id ? 'selected' : ''}`}
+                        onClick={() => updatePrimaryAttachments(slot, a.id)}
+                        title={a.desc || a.name}
+                      >
+                        {a.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Secondary */}
+        <div className="loadout-section">
+          <div className="loadout-section-title">Arma secundaria</div>
+          <div className="loadout-grid">
+            {weaponIds.map((id) => (
+              <button
+                key={id}
+                className={`loadout-item ${loadout.secondary === id ? 'selected' : ''}`}
+                onClick={() => update({ secondary: id })}
+              >
+                {WEAPONS[id].name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Perks */}
+        <div className="loadout-section">
+          <div className="loadout-section-title">Perks</div>
+          {['blue', 'red', 'green'].map((cat) => (
+            <div key={cat} className="loadout-perk-row">
+              <div className={`loadout-perk-cat ${cat}`}>{cat.toUpperCase()}</div>
+              <div className="loadout-grid">
+                {perksByCategory[cat].map((p) => (
+                  <button
+                    key={p.id}
+                    className={`loadout-item ${loadout.perks[cat] === p.id ? 'selected' : ''}`}
+                    onClick={() => updatePerk(cat, p.id)}
+                    title={p.desc}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={onClose}>Volver</button>
     </div>
   )
 }

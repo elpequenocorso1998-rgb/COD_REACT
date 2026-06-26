@@ -241,6 +241,166 @@ export const PENETRATION = {
   crate: 0.6
 }
 
+// --- Perks (Fase 1.4) ---
+// Cada perk tiene un id, name, descripción y un efecto data-driven.
+// Los efectos se aplican en loadout.js (modifican stats del arma o del
+// player en runtime).
+export const PERKS = {
+  scavenger: {
+    id: 'scavenger',
+    name: 'Scavenger',
+    desc: 'Recoge munición de enemigos muertos',
+    category: 'blue',
+    // Sin efecto estadístico directo: lo maneja el engine al matar.
+  },
+  ghost: {
+    id: 'ghost',
+    name: 'Ghost',
+    desc: 'Invisible al UAV enemigo',
+    category: 'blue'
+  },
+  coldBlooded: {
+    id: 'coldBlooded',
+    name: 'Cold-Blooded',
+    desc: 'Sin hitmarker rojo al recibir daño',
+    category: 'blue'
+  },
+  sleightOfHand: {
+    id: 'sleightOfHand',
+    name: 'Sleight of Hand',
+    desc: 'Recarga 2x más rápido',
+    category: 'red',
+    // Effect: reloadTime × 0.5
+    reloadTimeMul: 0.5
+  },
+  marathon: {
+    id: 'marathon',
+    name: 'Marathon',
+    desc: 'Sprint infinito (sin stamina)',
+    category: 'red',
+    infiniteSprint: true
+  },
+  lightweight: {
+    id: 'lightweight',
+    name: 'Lightweight',
+    desc: 'Movimiento 10% más rápido',
+    category: 'red',
+    moveSpeedMul: 1.1
+  },
+  deadSilence: {
+    id: 'deadSilence',
+    name: 'Dead Silence',
+    desc: 'Pasos silenciosos',
+    category: 'green'
+  },
+  ninja: {
+    id: 'ninja',
+    name: 'Ninja',
+    desc: 'Cambio de arma silencioso',
+    category: 'green'
+  },
+  commando: {
+    id: 'commando',
+    name: 'Commando',
+    desc: 'Mayor distancia de melee',
+    category: 'green',
+    meleeRangeMul: 1.5
+  },
+  steadyAim: {
+    id: 'steadyAim',
+    name: 'Steady Aim',
+    desc: 'Hipfire más preciso',
+    category: 'red',
+    hipFireSpreadMul: 0.7
+  },
+  stoppingPower: {
+    id: 'stoppingPower',
+    name: 'Stopping Power',
+    desc: 'Daño +25%',
+    category: 'red',
+    damageMul: 1.25
+  },
+  juggernaut: {
+    id: 'juggernaut',
+    name: 'Juggernaut',
+    desc: 'Vida +50',
+    category: 'blue',
+    healthBonus: 50
+  }
+}
+
+// --- Attachments (Fase 1.4) ---
+// Cada attachment modifica stats del arma equipada. Se aplican en
+// loadout.js al equipar el arma (combinando WEAPON base + attachments).
+export const ATTACHMENTS = {
+  reddot: {
+    id: 'reddot', name: 'Red Dot Sight', slot: 'sight',
+    adsSpreadMul: 0.5, adsTimeMul: 0.9
+  },
+  holographic: {
+    id: 'holographic', name: 'Holographic Sight', slot: 'sight',
+    adsSpreadMul: 0.4
+  },
+  acog: {
+    id: 'acog', name: 'ACOG Scope', slot: 'sight',
+    adsFovMul: 0.7, adsTimeMul: 1.2
+  },
+  suppressor: {
+    id: 'suppressor', name: 'Suppressor', slot: 'barrel',
+    // No aparece en minimap enemigo al disparar (futuro MP). Reduce daño.
+    damageMul: 0.9, raycastFarMul: 0.95
+  },
+  foregrip: {
+    id: 'foregrip', name: 'Foregrip', slot: 'underbarrel',
+    recoilMul: 0.7, hipFireSpreadMul: 0.8
+  },
+  extendedmags: {
+    id: 'extendedmags', name: 'Extended Mags', slot: 'mag',
+    magSizeMul: 1.5, reloadTimeMul: 1.1
+  },
+  laser: {
+    id: 'laser', name: 'Laser Sight', slot: 'underbarrel',
+    hipFireSpreadMul: 0.6
+  },
+  compensator: {
+    id: 'compensator', name: 'Compensator', slot: 'barrel',
+    recoilMul: 0.6
+  },
+  fmj: {
+    id: 'fmj', name: 'FMJ', slot: 'barrel',
+    // Aumenta penetración de paredes.
+    penetrationMul: 1.5
+  },
+  quickdraw: {
+    id: 'quickdraw', name: 'Quickdraw Handle', slot: 'stock',
+    adsTimeMul: 0.7
+  },
+  stock: {
+    id: 'stock', name: 'Stock', slot: 'stock',
+    moveSpeedMul: 1.05
+  }
+}
+
+// Slots válidos para attachments (un attachment por slot).
+export const ATTACHMENT_SLOTS = ['sight', 'barrel', 'underbarrel', 'mag', 'stock']
+
+// --- Loadout por defecto (Fase 1.4) ---
+// El loadout inicial del jugador cuando empieza una partida nueva sin
+// haber configurado nada. Se puede cambiar en el menú Create-a-class.
+export const DEFAULT_LOADOUT = {
+  primary: 'm4',
+  primaryAttachments: {}, // { slot: attachmentId }
+  secondary: 'pistol',
+  tactical: 'frag',
+  lethal: 'flash',
+  perks: {
+    blue: 'sleightOfHand',
+    red: 'stoppingPower',
+    green: 'deadSilence'
+  },
+  killstreaks: ['uav', 'airstrike', 'heli']
+}
+
 // --- Tipos de enemigo ---
 // Cada oleada mezcla tipos según el progreso. Antes todos los enemigos
 // eran melee caminantes idénticos; ahora hay variedad.

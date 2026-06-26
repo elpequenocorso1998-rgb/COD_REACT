@@ -97,7 +97,7 @@ head/body. Hitscan puro, sin penetración.
 **Verificación**: tiro a la pierna no mata, a la cabeza sí. Disparar a
 un enemigo detrás de una caja de madera le hace daño reducido.
 
-### 1.4 Create-a-class + Perks + Attachments `[ ]`
+### 1.4 Create-a-class + Perks + Attachments `[x]`
 
 **Problema actual**: `progression.js:16 UNLOCK_CATALOG` son placeholders
 vacíos.
@@ -321,7 +321,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.1 — viewmodels por arma (m4, ak47, mp5, sniper, shotgun, lmg, pistol)
 - [x] Fase 1.2 — IA táctica (state machine) + navmesh A* + ragdoll verlet + suppress
 - [x] Fase 1.3 — daño por zonas (head/neck/chest/stomach/limbs) + wallbang
-- [ ] Fase 1.4
+- [x] Fase 1.4 — create-a-class + perks + attachments (UI + persistencia)
 - [ ] Fase 1.5
 - [ ] Fase 1.6
 - [ ] Fase 1.7
