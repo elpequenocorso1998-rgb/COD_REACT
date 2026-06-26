@@ -521,10 +521,21 @@ export function createAudioSystem() {
     if (!m && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
       ctx.resume().catch(() => {})
     }
-    const target = m ? 0 : 0.5
+    const target = m ? 0 : (masterVolume != null ? masterVolume : 0.5)
     masterGain.gain.cancelScheduledValues(ctx.currentTime)
     masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime)
     masterGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 0.05)
+  }
+
+  // Fase 1.8: volumen master configurable desde settings.
+  let masterVolume = 0.5
+  function setMasterVolume(v) {
+    masterVolume = v
+    if (!masterGain || !alive()) return
+    if (muted) return
+    masterGain.gain.cancelScheduledValues(ctx.currentTime)
+    masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime)
+    masterGain.gain.linearRampToValueAtTime(v, ctx.currentTime + 0.05)
   }
 
   function dispose() {
@@ -543,7 +554,7 @@ export function createAudioSystem() {
 
   return {
     init, playShoot, playReload, playHitFlesh, playHitWall,
-    playDamage, playKill, setMuted, dispose,
+    playDamage, playKill, setMuted, setMasterVolume, dispose,
     playHitMarker, playCallout,
     playAirstrike, playExplosion, playHeliIncoming, playHeliShoot, playGunshipIncoming,
     playLevelUp, playEnemyShoot, playFootstep,

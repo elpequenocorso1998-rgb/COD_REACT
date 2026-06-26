@@ -3,6 +3,7 @@ import { buildViewModel, disposeViewModelShared } from './viewmodels.js'
 import { MOVEMENT, WEAPON, PLAYER, STAMINA } from './config.js'
 import { FOV, SPRINT_FOV } from './constants.js'
 import { hasPerk } from './loadout.js'
+import { getSettings } from './settings.js'
 
 /* =========================================================================
    Jugador (FPS controller) con controles suaves y responsivos.
@@ -53,10 +54,13 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   let targetYaw = 0, targetPitch = 0
   let yaw = 0, pitch = 0
   const SMOOTH = MOVEMENT.camSmooth
-  const SENS = MOVEMENT.mouseSens
+  // Fase 1.8: sensibilidad y FOV desde settings del jugador.
+  const _settings = getSettings()
+  let SENS_X = _settings.mouseSensX || MOVEMENT.mouseSens
+  let SENS_Y = _settings.mouseSensY || MOVEMENT.mouseSens
 
   // --- FOV dinámico ---
-  const baseFov = FOV
+  const baseFov = _settings.fov || FOV
   const sprintFov = SPRINT_FOV
   let currentFov = baseFov
 
@@ -241,9 +245,11 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     // ADS reduce la sensibilidad para apuntar con precisión.
     const w = currentWeaponDef || WEAPON
     const adsMul = 1 - adsProgress * (1 - w.adsSensMul)
-    const sens = (sprinting ? SENS * MOVEMENT.mouseSensSprintMul : SENS) * adsMul
-    mouseDeltaX += e.movementX * sens
-    mouseDeltaY += e.movementY * sens
+    const sensMul = sprinting ? MOVEMENT.mouseSensSprintMul : 1
+    const sensX = SENS_X * adsMul * sensMul
+    const sensY = SENS_Y * adsMul * sensMul
+    mouseDeltaX += e.movementX * sensX
+    mouseDeltaY += e.movementY * sensY
     const swayMul = 1 - adsProgress * 0.9
     viewmodelSwayX += e.movementX * 0.00015 * swayMul
     viewmodelSwayY += e.movementY * 0.00015 * swayMul
@@ -732,6 +738,19 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
   // Sincroniza el arma actual desde el store. Llamado por el engine cuando
   // el jugador cambia de arma o al iniciar la partida.
+  // Fase 1.8: aplica settings del jugador (FOV, sensibilidad) en runtime.
+  function applySettings(settings) {
+    SENS_X = settings.mouseSensX || SENS_X
+    SENS_Y = settings.mouseSensY || SENS_Y
+    // FOV base se actualiza; el currentFov se ajusta en el próximo update.
+    if (settings.fov) {
+      const newBase = settings.fov
+      currentFov = currentFov + (newBase - baseFov)
+      camera.fov = currentFov
+      camera.updateProjectionMatrix()
+    }
+  }
+
   function setWeapon(weaponDef) {
     currentWeaponDef = weaponDef || WEAPON
     raycaster.far = currentWeaponDef.raycastFar
@@ -745,7 +764,7 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
   return {
     update, reset, dispose, getPosition, getYaw,
-    requestPointerLock, exitPointerLock, setWeapon,
+    requestPointerLock, exitPointerLock, setWeapon, applySettings,
     getStamina: () => stamina,
     getMaxStamina: () => STAMINA.max,
     set onShoot(fn) { onShootCallback = fn },

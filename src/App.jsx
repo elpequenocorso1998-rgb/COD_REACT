@@ -4,6 +4,7 @@ import { useGameStore, GAME_STATES } from './game/store.js'
 import { createEngine } from './game/engine.js'
 import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
 import { getLoadout, saveLoadout } from './game/loadout.js'
+import { getSettings, saveSettings } from './game/settings.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -46,6 +47,7 @@ export default function App() {
   const gameState = useGameStore((s) => s.gameState)
   const loading = useGameStore((s) => s.loading)
   const [loadoutOpen, setLoadoutOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const engineRef = useRef(null)
   const containerRef = useRef(null)
@@ -92,14 +94,21 @@ export default function App() {
 
       {/* Solo mostramos el menú cuando ya no estamos cargando: antes el
           botón "Jugar" podía clickarse antes de que el engine montara. */}
-      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && (
+      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && (
         <MainMenu
           onStart={() => engineRef.current?.startGame()}
           onOpenLoadout={() => setLoadoutOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       )}
       {!loading && gameState === GAME_STATES.MENU && loadoutOpen && (
         <CreateAClassScreen onClose={() => setLoadoutOpen(false)} />
+      )}
+      {!loading && gameState === GAME_STATES.MENU && settingsOpen && (
+        <SettingsScreen
+          onClose={() => setSettingsOpen(false)}
+          onApply={(s) => engineRef.current?.applySettings(s)}
+        />
       )}
       {gameState === GAME_STATES.PLAYING && <HUD />}
       {gameState === GAME_STATES.PAUSED && (
@@ -324,13 +333,14 @@ function Scoreboard({ kills, deaths, score, wave }) {
 /* =========================================================================
    Menús: principal, pausa y game over.
    ========================================================================= */
-function MainMenu({ onStart, onOpenLoadout }) {
+function MainMenu({ onStart, onOpenLoadout, onOpenSettings }) {
   return (
     <div className="menu">
       <h1>Modern Warfare</h1>
       <h2>React Edition</h2>
       <button onClick={onStart}>Jugar</button>
       <button onClick={onOpenLoadout}>Create-a-Class</button>
+      <button onClick={onOpenSettings}>Settings</button>
       <div className="stats">
         Sobrevive a oleadas infinitas de enemigos.<br />
         Apunta con el ratón, dispara con click izq., recarga con R.
@@ -341,6 +351,7 @@ function MainMenu({ onStart, onOpenLoadout }) {
         <strong>Combate:</strong> Click izq. disparar · Click der. apuntar (ADS) · R recarga<br />
         <strong>Armas:</strong> Shift+1-7 cambiar (M4/AK/MP5/Sniper/Shotgun/LMG/Pistol)<br />
         <strong>Granadas:</strong> G frag · X flash · C humo<br />
+        <strong>Movimiento moderno:</strong> F mantle · V respirar (sniper)<br />
         <strong>Killstreaks:</strong> 4 UAV · 5 Airstrike · 6 Heli · 7 Gunship<br />
         <strong>UI:</strong> TAB scoreboard · ESC pausa
       </div>
@@ -363,6 +374,7 @@ function GameOverMenu({ onRestart }) {
   const wave = useGameStore((s) => s.wave)
   return (
     <div className="menu">
+      <div className="killcam-banner">KILLCAM</div>
       <h1>Misión fallida</h1>
       <h2>HAS CAÍDO EN COMBATE</h2>
       <div className="stats">
@@ -370,6 +382,107 @@ function GameOverMenu({ onRestart }) {
         Oleada alcanzada: <strong style={{ color: '#ffd24d' }}>{wave}</strong>
       </div>
       <button onClick={onRestart}>Reintentar</button>
+    </div>
+  )
+}
+
+/* =========================================================================
+   Settings — preferencias del jugador (Fase 1.8).
+   FOV, sensibilidad X/Y, volúmenes, calidad, colorblind, aim assist.
+   ========================================================================= */
+function SettingsScreen({ onClose, onApply }) {
+  const [settings, setSettingsState] = useState(() => getSettings())
+
+  const update = (patch) => {
+    const next = { ...settings, ...patch }
+    setSettingsState(next)
+    saveSettings(next)
+    onApply(next)
+  }
+
+  return (
+    <div className="menu settings-screen">
+      <h1>Settings</h1>
+      <div className="settings-content">
+        <div className="settings-row">
+          <label>FOV</label>
+          <input
+            type="range" min="60" max="110" step="1"
+            value={settings.fov}
+            onChange={(e) => update({ fov: Number(e.target.value) })}
+          />
+          <span className="settings-value">{settings.fov}°</span>
+        </div>
+        <div className="settings-row">
+          <label>Sensibilidad X</label>
+          <input
+            type="range" min="0.0005" max="0.006" step="0.0001"
+            value={settings.mouseSensX}
+            onChange={(e) => update({ mouseSensX: Number(e.target.value) })}
+          />
+          <span className="settings-value">{settings.mouseSensX.toFixed(4)}</span>
+        </div>
+        <div className="settings-row">
+          <label>Sensibilidad Y</label>
+          <input
+            type="range" min="0.0005" max="0.006" step="0.0001"
+            value={settings.mouseSensY}
+            onChange={(e) => update({ mouseSensY: Number(e.target.value) })}
+          />
+          <span className="settings-value">{settings.mouseSensY.toFixed(4)}</span>
+        </div>
+        <div className="settings-row">
+          <label>Volumen master</label>
+          <input
+            type="range" min="0" max="1" step="0.05"
+            value={settings.masterVolume}
+            onChange={(e) => update({ masterVolume: Number(e.target.value) })}
+          />
+          <span className="settings-value">{Math.round(settings.masterVolume * 100)}%</span>
+        </div>
+        <div className="settings-row">
+          <label>Calidad gráfica</label>
+          <select
+            value={settings.quality}
+            onChange={(e) => update({ quality: e.target.value })}
+          >
+            <option value="auto">Auto</option>
+            <option value="low">Baja</option>
+            <option value="medium">Media</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+        <div className="settings-row">
+          <label>Colorblind</label>
+          <select
+            value={settings.colorblind}
+            onChange={(e) => update({ colorblind: e.target.value })}
+          >
+            <option value="off">Off</option>
+            <option value="protanopia">Protanopia</option>
+            <option value="deuteranopia">Deuteranopia</option>
+            <option value="tritanopia">Tritanopia</option>
+          </select>
+        </div>
+        <div className="settings-row">
+          <label>Aim assist</label>
+          <input
+            type="range" min="0" max="1" step="0.1"
+            value={settings.aimAssist}
+            onChange={(e) => update({ aimAssist: Number(e.target.value) })}
+          />
+          <span className="settings-value">{Math.round(settings.aimAssist * 100)}%</span>
+        </div>
+        <div className="settings-row">
+          <label>Mostrar FPS</label>
+          <input
+            type="checkbox"
+            checked={settings.showFps}
+            onChange={(e) => update({ showFps: e.target.checked })}
+          />
+        </div>
+      </div>
+      <button onClick={onClose}>Volver</button>
     </div>
   )
 }

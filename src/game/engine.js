@@ -57,6 +57,14 @@ export function createEngine() {
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals
   let navmesh = null
   let sunMesh = null
+  // Fase 1.8: buffer circular para killcam (posiciones de cámara).
+  const KILLCAM_BUFFER_SIZE = 150 // ~5s a 30fps de sampleo
+  const KILLCAM_SAMPLE_INTERVAL = 1 / 30
+  const killcamBuffer = []
+  let killcamSampleTimer = 0
+  let killcamActive = false
+  let killcamPlaybackIndex = 0
+  let killcamPlaybackTimer = 0
   let cinematicPass = null
   let ssaoPass = null
   let rafId = null
@@ -438,6 +446,18 @@ export function createEngine() {
       const st = store.getState()
       enemies.update(dt, player.getPosition())
       player.update(dt, clock.elapsedTime)
+      // Fase 1.8: graba posiciones de cámara para killcam (buffer circular).
+      killcamSampleTimer += dt
+      if (killcamSampleTimer >= KILLCAM_SAMPLE_INTERVAL) {
+        killcamSampleTimer = 0
+        const pos = player.getPosition()
+        killcamBuffer.push({
+          x: pos.x, y: pos.y, z: pos.z,
+          yaw: player.getYaw(),
+          time: clock.elapsedTime
+        })
+        if (killcamBuffer.length > KILLCAM_BUFFER_SIZE) killcamBuffer.shift()
+      }
       // Fase 1.5: sincroniza stamina del player con el store (para HUD).
       if (player.getStamina) {
         st.setStamina(player.getStamina(), player.getMaxStamina())
@@ -483,6 +503,32 @@ export function createEngine() {
       )
       // Desactiva god rays si el sol está detrás de la cámara.
       cinematicPass.uniforms.godRaysIntensity.value = behindCamera ? 0 : 0.5
+    }
+
+    // Fase 1.8: killcam playback. Cuando el jugador muere, reproducimos
+    // los últimos 5s de su cámara en bucle hasta que reinicia.
+    if (state === GAME_STATES.GAMEOVER && killcamBuffer.length > 0) {
+      if (!killcamActive) {
+        killcamActive = true
+        killcamPlaybackIndex = 0
+        killcamPlaybackTimer = 0
+      }
+      killcamPlaybackTimer += dt
+      if (killcamPlaybackTimer >= KILLCAM_SAMPLE_INTERVAL) {
+        killcamPlaybackTimer = 0
+        killcamPlaybackIndex = (killcamPlaybackIndex + 1) % killcamBuffer.length
+        const frame = killcamBuffer[killcamPlaybackIndex]
+        if (frame && camera) {
+          camera.position.set(frame.x, frame.y, frame.z)
+          // Reconstruimos rotación desde yaw (pitch=0 para killcam simple).
+          camera.rotation.order = 'YXZ'
+          camera.rotation.y = frame.yaw
+          camera.rotation.x = 0
+          camera.rotation.z = 0
+        }
+      }
+    } else if (killcamActive && state !== GAME_STATES.GAMEOVER) {
+      killcamActive = false
     }
 
     // Render: en PAUSA no renderizamos (ahorra GPU, la imagen queda congelada).
@@ -706,7 +752,12 @@ export function createEngine() {
     }
   }
 
-  return { mount, dispose, startGame, resumeGame, quitToMenu, spawnWave,
+  function applySettings(settings) {
+    if (player) player.applySettings(settings)
+    if (audio && audio.setMasterVolume) audio.setMasterVolume(settings.masterVolume)
+  }
+
+  return { mount, dispose, startGame, resumeGame, quitToMenu, spawnWave, applySettings,
     set onMinimapReady(fn) { onMinimapReady = fn } }
 }
 

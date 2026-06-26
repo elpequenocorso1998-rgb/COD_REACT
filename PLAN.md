@@ -165,7 +165,7 @@ extended mags sube `magSize` a 45.
 
 **Verificación**: sombras nítidas hasta 50u, suaves más allá.
 
-### 1.8 UI/UX CoD-grade `[ ]`
+### 1.8 UI/UX CoD-grade `[x]`
 
 **Tareas**:
 - Refactorizar `App.jsx:309 MainMenu` a menú con tabs:
@@ -325,7 +325,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.5 — stamina + mantling + respiración (sniper) + footstep audio
 - [x] Fase 1.6 — casas con interior transitables + azoteas para combate vertical
 - [x] Fase 1.7 — sombras dinámicas (sun sigue al jugador) + agua con oleaje
-- [ ] Fase 1.8
+- [x] Fase 1.8 — settings (FOV/sensibilidad/volumen/colorblind) + killcam
 - [ ] Fase 1.9
 - [ ] Fase 2
 - [ ] Fase 3
