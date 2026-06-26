@@ -7,6 +7,7 @@ import { getLoadout, saveLoadout } from './game/loadout.js'
 import { getSettings, saveSettings } from './game/settings.js'
 import { t } from './i18n.js'
 import { createNetClient } from './net/client.js'
+import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -51,6 +52,7 @@ export default function App() {
   const [loadoutOpen, setLoadoutOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [mpOpen, setMpOpen] = useState(false)
+  const [barracksOpen, setBarracksOpen] = useState(false)
   const netClientRef = useRef(null)
 
   const engineRef = useRef(null)
@@ -98,12 +100,13 @@ export default function App() {
 
       {/* Solo mostramos el menú cuando ya no estamos cargando: antes el
           botón "Jugar" podía clickarse antes de que el engine montara. */}
-      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && !mpOpen && (
+      {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && !mpOpen && !barracksOpen && (
         <MainMenu
           onStart={() => engineRef.current?.startGame()}
           onOpenLoadout={() => setLoadoutOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenMultiplayer={() => setMpOpen(true)}
+          onOpenBarracks={() => setBarracksOpen(true)}
         />
       )}
       {!loading && gameState === GAME_STATES.MENU && loadoutOpen && (
@@ -142,6 +145,9 @@ export default function App() {
             client.connect()
           }}
         />
+      )}
+      {!loading && gameState === GAME_STATES.MENU && barracksOpen && (
+        <BarracksScreen onClose={() => setBarracksOpen(false)} />
       )}
       {gameState === GAME_STATES.MATCH_OVER && (
         <MatchOverScreen
@@ -374,7 +380,7 @@ function Scoreboard({ kills, deaths, score, wave }) {
 /* =========================================================================
    Menús: principal, pausa y game over.
    ========================================================================= */
-function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer }) {
+function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, onOpenBarracks }) {
   return (
     <div className="menu">
       <h1>{t('menu.title')}</h1>
@@ -382,6 +388,7 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer })
       <button onClick={onStart}>{t('menu.play')}</button>
       <button onClick={onOpenMultiplayer}>Multiplayer</button>
       <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
+      <button onClick={onOpenBarracks}>Barracks</button>
       <button onClick={onOpenSettings}>{t('menu.settings')}</button>
       <div className="stats">
         Sobrevive a oleadas infinitas de enemigos.<br />
@@ -522,6 +529,113 @@ function SettingsScreen({ onClose, onApply }) {
             checked={settings.showFps}
             onChange={(e) => update({ showFps: e.target.checked })}
           />
+        </div>
+      </div>
+      <button onClick={onClose}>{t('menu.back')}</button>
+    </div>
+  )
+}
+
+/* =========================================================================
+   Barracks — stats, weapon mastery, battle pass (Fase 3).
+   ========================================================================= */
+function BarracksScreen({ onClose }) {
+  const [summary] = useState(() => getMetaSummary())
+  const [selectedWeapon, setSelectedWeapon] = useState('m4')
+  const weaponStats = getWeaponStats(selectedWeapon)
+
+  return (
+    <div className="menu barracks-screen">
+      <h1>Barracks</h1>
+      <div className="barracks-content">
+        {/* Stats del jugador */}
+        <div className="barracks-section">
+          <div className="loadout-section-title">Player Stats</div>
+          <div className="barracks-stats">
+            <div className="barracks-stat">
+              <span className="stat-label">Level</span>
+              <span className="stat-value">{summary.playerLevel}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">Kills</span>
+              <span className="stat-value">{summary.totalKills}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">Deaths</span>
+              <span className="stat-value">{summary.totalDeaths}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">K/D</span>
+              <span className="stat-value">{summary.kd}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">Highest wave</span>
+              <span className="stat-value">{summary.highestWave}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Battle Pass */}
+        <div className="barracks-section">
+          <div className="loadout-section-title">Battle Pass — Tier {summary.battlePass.tier}/{summary.battlePass.maxTier}</div>
+          <div className="bp-progress">
+            <div className="bp-fill" style={{ width: `${(summary.battlePass.tier / summary.battlePass.maxTier) * 100}%` }} />
+          </div>
+          <div className="barracks-stat">
+            <span className="stat-label">XP to next tier</span>
+            <span className="stat-value">{summary.battlePass.xp} / {summary.battlePass.xpNeeded}</span>
+          </div>
+          <div className="barracks-stat">
+            <span className="stat-label">Premium</span>
+            <span className="stat-value">{summary.battlePass.premium ? 'Yes' : 'No'}</span>
+          </div>
+        </div>
+
+        {/* Daily challenges */}
+        <div className="barracks-section">
+          <div className="loadout-section-title">Daily Challenges</div>
+          {summary.dailies.map((c) => (
+            <div key={c.id} className="barracks-stat">
+              <span className="stat-label">{c.desc}</span>
+              <span className="stat-value">{c.progress}/{c.target} {c.claimed ? '✓' : ''}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Weapon mastery */}
+        <div className="barracks-section">
+          <div className="loadout-section-title">Weapon Mastery</div>
+          <div className="loadout-grid">
+            {Object.keys(WEAPONS).map((id) => (
+              <button
+                key={id}
+                className={`loadout-item ${selectedWeapon === id ? 'selected' : ''}`}
+                onClick={() => setSelectedWeapon(id)}
+              >
+                {WEAPONS[id].name}
+              </button>
+            ))}
+          </div>
+          <div className="barracks-stat" style={{ marginTop: 12 }}>
+            <span className="stat-label">Weapon level</span>
+            <span className="stat-value">{weaponStats.level} / {weaponStats.maxLevel}</span>
+          </div>
+          <div className="bp-progress">
+            <div className="bp-fill" style={{ width: `${(weaponStats.xp / weaponStats.xpNeeded) * 100}%` }} />
+          </div>
+          <div className="loadout-section-title" style={{ marginTop: 12, fontSize: 12 }}>Camos</div>
+          <div className="camos-grid">
+            {CAMO_CATALOG.map((c) => {
+              const unlocked = weaponStats.camos.includes(c.id)
+              return (
+                <div key={c.id} className={`camo ${unlocked ? 'unlocked' : 'locked'}`}>
+                  <div className="camo-swatch" style={{ background: `#${c.color.toString(16).padStart(6, '0')}` }} />
+                  <span>{c.name}</span>
+                  {!unlocked && <span className="camo-lock">Lv {c.level}</span>}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
       <button onClick={onClose}>{t('menu.back')}</button>

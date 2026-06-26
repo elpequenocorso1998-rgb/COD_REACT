@@ -17,7 +17,11 @@ vi.mock('../src/game/progression.js', () => {
     recordKill: vi.fn(),
     recordDeath: vi.fn(),
     recordWave: vi.fn(),
-    getProgress: vi.fn(() => ({ level, xp, xpNeeded, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0 }))
+    getProgress: vi.fn(() => ({ level, xp, xpNeeded, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0 })),
+    // Fase 3: mocks de weapon XP, battle pass y dailies.
+    addWeaponXP: vi.fn(() => ({ leveledUp: false, newLevel: 1, newCamo: null, xp: 0, xpNeeded: 500 })),
+    addBattlePassXP: vi.fn(() => ({ tier: 0, xp: 0, tiersGained: 0 })),
+    progressDaily: vi.fn()
   }
 })
 

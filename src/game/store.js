@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { PLAYER, WEAPONS } from './config.js'
-import { addXP, recordKill, recordDeath, recordWave, getProgress } from './progression.js'
+import { addXP, recordKill, recordDeath, recordWave, getProgress,
+  addWeaponXP, addBattlePassXP, progressDaily } from './progression.js'
 import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon } from './loadout.js'
 
 /* =========================================================================
@@ -296,6 +297,11 @@ export const useGameStore = create((set, get) => {
       // --- Progresión: XP por kill (10× score) + level up ---
       const xpResult = addXP(points * 10)
       recordKill()
+      // Fase 3: weapon XP + battle pass XP + daily challenges.
+      const currentWeapon = get().currentWeapon
+      addWeaponXP(currentWeapon, points)
+      addBattlePassXP(points * 2)
+      progressDaily('kills_50', 1)
       if (xpResult.leveledUp) {
         set({
           playerLevel: xpResult.newLevel,

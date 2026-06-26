@@ -40,7 +40,16 @@ function loadState() {
     }
   } catch (e) { _state = null }
   if (!_state) {
-    _state = { xp: 0, level: 1, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0 }
+    _state = {
+      xp: 0, level: 1, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0,
+      // Fase 3: weapon XP/niveles por arma + camos desbloqueados.
+      weaponXP: {},      // { weaponId: xp }
+      weaponLevel: {},   // { weaponId: level }
+      weaponCamos: {},   // { weaponId: [camoId, ...] }
+      // Fase 3: daily challenges y battle pass.
+      dailies: {},       // { challengeId: { progress, claimed, date } }
+      battlePass: { tier: 0, premium: false, xp: 0 }
+    }
   }
   return _state
 }
@@ -105,6 +114,152 @@ export function getProgress() {
 
 // Reset total (para testing o "nueva cuenta").
 export function resetProgress() {
-  _state = { xp: 0, level: 1, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0 }
+  _state = {
+    xp: 0, level: 1, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0,
+    weaponXP: {}, weaponLevel: {}, weaponCamos: {},
+    dailies: {}, battlePass: { tier: 0, premium: false, xp: 0 }
+  }
   saveState()
+}
+
+/* =========================================================================
+   Fase 3 — Weapon leveling + camos + battle pass.
+   ========================================================================= */
+
+const WEAPON_XP_PER_LEVEL = 500
+const WEAPON_MAX_LEVEL = 30
+
+// Camos desbloqueables por rango de nivel de arma.
+const WEAPON_CAMOS = {
+  5: 'spray',
+  10: 'woodland',
+  15: 'digital',
+  20: 'dragon',
+  25: 'gold',
+  30: 'diamond'
+}
+
+// XP necesaria para subir de nivel un arma (constante por ahora).
+export function weaponXpForLevel(_level) {
+  return WEAPON_XP_PER_LEVEL
+}
+
+// Devuelve el nivel de un arma (1 si nunca se ha usado).
+export function getWeaponLevel(weaponId) {
+  const s = loadState()
+  return s.weaponLevel[weaponId] || 1
+}
+
+// Devuelve la XP actual del arma hacia el siguiente nivel.
+export function getWeaponXP(weaponId) {
+  const s = loadState()
+  return s.weaponXP[weaponId] || 0
+}
+
+// Devuelve los camos desbloqueados de un arma.
+export function getWeaponCamos(weaponId) {
+  const s = loadState()
+  return s.weaponCamos[weaponId] || []
+}
+
+// Añade XP a un arma y sube de nivel si corresponde. Devuelve info.
+export function addWeaponXP(weaponId, amount) {
+  const s = loadState()
+  if (!s.weaponXP[weaponId]) s.weaponXP[weaponId] = 0
+  if (!s.weaponLevel[weaponId]) s.weaponLevel[weaponId] = 1
+  if (!s.weaponCamos[weaponId]) s.weaponCamos[weaponId] = []
+  s.weaponXP[weaponId] += amount
+  let leveledUp = false
+  let newCamo = null
+  while (s.weaponLevel[weaponId] < WEAPON_MAX_LEVEL &&
+         s.weaponXP[weaponId] >= WEAPON_XP_PER_LEVEL) {
+    s.weaponXP[weaponId] -= WEAPON_XP_PER_LEVEL
+    s.weaponLevel[weaponId] += 1
+    leveledUp = true
+    // Desbloquea camo si corresponde.
+    const camo = WEAPON_CAMOS[s.weaponLevel[weaponId]]
+    if (camo && !s.weaponCamos[weaponId].includes(camo)) {
+      s.weaponCamos[weaponId].push(camo)
+      newCamo = camo
+    }
+  }
+  saveState()
+  return {
+    leveledUp,
+    newLevel: s.weaponLevel[weaponId],
+    newCamo,
+    xp: s.weaponXP[weaponId],
+    xpNeeded: WEAPON_XP_PER_LEVEL
+  }
+}
+
+// --- Battle Pass (Fase 3) ---
+const BP_XP_PER_TIER = 1000
+const BP_MAX_TIER = 100
+
+export function getBattlePass() {
+  const s = loadState()
+  return { ...s.battlePass, xpNeeded: BP_XP_PER_TIER, maxTier: BP_MAX_TIER }
+}
+
+export function addBattlePassXP(amount) {
+  const s = loadState()
+  s.battlePass.xp += amount
+  let tiersGained = 0
+  while (s.battlePass.tier < BP_MAX_TIER && s.battlePass.xp >= BP_XP_PER_TIER) {
+    s.battlePass.xp -= BP_XP_PER_TIER
+    s.battlePass.tier += 1
+    tiersGained++
+  }
+  saveState()
+  return { tier: s.battlePass.tier, xp: s.battlePass.xp, tiersGained }
+}
+
+export function unlockBattlePassPremium() {
+  const s = loadState()
+  s.battlePass.premium = true
+  saveState()
+}
+
+// --- Daily challenges (Fase 3) ---
+const DAILY_CHALLENGES = [
+  { id: 'kills_50', desc: 'Get 50 kills', target: 50, xp: 500 },
+  { id: 'headshots_10', desc: 'Get 10 headshots', target: 10, xp: 750 },
+  { id: 'waves_5', desc: 'Survive 5 waves', target: 5, xp: 600 },
+  { id: 'multikill', desc: 'Get a multikill', target: 1, xp: 800 }
+]
+
+// Devuelve las dailies de hoy (genera nuevas si es un nuevo día).
+export function getDailies() {
+  const s = loadState()
+  const today = new Date().toDateString()
+  if (!s.dailies.date || s.dailies.date !== today) {
+    // Genera 3 dailies aleatorias para hoy.
+    const shuffled = [...DAILY_CHALLENGES].sort(() => Math.random() - 0.5)
+    s.dailies = {
+      date: today,
+      challenges: shuffled.slice(0, 3).map((c) => ({ ...c, progress: 0, claimed: false }))
+    }
+    saveState()
+  }
+  return s.dailies.challenges
+}
+
+// Progresa una daily por id.
+export function progressDaily(challengeId, amount = 1) {
+  const s = loadState()
+  if (!s.dailies.challenges) return
+  for (const c of s.dailies.challenges) {
+    if (c.id === challengeId && !c.claimed) {
+      c.progress = Math.min(c.target, c.progress + amount)
+      if (c.progress >= c.target) {
+        // Auto-claim: da XP al player.
+        addXP(c.xp)
+        addBattlePassXP(c.xp / 2)
+        c.claimed = true
+      }
+      saveState()
+      break
+    }
+  }
 }

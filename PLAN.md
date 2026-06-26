@@ -251,41 +251,50 @@ Objetivo: PvP real. Es lo que más vende de CoD.
 
 Objetivo: monetización y retención a largo plazo.
 
+> **Estado**: base implementada (weapon leveling, camos, battle pass,
+> daily challenges, Barracks UI). Faltan: cuentas online (3.1),
+> monetización real (3.2), prestige (3.3), seasons (3.4), mobile (3.5).
+
 ### 3.1 Cuentas y progresión cross-platform `[ ]`
 
-- Login: email + OAuth (Google/Steam/Discord).
-- Backend de inventario (sustituir `progression.js:11 localStorage`).
-- Cross-progression web/Steam/móvil.
+- [ ] Login: email + OAuth (Google/Steam/Discord).
+- [ ] Backend de inventario (sustituir `progression.js:11 localStorage`).
+- [ ] Cross-progression web/Steam/móvil.
 
-### 3.2 Monetización `[ ]`
+> Nota: ahora mismo toda la progresión es local (localStorage). Para
+> producción real necesitaría un backend de cuentas. El esqueleto de
+> progression.js está listo para migrar a una API.
 
-- **Battle Pass** seasonal (100 tiers, ~€10).
-- **In-game store**: skins de arma, operator skins, calling cards,
-  emblems, sprays, finishers.
-- **Weapon cases** (opcional, regulatorio según región).
-- Battle Pass con tiers gratis + premium.
+### 3.2 Monetización `[~]`
 
-### 3.3 Meta progression `[ ]`
+- [x] **Battle Pass** esqueleto: 100 tiers, XP por tier, premium flag.
+- [x] Catálogo de recompensas BP por tier (BP_REWARDS en meta.js).
+- [ ] In-game store: skins de arma, operator skins, calling cards.
+- [ ] Integración con pasarela de pago (Stripe/Steam).
+- [ ] Loot boxes (opcional, regulatorio).
 
-- **Weapon leveling**: cada arma sube de nivel (no solo player), unlocks
-  attachments por arma.
-- **Prestige** tras nivel max.
-- **Camos desbloqueables** por arma (gold, diamond, obsidian).
-- **Daily/weekly challenges**.
-- **Season events**.
+### 3.3 Meta progression `[~]`
+
+- [x] **Weapon leveling**: cada arma sube de nivel (max 30), unlocks
+  attachments por arma (en progression.js: addWeaponXP, getWeaponLevel).
+- [x] **Camos desbloqueables** por arma: spray, woodland, digital,
+  dragon, gold, diamond (a nivel 5/10/15/20/25/30).
+- [x] **Daily challenges**: 3 aleatorias por día, auto-claim con XP.
+- [ ] Prestige tras nivel max.
+- [ ] Season events.
 
 ### 3.4 Live ops `[ ]`
 
-- Seasonal content drops cada 2-3 meses (mapa/arma/operator nuevo).
-- Telemetry/analytics (qué armas se usan, win rates, churn).
-- A/B testing de balance en `config.js`.
-- Featured playlists rotatorios.
+- [ ] Seasonal content drops cada 2-3 meses (mapa/arma/operator nuevo).
+- [ ] Telemetry/analytics (qué armas se usan, win rates, churn).
+- [ ] A/B testing de balance en `config.js`.
+- [ ] Featured playlists rotatorios.
 
 ### 3.5 Mobile / cross-platform `[ ]`
 
-- Touch controls con aim assist agresivo.
-- Controller support en móvil.
-- Performance budget para móvil (LOW en `quality.js`).
+- [ ] Touch controls con aim assist agresivo.
+- [ ] Controller support en móvil.
+- [ ] Performance budget para móvil (LOW en `quality.js`).
 
 ---
 
@@ -332,4 +341,4 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.8 — settings (FOV/sensibilidad/volumen/colorblind) + killcam
 - [x] Fase 1.9 — i18n (es/en) + gamepad support + tests (122 tests)
 - [~] Fase 2 — MP base (servidor + cliente + TDM + killfeed); faltan modos extra, matchmaking, anti-cheat
-- [ ] Fase 3
+- [~] Fase 3 — meta base (weapon levels, camos, battle pass, dailies, Barracks); faltan cuentas online, monetización real, seasons
