@@ -1,0 +1,56 @@
+# NetworkPolicy: aísla los pods del juego. Solo permiten tráfico:
+# - INGRESO desde el namespace ingress-nginx (el Ingress controller) al
+#   puerto 9432. Nadie más dentro del clúster puede alcanzar el juego.
+# - EGRESO a DNS (kube-system) y HTTPS (443) para Google Fonts si nginx
+#   los proxyara (no lo hace hoy, pero queda preparado). Como el juego
+#   sirve estáticos sin dependencias externas, el egreso puede ser
+#   restrictivo.
+#
+# Requiere un CNI que soporte NetworkPolicy (Calico, Cilium, etc.).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: modern-warfare-react
+      app.kubernetes.io/component: game
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permite tráfico del Ingress controller (namespace ingress-nginx).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 9432
+    # Permite tráfico dentro del propio namespace (para debugging/monitoring).
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: modern-warfare
+  egress:
+    # DNS (CoreDNS en kube-system).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS saliente (solo si nginx necesita proxy a fuentes externas).
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443

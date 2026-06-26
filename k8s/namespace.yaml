@@ -1,0 +1,10 @@
+# Namespace aislado para el juego.
+# Separa los recursos del juego del resto del clúster y permite aplicar
+# NetworkPolicies y ResourceQuotas sin afectar a otros workloads.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/part-of: modern-warfare-react

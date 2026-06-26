@@ -1,0 +1,20 @@
+# ResourceQuota: limita el consumo total del namespace para evitar que
+# el juego acapare recursos del clúster. Ajusta los límites según tu
+# capacidad de nodo.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 256Mi
+    limits.cpu: "2"
+    limits.memory: 512Mi
+    pods: "10"
+    services: "2"
+    configmaps: "5"
+    secrets: "5"

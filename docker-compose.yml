@@ -15,6 +15,17 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+    # Hardening del contenedor (antes corría con caps por defecto y sin
+    # restricciones de filesystem).
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp                # nginx necesita /tmp para caches temporales
+      - /var/cache/nginx
+      - /var/run
 
   # Servicio opcional de desarrollo con Vite HMR.
   # Se activa con: docker compose up dev

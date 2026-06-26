@@ -3,30 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="FPS tipo Call of Duty para navegador, hecho en React + Three.js. Sobrevive a oleadas infinitas en una Pamplona procedural." />
     <meta name="theme-color" content="#0a0f18" />
-    <!-- Three.js requiere un crosshair y UI fija: bloqueamos el zoom táctil -->
+    <!-- Three.js requiere un crosshair y UI fija: bloqueamos el zoom táctil
+         de verdad (maximum-scale=1, user-scalable=no) para que el doble-tap
+         no haga zoom en móvil. Antes el comentario decía "bloqueamos" pero
+         maximum-scale=5.0 permitía zoom hasta 5x. -->
     <title>Modern Warfare React</title>
-    <style>
-      /* Reset global para que el canvas ocupe toda la ventana.
-         El cuerpo usa un fondo oscuro para evitar parpadeos mientras carga el motor. */
-      html, body, #root {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #000;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        color: #fff;
-        user-select: none;
-      }
-      canvas { display: block; }
-    </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>Este juego requiere JavaScript habilitado para funcionar.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

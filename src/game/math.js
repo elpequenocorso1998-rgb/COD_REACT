@@ -33,6 +33,8 @@ export function lerp(a, b, t) {
 // Interpolación suave (smoothstep) en [0, 1] con derivadas nulas en los
 // extremos. Útil para transiciones de cámara y fade.
 export function smoothstep(edge0, edge1, x) {
+  // Guard: si los extremos coinciden, evita 0/0 = NaN.
+  if (edge1 === edge0) return x < edge0 ? 0 : 1
   const t = clamp((x - edge0) / (edge1 - edge0), 0, 1)
   return t * t * (3 - 2 * t)
 }

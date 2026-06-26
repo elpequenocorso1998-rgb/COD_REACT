@@ -1,6 +1,3 @@
-import * as THREE from 'three'
-import { QUALITY, SHADOW_MAP_SIZE } from './constants.js'
-
 /* =========================================================================
    Escalado de calidad dinámico.
    --------------------------------------------------------------------------
@@ -12,6 +9,7 @@ import { QUALITY, SHADOW_MAP_SIZE } from './constants.js'
    Antes el pipeline completo (SSAO + Bloom + god rays + SMAA + sombras
    2048) corría siempre, incluso en GPUs que no lo soportan → <30 FPS.
    ========================================================================= */
+import { QUALITY, SHADOW_MAP_SIZE } from './constants.js'
 
 // Umbral de FPS para clasificar (medido sobre una ventana de 60 frames).
 const FPS_HIGH = 50
@@ -19,6 +17,10 @@ const FPS_MEDIUM = 30
 
 // Aplica un perfil de calidad al renderer y los passes de post-procesado.
 // `passes` es { ssaoPass, bloomPass, cinematicPass, sun }.
+// IMPORTANTE: no disposeamos sun.shadow.map manualmente; marcamos
+// needsUpdate=true y dejamos que Three.js reasigne el RT de forma segura.
+// Antes hacer dispose+null mid-frame podía causar un null-deref en el
+// siguiente render de sombras.
 export function applyQuality(quality, renderer, passes) {
   const { ssaoPass, bloomPass, cinematicPass, sun } = passes
 
@@ -33,8 +35,7 @@ export function applyQuality(quality, renderer, passes) {
       // Sombra 1024 (mitad de resolución).
       if (sun) {
         sun.shadow.mapSize.set(1024, 1024)
-        if (sun.shadow.map) sun.shadow.map.dispose()
-        sun.shadow.map = null
+        sun.shadow.needsUpdate = true
       }
       // Pixel ratio capado a 1.5 (menos fill rate).
       if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
@@ -46,8 +47,7 @@ export function applyQuality(quality, renderer, passes) {
       if (cinematicPass) cinematicPass.uniforms.godRaysIntensity.value = 0.3
       if (sun) {
         sun.shadow.mapSize.set(1536, 1536)
-        if (sun.shadow.map) sun.shadow.map.dispose()
-        sun.shadow.map = null
+        sun.shadow.needsUpdate = true
       }
       if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       break
@@ -58,8 +58,7 @@ export function applyQuality(quality, renderer, passes) {
       if (cinematicPass) cinematicPass.uniforms.godRaysIntensity.value = 0.5
       if (sun) {
         sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE)
-        if (sun.shadow.map) sun.shadow.map.dispose()
-        sun.shadow.map = null
+        sun.shadow.needsUpdate = true
       }
       if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       break
@@ -89,9 +88,10 @@ export class FpsSampler {
     if (dt > 0) this.samples.push(1 / dt)
     if (this.samples.length >= this.warmupFrames) {
       // Media de los FPS medidos (ignorando el primer frame, ruidoso).
-      const s = this.samples.slice(1)
-      const sum = s.reduce((a, b) => a + b, 0)
-      this.fps = sum / s.length
+      // Sin slice() (alloc): sumamos in-place desde el índice 1.
+      let sum = 0
+      for (let i = 1; i < this.samples.length; i++) sum += this.samples[i]
+      this.fps = sum / (this.samples.length - 1)
       this.detected = true
       this.onDetected(classifyQuality(this.fps))
     }

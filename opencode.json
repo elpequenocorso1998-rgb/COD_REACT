@@ -6,7 +6,7 @@
       "name": "LiteLLM PMPLDL03",
       "options": {
         "baseURL": "http://localhost/v1",
-        "apiKey": "{env:OPENCODE_API_KEY}"
+        "apiKey": "NLPRules.2025"
       },
       "models": {
         "GLM-5.2-FP8": {

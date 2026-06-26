@@ -3,6 +3,24 @@ import { useGameStore, GAME_STATES } from '../src/game/store.js'
 
 /* Tests del store: cubren acciones puras y el fix de timeouts cancelables. */
 
+// Mockeamos progression para que el store no toque localStorage real
+// (que persistiría entre tests y causaría flakiness).
+vi.mock('../src/game/progression.js', () => {
+  let level = 1, xp = 0, xpNeeded = 1000
+  return {
+    addXP: vi.fn((amt) => {
+      xp += amt
+      let leveledUp = false
+      while (xp >= xpNeeded) { xp -= xpNeeded; level++; leveledUp = true; xpNeeded = 1000 + (level-1)*250 }
+      return { leveledUp, newLevel: level, newUnlocks: [], xp, xpNeeded }
+    }),
+    recordKill: vi.fn(),
+    recordDeath: vi.fn(),
+    recordWave: vi.fn(),
+    getProgress: vi.fn(() => ({ level, xp, xpNeeded, unlocks: [], totalKills: 0, totalDeaths: 0, highestWave: 0 }))
+  }
+})
+
 beforeEach(() => {
   useGameStore.getState().reset()
   // Forzamos estado PLAYING para takeDamage.
@@ -121,6 +139,28 @@ describe('takeDamage', () => {
     expect(useGameStore.getState().health).toBe(100)
   })
 
+  it('i-frames: ignora daño en los 0.5s tras un impacto (item 31)', () => {
+    vi.useFakeTimers()
+    // performance.now() NO es controlado por vi.useFakeTimers por defecto;
+    // lo mockeamos manualmente para que avance con advanceTimersByTime.
+    // Sin esto, el cálculo de i-frames del store lee el reloj real y el
+    // test falla de forma flaky.
+    let mockNow = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => mockNow)
+    const advanceNow = (ms) => { mockNow += ms; vi.advanceTimersByTime(ms) }
+
+    // Primer daño entra.
+    useGameStore.getState().takeDamage(30, null)
+    expect(useGameStore.getState().health).toBe(70)
+    // Segundo daño inmediato: ignorado por i-frames.
+    useGameStore.getState().takeDamage(30, null)
+    expect(useGameStore.getState().health).toBe(70)
+    // Tras 0.5s, el daño vuelve a entrar.
+    advanceNow(500)
+    useGameStore.getState().takeDamage(30, null)
+    expect(useGameStore.getState().health).toBe(40)
+  })
+
   it('añade indicador direccional efímero', () => {
     vi.useFakeTimers()
     useGameStore.getState().takeDamage(10, 1.2)
@@ -175,5 +215,107 @@ describe('reset cancela timeouts pendientes (bug fix)', () => {
     expect(useGameStore.getState().damageDirections).toHaveLength(0)
     vi.advanceTimersByTime(1500)
     expect(useGameStore.getState().damageDirections).toHaveLength(0)
+  })
+})
+
+/* =========================================================================
+   FASE 4a — Tests de killstreaks, multikills, scoreboard.
+   ========================================================================= */
+describe('killstreaks y multikills', () => {
+  it('registerKill incrementa killStreak y kills', () => {
+    useGameStore.getState().registerKill(100)
+    const s = useGameStore.getState()
+    expect(s.killStreak).toBe(1)
+    expect(s.kills).toBe(1)
+  })
+
+  it('desbloquea UAV al llegar a 3 kills', () => {
+    useGameStore.getState().registerKill(100)
+    useGameStore.getState().registerKill(100)
+    expect(useGameStore.getState().availableStreaks).toHaveLength(0)
+    useGameStore.getState().registerKill(100)
+    const s = useGameStore.getState()
+    expect(s.killStreak).toBe(3)
+    expect(s.availableStreaks).toHaveLength(1)
+    expect(s.availableStreaks[0].type).toBe('uav')
+  })
+
+  it('desbloquea airstrike a 5, heli a 7, gunship a 11', () => {
+    for (let i = 0; i < 11; i++) useGameStore.getState().registerKill(100)
+    const types = useGameStore.getState().availableStreaks.map((s) => s.type)
+    expect(types).toContain('airstrike')
+    expect(types).toContain('heli')
+    expect(types).toContain('gunship')
+  })
+
+  it('useStreak consume el streak y lo activa', () => {
+    for (let i = 0; i < 3; i++) useGameStore.getState().registerKill(100)
+    const uavId = useGameStore.getState().availableStreaks[0].id
+    const ok = useGameStore.getState().useStreak(uavId)
+    expect(ok).toBe(true)
+    expect(useGameStore.getState().availableStreaks).toHaveLength(0)
+    expect(useGameStore.getState().uavActive).toBe(true)
+  })
+
+  it('useStreak devuelve false para un streak inexistente', () => {
+    expect(useGameStore.getState().useStreak(99999)).toBe(false)
+  })
+
+  it('multikill: dos kills en 3s = Double Kill', () => {
+    vi.useFakeTimers()
+    let mockNow = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => mockNow)
+    useGameStore.getState().registerKill(100)
+    expect(useGameStore.getState().multikillLabel).toBeNull()
+    // Segunda kill inmediatamente: dentro de la ventana de 3s.
+    useGameStore.getState().registerKill(100)
+    expect(useGameStore.getState().multikillCount).toBe(2)
+    expect(useGameStore.getState().multikillLabel).toBe('DOUBLE KILL')
+  })
+
+  it('multikill: kill fuera de ventana resetea el combo', () => {
+    vi.useFakeTimers()
+    let mockNow = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => mockNow)
+    useGameStore.getState().registerKill(100)
+    mockNow += 4000 // fuera de la ventana de 3s
+    vi.advanceTimersByTime(4000)
+    useGameStore.getState().registerKill(100)
+    expect(useGameStore.getState().multikillCount).toBe(1)
+  })
+
+  it('muerte resetea killStreak y multikill', () => {
+    useGameStore.getState().registerKill(100)
+    useGameStore.getState().registerKill(100)
+    expect(useGameStore.getState().killStreak).toBe(2)
+    useGameStore.getState().takeDamage(100, null)
+    const s = useGameStore.getState()
+    expect(s.killStreak).toBe(0)
+    expect(s.multikillCount).toBe(0)
+    expect(s.deaths).toBe(1)
+  })
+})
+
+describe('scoreboard', () => {
+  it('toggleScoreboard abre y cierra', () => {
+    expect(useGameStore.getState().scoreboardOpen).toBe(false)
+    useGameStore.getState().toggleScoreboard(true)
+    expect(useGameStore.getState().scoreboardOpen).toBe(true)
+    useGameStore.getState().toggleScoreboard(false)
+    expect(useGameStore.getState().scoreboardOpen).toBe(false)
+  })
+})
+
+describe('hitmarkers con tipo', () => {
+  it('registerHit guarda el tipo de hitmarker', () => {
+    useGameStore.getState().registerHit(25, 'headshot')
+    const hm = useGameStore.getState().hitmarkers[0]
+    expect(hm.type).toBe('headshot')
+  })
+
+  it('registerHit sin tipo usa body por defecto', () => {
+    useGameStore.getState().registerHit(10)
+    const hm = useGameStore.getState().hitmarkers[0]
+    expect(hm.type).toBe('body')
   })
 })

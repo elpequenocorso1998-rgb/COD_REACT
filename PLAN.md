@@ -26,7 +26,7 @@ Estado de cada sub-fase: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho.
 Objetivo: convertir el survival actual en algo indistinguible de un CoD
 single-player. Sin multijugador aún, pero base sólida para Fase 2.
 
-### 1.1 Viewmodels por arma `[ ]`
+### 1.1 Viewmodels por arma `[x]`
 
 **Problema actual**: `player.js:74-141` construye UN solo rifle M4 que se
 muestra para TODAS las armas (incluso pistol/sniper/shotgun). Inaceptable.
@@ -318,7 +318,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 ## Progreso
 
 - [x] PLAN.md escrito
-- [ ] Fase 1.1
+- [x] Fase 1.1 — viewmodels por arma (m4, ak47, mp5, sniper, shotgun, lmg, pistol)
 - [ ] Fase 1.2
 - [ ] Fase 1.3
 - [ ] Fase 1.4

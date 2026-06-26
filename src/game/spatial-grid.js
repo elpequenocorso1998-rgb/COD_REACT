@@ -9,17 +9,22 @@
    - Celda cuadrada de `cellSize` unidades.
    - Inserción de AABBs: cubre todas las celdas que el AABB toca.
    - Query punto+radio: solo revisa las celdas que toca el círculo.
-   - Reconstrucción barata: se llama una vez al cargar el mundo.
+   - Reconstrucción barota: se llama una vez al cargar el mundo.
+   - Clave NUMÉRICA (cx * 73856093 ^ cz * 19349663) en lugar de string
+     "cx,cz": Map con números es más rápido que con strings y evita
+     allocar un string por lookup.
    ========================================================================= */
 
 export class SpatialGrid {
   constructor(cellSize = 4) {
     this.cellSize = cellSize
-    this.cells = new Map() // key "cx,cz" -> array de {box, type}
+    this.cells = new Map() // clave numérica -> array de {box, type}
   }
 
+  // Hash numérico determinista para un par de coords de celda.
   _key(cx, cz) {
-    return cx + ',' + cz
+    // Mezcla tipo FNV-ish para distribuir bien en el rango del Map.
+    return (cx * 73856093) ^ (cz * 19349663)
   }
 
   // Inserta un collider AABB. Lo añade a todas las celdas que toca.
@@ -57,6 +62,24 @@ export class SpatialGrid {
       }
     }
     return result
+  }
+
+  // Itera los colliders candidatos sin allocar un array (versión de
+  // bajo alloc para collidesAt en hot loops).
+  forEachCandidate(x, z, radius, fn) {
+    const cs = this.cellSize
+    const minX = Math.floor((x - radius) / cs)
+    const maxX = Math.floor((x + radius) / cs)
+    const minZ = Math.floor((z - radius) / cs)
+    const maxZ = Math.floor((z + radius) / cs)
+    for (let cx = minX; cx <= maxX; cx++) {
+      for (let cz = minZ; cz <= maxZ; cz++) {
+        const arr = this.cells.get(this._key(cx, cz))
+        if (arr) {
+          for (const c of arr) fn(c)
+        }
+      }
+    }
   }
 
   clear() {

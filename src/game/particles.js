@@ -22,9 +22,16 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
   const matSmokeBase = new THREE.MeshBasicMaterial({
     color: 0x444444, transparent: true, opacity: 0.6
   })
+  // Color hex constante por tipo para swap rápido con setHex (sin copy()).
+  const BLOOD_HEX = 0xaa1010
+  const SPARK_HEX = 0xffcc44
+  const SMOKE_HEX = 0x444444
 
   const pool = [] // { mesh, vel, life, maxLife, gravity, fade, scaleRate, material }
   const freeList = [] // índices libres para adquisición O(1)
+  // Scratch Vector3 reutilizado para direcciones (antes spawn hacía
+  // normalDirection.clone() por partícula: ~25 alloc/disparo).
+  const _scratchDir = new THREE.Vector3()
 
   // Pre-creamos el pool oculto. Cada partícula tiene su propio material
   // clonado para que el fade de opacidad sea independiente.
@@ -69,18 +76,19 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     for (let i = 0; i < count; i++) {
       const p = acquire()
       if (!p) return
-      p.mesh.material.copy(matBloodBase)
+      // Swap rápido de color por tipo con setHex (sin material.copy()).
+      p.mesh.material.color.setHex(BLOOD_HEX)
       p.mesh.material.transparent = false
       p.mesh.material.opacity = 1
       p.mesh.position.copy(position)
       p.mesh.scale.setScalar(0.6 + Math.random() * 0.8)
       p.mesh.visible = true
       // Velocidad: dirección del impacto + dispersión esférica.
-      const dir = normalDirection.clone().multiplyScalar(2 + Math.random() * 3)
-      dir.x += (Math.random() - 0.5) * 4
-      dir.y += Math.random() * 3
-      dir.z += (Math.random() - 0.5) * 4
-      p.vel.copy(dir)
+      _scratchDir.copy(normalDirection).multiplyScalar(2 + Math.random() * 3)
+      _scratchDir.x += (Math.random() - 0.5) * 4
+      _scratchDir.y += Math.random() * 3
+      _scratchDir.z += (Math.random() - 0.5) * 4
+      p.vel.copy(_scratchDir)
       p.life = 0
       p.maxLife = 0.8 + Math.random() * 0.4
       p.gravity = 9.8
@@ -97,17 +105,17 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     for (let i = 0; i < count; i++) {
       const p = acquire()
       if (!p) return
-      p.mesh.material.copy(matSparkBase)
+      p.mesh.material.color.setHex(SPARK_HEX)
       p.mesh.material.transparent = false
       p.mesh.material.opacity = 1
       p.mesh.position.copy(position)
       p.mesh.scale.setScalar(0.3 + Math.random() * 0.4)
       p.mesh.visible = true
-      const dir = normalDirection.clone().multiplyScalar(3 + Math.random() * 3)
-      dir.x += (Math.random() - 0.5) * 3
-      dir.y += 1 + Math.random() * 2
-      dir.z += (Math.random() - 0.5) * 3
-      p.vel.copy(dir)
+      _scratchDir.copy(normalDirection).multiplyScalar(3 + Math.random() * 3)
+      _scratchDir.x += (Math.random() - 0.5) * 3
+      _scratchDir.y += 1 + Math.random() * 2
+      _scratchDir.z += (Math.random() - 0.5) * 3
+      p.vel.copy(_scratchDir)
       p.life = 0
       p.maxLife = 0.4 + Math.random() * 0.2
       p.gravity = 9.8
@@ -123,7 +131,7 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     for (let i = 0; i < count; i++) {
       const p = acquire()
       if (!p) return
-      p.mesh.material.copy(matSmokeBase)
+      p.mesh.material.color.setHex(SMOKE_HEX)
       p.mesh.material.transparent = true
       p.mesh.material.opacity = 0.6
       p.mesh.position.copy(position)
@@ -150,17 +158,17 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     for (let i = 0; i < 5; i++) {
       const p = acquire()
       if (!p) return
-      p.mesh.material.copy(matSparkBase)
+      p.mesh.material.color.setHex(SPARK_HEX)
       p.mesh.material.transparent = false
       p.mesh.material.opacity = 1
       p.mesh.position.copy(position)
       p.mesh.scale.setScalar(0.2 + Math.random() * 0.2)
       p.mesh.visible = true
-      const v = direction.clone().multiplyScalar(4 + Math.random() * 3)
-      v.x += (Math.random() - 0.5) * 2
-      v.y += (Math.random() - 0.5) * 2
-      v.z += (Math.random() - 0.5) * 2
-      p.vel.copy(v)
+      _scratchDir.copy(direction).multiplyScalar(4 + Math.random() * 3)
+      _scratchDir.x += (Math.random() - 0.5) * 2
+      _scratchDir.y += (Math.random() - 0.5) * 2
+      _scratchDir.z += (Math.random() - 0.5) * 2
+      p.vel.copy(_scratchDir)
       p.life = 0
       p.maxLife = 0.15 + Math.random() * 0.1
       p.gravity = 0

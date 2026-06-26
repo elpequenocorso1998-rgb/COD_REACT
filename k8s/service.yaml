@@ -1,0 +1,21 @@
+# Service ClusterIP: expone los pods del Deployment dentro del clúster.
+# Puerto 9432 (el mismo que usa el contenedor, sin mapeo).
+# Un Ingress lo publicará al exterior (ver ingress.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+  ports:
+    - name: http
+      port: 9432
+      targetPort: http
+      protocol: TCP

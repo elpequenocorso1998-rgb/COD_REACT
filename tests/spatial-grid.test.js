@@ -77,4 +77,69 @@ describe('SpatialGrid', () => {
     const res = grid.query(1, 1, 0)
     expect(res).toHaveLength(1)
   })
+
+  // --- Cobertura ampliada (T4: validar refs devueltos, T5: edge cases) ---
+
+  it('devuelve los colliders correctos (no solo count): valida type/tag (T4)', () => {
+    grid.insert(makeBox(0, 0, 2, 2), 'wall')
+    grid.insert(makeBox(0, 0, 2, 2), 'crate')
+    const res = grid.query(1, 1, 0.4)
+    expect(res).toHaveLength(2)
+    const tags = res.map((c) => c.type).sort()
+    expect(tags).toEqual(['crate', 'wall'])
+    // Las boxes devueltas son las mismas referencias insertadas.
+    const insertedBox = makeBox(0, 0, 2, 2)
+    grid.insert(insertedBox, 'refcheck')
+    const res2 = grid.query(1, 1, 0.4)
+    expect(res2.some((c) => c.box === insertedBox)).toBe(true)
+  })
+
+  it('coordenadas negativas funcionan correctamente (T5)', () => {
+    grid.insert(makeBox(-6, -6, -4, -4), 'neg')
+    // Punto en (-5,-5), celda (-2,-2) con cellSize 4: floor(-5/4)=-2.
+    const res = grid.query(-5, -5, 0.4)
+    expect(res).toHaveLength(1)
+    expect(res[0].type).toBe('neg')
+  })
+
+  it('punto exactamente en frontera de celda (T5)', () => {
+    // cellSize=4: x=4 es frontera entre celda 0 y celda 1.
+    // makeBox(0,0,1,1) cubre solo celda 0,0 (floor(1/4)=0).
+    // makeBox(8,8,9,9) cubre solo celda 2,2 (floor(8/4)=2).
+    // Punto en (4.5,4.5) radio 0.1: celdas 1,1 (floor(4.4/4)=1 a floor(4.6/4)=1).
+    grid.insert(makeBox(0, 0, 1, 1), 'left')
+    grid.insert(makeBox(8, 8, 9, 9), 'right')
+    const res = grid.query(4.5, 4.5, 0.1)
+    // Ni 'left' (celda 0,0) ni 'right' (celda 2,2) están en celda 1,1.
+    expect(res.some((c) => c.type === 'left')).toBe(false)
+    expect(res.some((c) => c.type === 'right')).toBe(false)
+    expect(res).toHaveLength(0)
+  })
+
+  it('query que abarca todo el grid devuelve todos los colliders (T5)', () => {
+    // Nota: un AABB grande se inserta en múltiples celdas, así que el
+    // query puede devolver el MISMO collider varias veces (una por celda).
+    // Usamos colliders pequeños (1 celda) para que count == insertados.
+    grid.insert(makeBox(0, 0, 1, 1), 'a')
+    grid.insert(makeBox(10, 10, 11, 11), 'b')
+    grid.insert(makeBox(20, 20, 21, 21), 'c')
+    const res = grid.query(0, 0, 100)
+    const tags = res.map((c) => c.type)
+    expect(tags).toContain('a')
+    expect(tags).toContain('b')
+    expect(tags).toContain('c')
+  })
+
+  it('forEachCandidate itera sin allocar array', () => {
+    grid.insert(makeBox(0, 0, 2, 2), 'a')
+    grid.insert(makeBox(0, 0, 2, 2), 'b')
+    const seen = []
+    grid.forEachCandidate(1, 1, 0.4, (c) => seen.push(c.type))
+    expect(seen.sort()).toEqual(['a', 'b'])
+  })
+
+  it('grid vacío: query devuelve array vacío sin error', () => {
+    const res = grid.query(0, 0, 10)
+    expect(res).toEqual([])
+  })
 })

@@ -16,7 +16,10 @@ html, body, #root {
   color: #fff;
   font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
   cursor: default;
+  user-select: none;
 }
+
+canvas { display: block; }
 
 .game-canvas {
   position: fixed; inset: 0; z-index: 0;
@@ -358,4 +361,229 @@ html, body, #root {
 @keyframes loadbar {
   0% { left: -40%; }
   100% { left: 100%; }
+}
+
+/* =========================================================================
+   FASE 4a — UI/UX: minimap, killstreaks, scoreboard, multikill, XP, hitmarkers.
+   ========================================================================= */
+
+/* --- Hitmarker variantes de color --- */
+.hitmarker.headshot::before, .hitmarker.headshot::after { background: #ff2020; }
+.hitmarker.kill::before, .hitmarker.kill::after { background: #ffd24d; box-shadow: 0 0 6px #ffd24d; }
+
+/* --- Minimap --- */
+.minimap-container {
+  position: absolute;
+  top: 16px; left: 16px;
+  z-index: 10;
+  pointer-events: none;
+}
+.minimap-container canvas {
+  display: block;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(0,0,0,0.6), 0 0 0 2px rgba(180,180,180,0.4);
+}
+
+/* --- Multikill callout --- */
+.multikill-callout {
+  position: absolute;
+  top: 22%; left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  font-family: 'Oswald', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #ffd24d;
+  text-shadow: 0 0 8px rgba(255,210,77,0.6), 0 2px 4px #000;
+  animation: multikillpop 1.5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes multikillpop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5) translateY(10px); }
+  15%  { opacity: 1; transform: translateX(-50%) scale(1.2) translateY(0); }
+  30%  { transform: translateX(-50%) scale(1) translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-10px); }
+}
+
+/* --- Level up flash --- */
+.levelup-flash {
+  position: absolute;
+  top: 30%; left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  text-align: center;
+  pointer-events: none;
+  animation: levelupflash 3s ease-out forwards;
+}
+.levelup-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(74,222,128,0.6), 0 2px 4px #000;
+  letter-spacing: 3px;
+}
+.levelup-level {
+  font-size: 20px;
+  color: #fff;
+  margin-top: 4px;
+}
+.levelup-unlocks {
+  margin-top: 8px;
+}
+.levelup-unlock {
+  font-size: 14px;
+  color: #ffd24d;
+  margin-top: 2px;
+}
+@keyframes levelupflash {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  10%  { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  20%  { transform: translateX(-50%) scale(1); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-20px); }
+}
+
+/* --- Killstreaks panel (esquina inf-derecha) --- */
+.streaks-panel {
+  position: absolute;
+  bottom: 90px; right: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+.streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10,15,24,0.8);
+  border: 1px solid rgba(255,210,77,0.4);
+  border-radius: 4px;
+  padding: 4px 8px;
+  animation: streakpulse 1.5s infinite;
+}
+.streak-key {
+  display: inline-block;
+  width: 18px; height: 18px;
+  line-height: 18px;
+  text-align: center;
+  background: #ffd24d;
+  color: #000;
+  font-weight: 700;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.streak-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  color: #ffd24d;
+  letter-spacing: 1px;
+}
+@keyframes streakpulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(255,210,77,0.3); }
+  50%      { box-shadow: 0 0 10px rgba(255,210,77,0.6); }
+}
+
+/* --- Killstreak counter --- */
+.killstreak-counter {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 10;
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  color: #ffaa44;
+  background: rgba(10,15,24,0.7);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,170,68,0.3);
+}
+
+/* --- XP bar (debajo del score) --- */
+.xp-bar {
+  position: relative;
+  width: 140px;
+  height: 14px;
+  margin-top: 4px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80, #22d3ee);
+  transition: width 0.3s ease;
+}
+.xp-label {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 2px #000, 0 1px 1px #000;
+  line-height: 14px;
+  letter-spacing: 1px;
+}
+
+/* --- Scoreboard overlay --- */
+.scoreboard {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+.scoreboard-header {
+  font-family: 'Oswald', sans-serif;
+  font-size: 24px;
+  color: #ffd24d;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+.scoreboard-teams {
+  display: flex;
+  gap: 40px;
+}
+.scoreboard-team {
+  min-width: 320px;
+}
+.scoreboard-team-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  color: #4ade80;
+  letter-spacing: 2px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid rgba(74,222,128,0.4);
+  margin-bottom: 6px;
+}
+.scoreboard-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: #ddd;
+}
+.scoreboard-row:not(.scoreboard-header-row):hover {
+  background: rgba(255,255,255,0.05);
+}
+.scoreboard-header-row {
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.scoreboard-hint {
+  margin-top: 20px;
+  font-size: 12px;
+  color: #666;
 }

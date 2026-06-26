@@ -110,6 +110,12 @@ export function buildHumanoid() {
 
   const root = new THREE.Group() // raíz = pies en y=0
 
+  // Geometrías creadas por-enemigo (no compartidas). Las trackeamos para
+  // poder liberarlas al destruir el enemigo (antes se leak-eaban: 7 geos
+  // por enemigo, 6+ enemigos/ola × muchas olas = fuga continua de GPU mem).
+  const perEnemyGeos = []
+  const trackGeo = (g) => { perEnemyGeos.push(g); return g }
+
   // --- CADERA (caderas a ~0.95m) ---
   const hips = new THREE.Group()
   hips.position.y = 0.95
@@ -118,7 +124,7 @@ export function buildHumanoid() {
   const hipMesh = new THREE.Mesh(_geoHip, _matPants)
   hipMesh.position.y = 0; hipMesh.castShadow = true; hips.add(hipMesh)
 
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.22), _matBelt)
+  const belt = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.34, 0.06, 0.22)), _matBelt)
   belt.position.y = 0.04; hips.add(belt)
 
   // --- COLUMNA ---
@@ -138,11 +144,9 @@ export function buildHumanoid() {
   const vest = new THREE.Mesh(_geoVest, _matVest)
   vest.position.y = 0.02; vest.castShadow = true; chest.add(vest)
   // Pockets del chaleco: pequeñas cajas en el pecho.
+  const pocketGeo = trackGeo(new THREE.BoxGeometry(0.08, 0.08, 0.05))
   for (let i = 0; i < 2; i++) {
-    const pocket = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.08, 0.05),
-      _matVest
-    )
+    const pocket = new THREE.Mesh(pocketGeo, _matVest)
     pocket.position.set((i === 0 ? -1 : 1) * 0.1, 0.05, 0.18)
     pocket.castShadow = true; chest.add(pocket)
   }
@@ -170,22 +174,21 @@ export function buildHumanoid() {
   const helmet = new THREE.Mesh(_geoHelmet, _matHelmet)
   helmet.position.y = 0.03; helmet.castShadow = true; head.add(helmet)
   // Visera del casco: pequeña extensión frontal.
-  const visor = new THREE.Mesh(
-    new THREE.BoxGeometry(0.22, 0.03, 0.06),
-    _matHelmet
-  )
+  const visor = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.22, 0.03, 0.06)), _matHelmet)
   visor.position.set(0, 0.08, 0.12); head.add(visor)
 
   // Ojos.
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), _matEye)
+  const eyeGeo = trackGeo(new THREE.SphereGeometry(0.018, 8, 8))
+  const eyeL = new THREE.Mesh(eyeGeo, _matEye)
   eyeL.position.set(-0.04, 0.015, 0.125); head.add(eyeL)
-  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), _matEye)
+  const eyeR = new THREE.Mesh(eyeGeo, _matEye)
   eyeR.position.set(0.04, 0.015, 0.125); head.add(eyeR)
 
   // Cejas.
-  const browL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), _matBrow)
+  const browGeo = trackGeo(new THREE.BoxGeometry(0.04, 0.008, 0.01))
+  const browL = new THREE.Mesh(browGeo, _matBrow)
   browL.position.set(-0.04, 0.045, 0.13); head.add(browL)
-  const browR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), _matBrow)
+  const browR = new THREE.Mesh(browGeo, _matBrow)
   browR.position.set(0.04, 0.045, 0.13); head.add(browR)
 
   // Nariz.
@@ -263,7 +266,8 @@ export function buildHumanoid() {
   return {
     root, hips, spine, chest, neck, head,
     armL, armR, legL, legR,
-    headMesh, torsoMesh
+    headMesh, torsoMesh, vestMesh: vest, helmetMesh: helmet,
+    perEnemyGeos
   }
 }
 
@@ -277,8 +281,12 @@ export function animateWalk(humanoid, phase, speed = 1) {
   if (s < 0.05) {
     // Idle: postura relajada con leve respiración.
     humanoid.chest.rotation.x = Math.sin(phase * 0.5) * 0.02
+    humanoid.chest.rotation.y = 0
     humanoid.head.rotation.y = Math.sin(phase * 0.3) * 0.05
     humanoid.head.rotation.x = Math.sin(phase * 0.5) * 0.01
+    humanoid.head.rotation.z = 0
+    humanoid.spine.rotation.z = 0
+    humanoid.hips.rotation.y = 0
     humanoid.armL.shoulder.rotation.x = 0.05
     humanoid.armR.shoulder.rotation.x = 0.05
     humanoid.armL.shoulder.rotation.z = 0.05

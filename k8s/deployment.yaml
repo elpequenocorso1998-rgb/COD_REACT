@@ -1,0 +1,103 @@
+# Deployment del juego: sirve estáticos con nginx (imagen construida por
+# el Dockerfile del repo). Está preparado para producción:
+# - replicas: 3 para alta disponibilidad.
+# - rollout rolling: maxUnavailable 0 + maxSurge 1 → sin downtime.
+# - securityContext: runAsNonRoot, readOnlyRootFilesystem, drop ALL caps,
+#   no-new-privileges (espejo del hardening de docker-compose).
+# - resources requests/limits: evita noisy neighbors y OOM kills.
+# - probe de readiness en / (solo recibe tráfico cuando nginx responde).
+# - probe de liveness en / (reinicia el pod si nginx colapsa).
+# - imagen con tag explícito (no :latest en prod; aquí latest para dev).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: modern-warfare-react
+      app.kubernetes.io/component: game
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: modern-warfare-react
+        app.kubernetes.io/component: game
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101            # usuario nginx de la imagen unprivileged
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: game
+          image: modern-warfare-react:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9432
+              protocol: TCP
+          # El contenedor ya tiene HEALTHCHECK, pero K8s necesita sus
+          # propias probes para tomar decisiones de routing/restart.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30   # hasta 60s para arrancar
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 101
+          # tmpfs para caches de nginx (el rootfs es read-only).
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}

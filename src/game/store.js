@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { PLAYER, WEAPONS, WEAPON } from './config.js'
+import { addXP, recordKill, recordDeath, recordWave, getProgress } from './progression.js'
 
 /* =========================================================================
    Store global del juego (Zustand).
@@ -13,6 +15,11 @@ import { create } from 'zustand'
      reset() para evitar que marcadores/estado de la partida anterior
      reaparezcan tras un reinicio rápido (bug fixed).
    - IDs efímeros con contador monótono (sin colisiones bajo fuego rápido).
+   - Valores de arma/jugador importados de config.js (antes hardcodeados
+     aquí y en enemies.js, con riesgo de desincronización).
+   - takeDamage atómico: una sola llamada set() calcula vida, flash,
+     dirección y transición a GAMEOVER (antes 3 sets separados).
+   - En muerte se limpia firing/reloading y se cancelan timeouts pendientes.
    ========================================================================= */
 
 export const GAME_STATES = {
@@ -27,6 +34,8 @@ export const GAME_STATES = {
 let _idCounter = 0
 function nextId() {
   _idCounter += 1
+  // Cap para evitar overflow teórico en sesiones muy largas.
+  if (_idCounter > Number.MAX_SAFE_INTEGER - 1) _idCounter = 1
   return _idCounter
 }
 
@@ -47,13 +56,14 @@ export const useGameStore = create((set, get) => {
     return id
   }
 
-  // Cancela todos los timeouts pendientes (llamado por reset).
+  // Cancela todos los timeouts pendientes (llamado por reset y por muerte).
   function clearPendingTimeouts() {
     for (const id of pendingTimeouts) clearTimeout(id)
     pendingTimeouts.clear()
   }
 
-  return {
+  // Estado inicial derivado de config (single source of truth).
+  const initialState = () => ({
     // --- Estado general ---
     gameState: GAME_STATES.MENU,    // pantalla activa
     loading: true,                  // true mientras Three.js monta la escena
@@ -62,31 +72,97 @@ export const useGameStore = create((set, get) => {
     enemiesRemaining: 0,            // enemigos vivos en la oleada
 
     // --- Jugador ---
-    health: 100,
-    maxHealth: 100,
+    health: PLAYER.maxHealth,
+    maxHealth: PLAYER.maxHealth,
 
     // --- Arma ---
-    ammo: 30,
-    magSize: 30,
-    reserve: 90,
+    // Arma actual (id del catálogo WEAPONS). ammo/reserve son los del arma
+    // equipada; al cambiar de arma se guardan los del arma anterior y se
+    // cargan los de la nueva.
+    currentWeapon: 'm4',
+    weaponAmmo: { m4: WEAPONS.m4.magSize },      // munición por arma {id: balas en cargador}
+    weaponReserve: { m4: WEAPONS.m4.reserveStart }, // reserva por arma {id: balas de respaldo}
+    ammo: WEAPON.magSize,
+    magSize: WEAPON.magSize,
+    reserve: WEAPON.reserveStart,
     reloading: false,
 
     // --- Feedback visual ---
     firing: false,                  // crosshair se ensancha
-    hitmarkers: [],                 // lista de IDs efímeros para pintar X
+    hitmarkers: [],                 // lista de {id, type} efímeros para pintar X
     killmarkers: [],                // X grande dorada al matar
     damageFlash: false,             // viñeta roja al recibir daño
     damageDirections: [],           // indicadores direccionales {id, angle}
+    lastDamageAt: 0,                // timestamp del último daño (para i-frames)
+
+    // --- Stats y killstreaks ---
+    kills: 0,                       // kills totales (scoreboard)
+    deaths: 0,                      // muertes totales (scoreboard)
+    killStreak: 0,                  // kills consecutivas sin morir
+    availableStreaks: [],           // killstreaks desbloqueados pendientes de usar
+    activeStreaks: [],              // killstreaks activos ahora [{id, type, until}]
+    lastKillAt: 0,                  // timestamp de la última kill (ventana multikill)
+    multikillCount: 0,              // kills dentro de la ventana de 3s
+    multikillLabel: null,           // callout efímero ("Double Kill", etc.)
+
+    // --- UAV (killstreak de 3): revela enemigos en el minimap ---
+    uavActive: false,
+
+    // --- Scoreboard ---
+    scoreboardOpen: false,           // overlay Tab hold
+
+    // --- Progresión (XP/nivel, reflejada en HUD desde progression.js) ---
+    playerLevel: getProgress().level,
+    playerXP: getProgress().xp,
+    playerXPNeeded: getProgress().xpNeeded,
+    levelUpFlash: null               // {level, unlocks} efímero al subir de nivel
+  })
+
+  return {
+    ...initialState(),
 
     // --- Acciones ---
     setState: (gameState) => set({ gameState }),
     setLoading: (loading) => set({ loading }),
 
+    // Cambia de arma: guarda la munición del arma actual y carga la de la nueva.
+    switchWeapon: (weaponId) => {
+      if (!WEAPONS[weaponId]) return
+      const { currentWeapon, weaponAmmo, weaponReserve } = get()
+      if (weaponId === currentWeapon) return
+      // Guardamos munición del arma actual.
+      const newAmmo = { ...weaponAmmo }
+      const newReserve = { ...weaponReserve }
+      newAmmo[currentWeapon] = get().ammo
+      newReserve[currentWeapon] = get().reserve
+      // Cargamos munición del arma nueva (o inicializamos si es primera vez).
+      const w = WEAPONS[weaponId]
+      const ammo = newAmmo[weaponId] ?? w.magSize
+      const reserve = newReserve[weaponId] ?? w.reserveStart
+      set({
+        currentWeapon: weaponId,
+        ammo, reserve,
+        magSize: w.magSize,
+        reloading: false,
+        weaponAmmo: newAmmo,
+        weaponReserve: newReserve
+      })
+    },
+
+    // Devuelve la definición del arma equipada actualmente.
+    getCurrentWeapon: () => WEAPONS[get().currentWeapon],
+
     // Disparo: consume 1 bala y marca el crosshair como "firing".
     fire: () => {
-      const { ammo, reloading } = get()
-      if (reloading || ammo <= 0) return false
-      set({ ammo: ammo - 1, firing: true })
+      // Lectura + escritura atómica vía set con función (evita race con
+      // doble llamada en el mismo tick).
+      let fired = false
+      set((s) => {
+        if (s.reloading || s.ammo <= 0) return s
+        fired = true
+        return { ammo: s.ammo - 1, firing: true }
+      })
+      if (!fired) return false
       // el crosshair vuelve a su tamaño tras 80ms
       trackTimeout(() => set({ firing: false }), 80)
       return true
@@ -94,67 +170,204 @@ export const useGameStore = create((set, get) => {
 
     // Recarga: mueve balas de la reserva al cargador.
     reload: () => {
-      const { ammo, magSize, reserve, reloading } = get()
+      const { ammo, magSize, reserve, reloading, currentWeapon } = get()
       if (reloading || ammo === magSize || reserve <= 0) return
+      const w = WEAPONS[currentWeapon]
       set({ reloading: true })
       trackTimeout(() => {
-        const need = magSize - get().ammo
-        const move = Math.min(need, get().reserve)
-        set((s) => ({
-          ammo: s.ammo + move,
-          reserve: s.reserve - move,
-          reloading: false
-        }))
-      }, 1500) // 1.5s de tiempo de recarga
+        set((s) => {
+          const need = s.magSize - s.ammo
+          const move = Math.min(need, s.reserve)
+          return {
+            ammo: s.ammo + move,
+            reserve: s.reserve - move,
+            reloading: false
+          }
+        })
+      }, w.reloadTime * 1000) // config en segundos → ms para setTimeout
     },
 
     // Acierto en enemigo: suma puntos y muestra hitmarker.
-    registerHit: (points = 10) => {
+    // type: 'body' | 'headshot' | 'kill' (determina color + sonido).
+    registerHit: (points = 10, type = 'body') => {
       const id = nextId()
       set((s) => ({
         score: s.score + points,
-        hitmarkers: [...s.hitmarkers, id]
+        hitmarkers: [...s.hitmarkers, { id, type }]
       }))
       trackTimeout(() => {
-        set((s) => ({ hitmarkers: s.hitmarkers.filter((h) => h !== id) }))
+        set((s) => ({ hitmarkers: s.hitmarkers.filter((h) => h.id !== id) }))
       }, 250)
     },
 
-    // Enemigo eliminado.
+    // Enemigo eliminado. Trackea killstreak, multikill y desbloquea streaks.
     registerKill: (points = 100) => {
       const id = nextId()
-      set((s) => ({
-        score: s.score + points,
-        enemiesRemaining: Math.max(0, s.enemiesRemaining - 1),
-        killmarkers: [...s.killmarkers, id]
-      }))
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      // Multikill: ventana de 3s desde la última kill.
+      const prevKillAt = get().lastKillAt
+      const inWindow = prevKillAt > 0 && (now - prevKillAt) < 3000
+      const newMultikill = inWindow ? get().multikillCount + 1 : 1
+      const multikillLabel = multikillLabelFor(newMultikill)
+
+      set((s) => {
+        const newStreak = s.killStreak + 1
+        // Desbloquea killstreaks al cruzar umbrales (3/5/7/11).
+        const newAvailable = [...s.availableStreaks]
+        const thresholds = [
+          { count: 3, type: 'uav' },
+          { count: 5, type: 'airstrike' },
+          { count: 7, type: 'heli' },
+          { count: 11, type: 'gunship' }
+        ]
+        for (const t of thresholds) {
+          if (newStreak === t.count) {
+            newAvailable.push({ id: nextId(), type: t.type })
+          }
+        }
+        return {
+          score: s.score + points,
+          kills: s.kills + 1,
+          enemiesRemaining: Math.max(0, s.enemiesRemaining - 1),
+          killmarkers: [...s.killmarkers, id],
+          killStreak: newStreak,
+          availableStreaks: newAvailable,
+          lastKillAt: now,
+          multikillCount: newMultikill,
+          multikillLabel
+        }
+      })
       trackTimeout(() => {
         set((s) => ({ killmarkers: s.killmarkers.filter((k) => k !== id) }))
       }, 500)
+      // El callout de multikill desaparece tras 1.5s.
+      if (multikillLabel) {
+        trackTimeout(() => {
+          if (get().multikillLabel === multikillLabel) {
+            set({ multikillLabel: null })
+          }
+        }, 1500)
+      }
+      // --- Progresión: XP por kill (10× score) + level up ---
+      const xpResult = addXP(points * 10)
+      recordKill()
+      if (xpResult.leveledUp) {
+        set({
+          playerLevel: xpResult.newLevel,
+          playerXP: xpResult.xp,
+          playerXPNeeded: xpResult.xpNeeded,
+          levelUpFlash: { level: xpResult.newLevel, unlocks: xpResult.newUnlocks }
+        })
+        // El flash de level up desaparece tras 3s.
+        trackTimeout(() => set({ levelUpFlash: null }), 3000)
+      } else {
+        set({ playerXP: xpResult.xp, playerXPNeeded: xpResult.xpNeeded })
+      }
+    },
+
+    // Consume un killstreak desbloqueado y lo activa.
+    useStreak: (streakId) => {
+      const { availableStreaks } = get()
+      const streak = availableStreaks.find((s) => s.id === streakId)
+      if (!streak) return false
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      const duration = streakDuration(streak.type)
+      set((s) => ({
+        availableStreaks: s.availableStreaks.filter((s2) => s2.id !== streakId),
+        activeStreaks: [...s.activeStreaks, { id: streakId, type: streak.type, until: now + duration }]
+      }))
+      // UAV: activa reveal del minimap.
+      if (streak.type === 'uav') set({ uavActive: true })
+      // Auto-expira el streak.
+      trackTimeout(() => {
+        set((s) => ({
+          activeStreaks: s.activeStreaks.filter((s2) => s2.id !== streakId)
+        }))
+        if (streak.type === 'uav') {
+          // Solo desactiva UAV si no hay otro UAV activo.
+          const stillUav = get().activeStreaks.some((s2) => s2.type === 'uav')
+          if (!stillUav) set({ uavActive: false })
+        }
+      }, duration)
+      return true
+    },
+
+    // Toggle del scoreboard (Tab hold).
+    toggleScoreboard: (open) => {
+      set({ scoreboardOpen: open })
     },
 
     // Daño al jugador.
+    // I-frames: tras recibir daño, 0.5s de invulnerabilidad (PLAYER.invulnTime)
+    // para evitar melts instantáneos cuando varios enemigos golpean en el
+    // mismo frame. Antes no había i-frames y 3 enemigos mataban al jugador
+    // de golpe.
+    // ATÓMICO: una sola llamada set() calcula vida, flash, dirección y
+    // transición a GAMEOVER. Antes eran 3 sets separados que dejaban estado
+    // intermedio inconsistente.
     takeDamage: (amount, fromDirection = null) => {
-      const { health, gameState } = get()
+      const { health, gameState, lastDamageAt } = get()
       if (gameState !== GAME_STATES.PLAYING) return
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      if (now - lastDamageAt < PLAYER.invulnTime * 1000) return
       const newHealth = Math.max(0, health - amount)
-      set({ health: newHealth, damageFlash: true })
-      trackTimeout(() => set({ damageFlash: false }), 150)
 
-      // Indicador direccional si se pasa el ángulo.
       if (fromDirection !== null) {
         const id = nextId()
-        set((s) => ({ damageDirections: [...s.damageDirections, { id, angle: fromDirection }] }))
+        set((s) => ({
+          health: newHealth,
+          damageFlash: true,
+          lastDamageAt: now,
+          damageDirections: [...s.damageDirections, { id, angle: fromDirection }],
+          // Muerte limpia: firing/reloading a false, killStreak reseteado.
+          gameState: newHealth <= 0 ? GAME_STATES.GAMEOVER : s.gameState,
+          firing: newHealth <= 0 ? false : s.firing,
+          reloading: newHealth <= 0 ? false : s.reloading,
+          deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
+          killStreak: newHealth <= 0 ? 0 : s.killStreak,
+          multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
+          multikillLabel: newHealth <= 0 ? null : s.multikillLabel
+        }))
         trackTimeout(() => {
           set((s) => ({ damageDirections: s.damageDirections.filter((d) => d.id !== id) }))
         }, 1200)
+      } else {
+        set((s) => ({
+          health: newHealth,
+          damageFlash: true,
+          lastDamageAt: now,
+          gameState: newHealth <= 0 ? GAME_STATES.GAMEOVER : s.gameState,
+          firing: newHealth <= 0 ? false : s.firing,
+          reloading: newHealth <= 0 ? false : s.reloading,
+          deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
+          killStreak: newHealth <= 0 ? 0 : s.killStreak,
+          multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
+          multikillLabel: newHealth <= 0 ? null : s.multikillLabel
+        }))
       }
-
-      if (newHealth <= 0) set({ gameState: GAME_STATES.GAMEOVER })
+      if (newHealth <= 0) {
+        // Al morir cancelamos la recarga pendiente y el timeout del flash
+        // de daño para que no muten el estado post-muerte.
+        clearPendingTimeouts()
+        // Progresión: XP de consolación + registramos muerte/oleada.
+        const xpResult = addXP(50)
+        recordDeath()
+        recordWave(get().wave)
+        set({
+          playerLevel: xpResult.newLevel,
+          playerXP: xpResult.xp,
+          playerXPNeeded: xpResult.xpNeeded
+        })
+      } else {
+        trackTimeout(() => set({ damageFlash: false }), 150)
+      }
     },
 
     // Inicia una nueva oleada.
-    startWave: (wave, count) => set({ wave, enemiesRemaining: count }),
+    startWave: (wave, count) => {
+      recordWave(wave)
+      set({ wave, enemiesRemaining: count })
+    },
 
     // Resetea todo para una nueva partida.
     // IMPORTANTE: cancela los timeouts pendientes para que el feedback
@@ -162,23 +375,68 @@ export const useGameStore = create((set, get) => {
     // no reaparezca sobre la nueva (bug fixed).
     reset: () => {
       clearPendingTimeouts()
+      const prog = getProgress()
       set({
         gameState: GAME_STATES.PLAYING,
         score: 0,
         wave: 1,
         enemiesRemaining: 0,
-        health: 100,
-        maxHealth: 100,
-        ammo: 30,
-        magSize: 30,
-        reserve: 90,
+        health: PLAYER.maxHealth,
+        maxHealth: PLAYER.maxHealth,
+        lastDamageAt: 0,
+        // Armas: volvemos al arma por defecto (M4) con munición llena.
+        currentWeapon: 'm4',
+        weaponAmmo: { m4: WEAPONS.m4.magSize },
+        weaponReserve: { m4: WEAPONS.m4.reserveStart },
+        ammo: WEAPONS.m4.magSize,
+        magSize: WEAPONS.m4.magSize,
+        reserve: WEAPONS.m4.reserveStart,
         reloading: false,
         firing: false,
         hitmarkers: [],
         killmarkers: [],
         damageFlash: false,
-        damageDirections: []
+        damageDirections: [],
+        // Stats y streaks reseteados para la nueva partida.
+        kills: 0,
+        deaths: 0,
+        killStreak: 0,
+        availableStreaks: [],
+        activeStreaks: [],
+        lastKillAt: 0,
+        multikillCount: 0,
+        multikillLabel: null,
+        uavActive: false,
+        scoreboardOpen: false,
+        // Progresión se mantiene (es persistente entre partidas).
+        playerLevel: prog.level,
+        playerXP: prog.xp,
+        playerXPNeeded: prog.xpNeeded,
+        levelUpFlash: null
       })
     }
   }
 })
+
+// --- Helpers de killstreaks y multikills (a nivel módulo, sin estado) ---
+
+// Devuelve el label del multikill según el count (0 o 1 = sin callout).
+function multikillLabelFor(count) {
+  if (count >= 8) return 'MONSTER KILL'
+  if (count >= 6) return 'MEGA KILL'
+  if (count >= 4) return 'MULTI KILL'
+  if (count >= 3) return 'TRIPLE KILL'
+  if (count >= 2) return 'DOUBLE KILL'
+  return null
+}
+
+// Duración (ms) de cada tipo de killstreak.
+function streakDuration(type) {
+  switch (type) {
+    case 'uav': return 30000       // 30s de reveal
+    case 'airstrike': return 8000  // 8s de ventana de bombardeo
+    case 'heli': return 60000      // 60s de helicóptero aliado
+    case 'gunship': return 30000   // 30s de control de cañón aéreo
+    default: return 10000
+  }
+}

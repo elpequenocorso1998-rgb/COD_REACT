@@ -8,5 +8,16 @@ dist
 *.log
 .DS_Store
 .env
+.env.*
 .vscode
 .idea
+
+# Tests y manifiestos de k8s no se necesitan en la imagen de producción.
+tests
+k8s
+
+# Config de opencode y otros archivos de desarrollo.
+opencode.json
+.opencode
+AGENTS.md
+

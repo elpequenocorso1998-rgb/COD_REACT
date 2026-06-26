@@ -1,0 +1,29 @@
+# Kustomization: aplica todos los manifiestos de una vez.
+# Uso:
+#   kubectl apply -k k8s/
+# o, si prefieres sin kustomize:
+#   kubectl apply -f k8s/namespace.yaml -f k8s/deployment.yaml -f k8s/service.yaml ...
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: modern-warfare-react
+namespace: modern-warfare
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: modern-warfare-react
+      app.kubernetes.io/managed-by: kustomize
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+  - quota.yaml
+
+# images:
+#   - name: modern-warfare-react
+#     newName: ghcr.io/tu-org/modern-warfare-react  # descomenta y ajusta para tu registry
+#     newTag: "1.0.0"

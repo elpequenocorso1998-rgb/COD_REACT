@@ -1,0 +1,18 @@
+# PodDisruptionBudget: garantiza que al menos 1 réplica del juego esté
+# siempre disponible durante mantenimientos voluntarios (drain de nodos,
+# upgrades del clúster). Con replicas=3 y minAvailable=2, solo se puede
+# interrumpir 1 pod a la vez.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: modern-warfare-react
+      app.kubernetes.io/component: game

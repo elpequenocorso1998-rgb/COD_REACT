@@ -33,21 +33,193 @@ export const MOVEMENT = {
   camSmooth: 0.35
 }
 
-// --- Arma ---
-export const WEAPON = {
-  magSize: 30,
-  reserveStart: 90,
-  fireInterval: 0.1, // 10 disparos/seg
-  reloadTime: 1500,  // ms
-  bodyDamage: 34,
-  headDamage: 100,
-  raycastFar: 200,
-  recoilPerShot: 0.045,
-  recoilMax: 0.14,
-  recoilRecover: 0.85,
-  pitchKick: 0.012,
-  yawKick: 0.008
+// --- Arsenal de armas ---
+// IMPORTANTE: todos los tiempos en SEGUNDOS para consistencia interna.
+// store.js convierte a ms al llamar setTimeout.
+// Cada arma tiene sus stats propias para que el balance sea data-driven.
+// category: 'ar' (assault rifle), 'smg', 'sniper', 'shotgun', 'lmg', 'pistol'
+export const WEAPONS = {
+  m4: {
+    id: 'm4',
+    name: 'M4 Carbine',
+    category: 'ar',
+    magSize: 30,
+    reserveStart: 90,
+    fireInterval: 0.1,      // 10 disparos/seg
+    reloadTime: 1.5,
+    bodyDamage: 34,
+    headDamage: 100,
+    raycastFar: 200,
+    recoilPerShot: 0.045,
+    recoilMax: 0.14,
+    recoilRecover: 0.85,
+    pitchKick: 0.012,
+    yawKick: 0.008,
+    adsTime: 0.25,           // tiempo de ADS (segundos)
+    adsFov: 45,              // FOV al apuntar
+    hipFireSpread: 1.0,      // multiplicador de spread hipfire
+    adsSpread: 0.1,          // multiplicador de spread en ADS
+    adsSensMul: 0.6,         // reducción de sensibilidad al apuntar
+    moveSpeedMul: 1.0,       // multiplicador de velocidad al llevarla
+    automatic: true,
+    minWave: 1               // disponible desde el inicio
+  },
+  ak47: {
+    id: 'ak47',
+    name: 'AK-47',
+    category: 'ar',
+    magSize: 30,
+    reserveStart: 90,
+    fireInterval: 0.11,
+    reloadTime: 1.8,
+    bodyDamage: 40,
+    headDamage: 120,
+    raycastFar: 200,
+    recoilPerShot: 0.06,
+    recoilMax: 0.18,
+    recoilRecover: 0.82,
+    pitchKick: 0.016,
+    yawKick: 0.011,
+    adsTime: 0.28,
+    adsFov: 45,
+    hipFireSpread: 1.1,
+    adsSpread: 0.12,
+    adsSensMul: 0.6,
+    moveSpeedMul: 0.97,
+    automatic: true,
+    minWave: 1
+  },
+  mp5: {
+    id: 'mp5',
+    name: 'MP5 SMG',
+    category: 'smg',
+    magSize: 30,
+    reserveStart: 120,
+    fireInterval: 0.08,      // 12.5 disparos/seg
+    reloadTime: 1.2,
+    bodyDamage: 25,
+    headDamage: 75,
+    raycastFar: 120,
+    recoilPerShot: 0.03,
+    recoilMax: 0.1,
+    recoilRecover: 0.88,
+    pitchKick: 0.008,
+    yawKick: 0.006,
+    adsTime: 0.18,
+    adsFov: 50,
+    hipFireSpread: 0.7,
+    adsSpread: 0.08,
+    adsSensMul: 0.65,
+    moveSpeedMul: 1.1,
+    automatic: true,
+    minWave: 1
+  },
+  sniper: {
+    id: 'sniper',
+    name: 'Sniper Rifle',
+    category: 'sniper',
+    magSize: 5,
+    reserveStart: 25,
+    fireInterval: 1.2,       // bolt-action lento
+    reloadTime: 2.5,
+    bodyDamage: 150,
+    headDamage: 500,         // headshot instantáneo
+    raycastFar: 400,
+    recoilPerShot: 0.2,
+    recoilMax: 0.3,
+    recoilRecover: 0.7,
+    pitchKick: 0.05,
+    yawKick: 0.02,
+    adsTime: 0.4,
+    adsFov: 20,              // zoom fuerte
+    hipFireSpread: 3.0,      // muy impreciso sin apuntar
+    adsSpread: 0.0,          // perfecta al apuntar
+    adsSensMul: 0.3,
+    moveSpeedMul: 0.85,
+    automatic: false,        // bolt-action: un click = un disparo
+    minWave: 1
+  },
+  shotgun: {
+    id: 'shotgun',
+    name: 'Shotgun',
+    category: 'shotgun',
+    magSize: 7,
+    reserveStart: 35,
+    fireInterval: 0.7,
+    reloadTime: 3.0,
+    bodyDamage: 20,          // por pellet (8 pellets)
+    headDamage: 40,
+    raycastFar: 60,          // corto alcance
+    recoilPerShot: 0.12,
+    recoilMax: 0.25,
+    recoilRecover: 0.75,
+    pitchKick: 0.04,
+    yawKick: 0.02,
+    adsTime: 0.3,
+    adsFov: 55,
+    hipFireSpread: 0.5,
+    adsSpread: 0.3,
+    adsSensMul: 0.7,
+    moveSpeedMul: 0.95,
+    automatic: false,
+    pellets: 8,              // dispara 8 rayos por disparo
+    minWave: 1
+  },
+  lmg: {
+    id: 'lmg',
+    name: 'LMG',
+    category: 'lmg',
+    magSize: 100,
+    reserveStart: 200,
+    fireInterval: 0.09,
+    reloadTime: 4.0,
+    bodyDamage: 30,
+    headDamage: 90,
+    raycastFar: 250,
+    recoilPerShot: 0.04,
+    recoilMax: 0.16,
+    recoilRecover: 0.83,
+    pitchKick: 0.011,
+    yawKick: 0.009,
+    adsTime: 0.35,
+    adsFov: 48,
+    hipFireSpread: 1.3,
+    adsSpread: 0.15,
+    adsSensMul: 0.55,
+    moveSpeedMul: 0.8,
+    automatic: true,
+    minWave: 1
+  },
+  pistol: {
+    id: 'pistol',
+    name: 'Pistol',
+    category: 'pistol',
+    magSize: 12,
+    reserveStart: 48,
+    fireInterval: 0.15,
+    reloadTime: 1.0,
+    bodyDamage: 28,
+    headDamage: 80,
+    raycastFar: 100,
+    recoilPerShot: 0.035,
+    recoilMax: 0.1,
+    recoilRecover: 0.9,
+    pitchKick: 0.01,
+    yawKick: 0.007,
+    adsTime: 0.15,
+    adsFov: 55,
+    hipFireSpread: 0.8,
+    adsSpread: 0.1,
+    adsSensMul: 0.7,
+    moveSpeedMul: 1.15,
+    automatic: false,
+    minWave: 1
+  }
 }
+
+// WEAPON: alias del arma por defecto (M4) para compatibilidad con código
+// existente que importa WEAPON directamente.
+export const WEAPON = WEAPONS.m4
 
 // --- Tipos de enemigo ---
 // Cada oleada mezcla tipos según el progreso. Antes todos los enemigos

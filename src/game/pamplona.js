@@ -173,7 +173,10 @@ export function buildPamplonaHouse({
     map: roofTex.clone(),
     color: 0x8a3a20,
     roughness: 0.85,
-    metalness: 0.1
+    metalness: 0.1,
+    // DoubleSide: el tejado tiene caras con winding inconsistente; sin
+    // esto, partes del tejado se verían invisibles desde ciertos ángulos.
+    side: THREE.DoubleSide
   })
   roofMat.map.repeat.set(width / 2, depth / 2)
   // Prisma triangular para el tejado.
@@ -204,6 +207,11 @@ export function buildPamplonaHouse({
   roof.position.y = height + 0.3
   roof.castShadow = true; roof.receiveShadow = true
   group.add(roof)
+  // Collider del tejado: las balas y el jugador no deben atravesarlo
+  // (antes solo el cuerpo de la casa era collider).
+  colliders.push(new THREE.Box3().setFromObject(roof))
+  // Cornisa también sólida para que las balas no la atraviesen.
+  colliders.push(new THREE.Box3().setFromObject(cornice))
 
   // --- Ventanas y balcones por planta ---
   const balconyMat = new THREE.MeshStandardMaterial({
@@ -406,6 +414,9 @@ export function buildSanFerdinandBanners(start, end, height = 6) {
   const dir = endV.clone().sub(startV)
   const length = dir.length()
   const segments = Math.floor(length / 1.5)
+  // Guard: si el tramo es más corto que 1.5, segments=0 produce 0/0=NaN
+  // en el cálculo de t. Sin banderines en tramos cortos.
+  if (segments < 1) return group
 
   // Cuerda superior.
   const ropeGeo = new THREE.BufferGeometry()
@@ -506,5 +517,9 @@ export function buildFountain(sillarTex) {
   )
   basinWater.position.y = 0.55; group.add(basinWater)
 
-  return group
+  // Colliders: la pila es sólida (antes el jugador cruzaba la fuente).
+  // Devolvemos un collider AABB aprox de la pila (suficiente para no
+  // atravesarla; el cilindro exacto requeriría circleCollider).
+  const colliders = [new THREE.Box3().setFromObject(basin)]
+  return { group, colliders }
 }

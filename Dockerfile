@@ -10,9 +10,10 @@ WORKDIR /app
 # la caché de Docker: si no cambian package*.json, no reinstalamos.
 COPY package.json package-lock.json* ./
 
-# Instalamos todas las dependencias (incluidas las de desarrollo,
-# porque necesitamos Vite para compilar).
-RUN npm install --no-audit --no-fund
+# npm ci: instalación reproducible y determinista desde el lockfile
+# (antes 'npm install' podía resolver versiones distintas y romper
+# reproducibilidad de builds).
+RUN npm ci --no-audit --no-fund
 
 # Copiamos el resto del código fuente.
 COPY . .
@@ -21,19 +22,26 @@ COPY . .
 RUN npm run build
 
 # Etapa 2: SERVE
-# Servimos los estáticos con nginx:alpine (imagen final muy ligera).
-# En desarrollo también podríamos usar 'npm run dev', pero servir
-# estáticos con nginx es más realista y rápido para producción.
-FROM nginx:alpine AS serve
+# Servimos los estáticos con nginx-unprivileged (no corre como root,
+# más seguro que nginx:alpine que arranca el master como root).
+FROM nginxinc/nginx-unprivileged:alpine AS serve
 
 # Copiamos la config de nginx que escucha en el puerto 9432.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiamos los estáticos compilados desde la etapa anterior.
-COPY --from=build /app/dist /usr/share/nginx/html
+# --chown para que el usuario nginx (UID 101) pueda leerlos.
+COPY --chown=101:101 --from=build /app/dist /usr/share/nginx/html
 
-# Exponemos el puerto solicitado por el usuario.
+# nginx-unprivileged escucha por defecto en 8080; nuestra config usa 9432.
+# El usuario sin privilegios puede enlazar puertos > 1024 sin problemas.
 EXPOSE 9432
+
+# Healthcheck: wget ligero para que el orquestador sepa si el contenedor
+# sirve correctamente (antes no había healthcheck y restart lo ciegaba).
+USER 101
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://localhost:9432/ || exit 1
 
 # Arrancamos nginx en primer plano.
 CMD ["nginx", "-g", "daemon off;"]

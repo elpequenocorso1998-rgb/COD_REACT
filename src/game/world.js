@@ -118,8 +118,16 @@ export function createWorld(scene) {
   // Espacio abierto con fuente en el centro.
   // ---------------------------------------------------------------------
   const fountain = buildFountain(sillarTex)
-  fountain.position.set(0, 0, 0)
-  scene.add(fountain)
+  fountain.group.position.set(0, 0, 0)
+  fountain.group.updateMatrixWorld(true)
+  scene.add(fountain.group)
+  // La fuente es sólida (antes el jugador la atravesaba).
+  if (fountain.colliders) {
+    fountain.colliders.forEach((box) => {
+      box.applyMatrix4(fountain.group.matrixWorld)
+      colliders.push({ box, type: 'wall' })
+    })
+  }
 
   // ---------------------------------------------------------------------
   // CASAS alrededor de la plaza, formando callejones.
@@ -276,7 +284,9 @@ export function createWorld(scene) {
     const pl = new THREE.PointLight(0xffb060, 0, 18, 1.8)
     pl.position.set(x + sign * 0.5, 4.6, z)
     scene.add(pl)
-    lampLights.push({ light: pl, x: x + sign * 0.5, z: z + sign * 0.5 })
+    // x/z redundantes con pl.position: los guardamos para updateLamps sin
+    // tener que leer .position cada frame (acceso directo más rápido).
+    lampLights.push({ light: pl, x: x + sign * 0.5, z: z })
   })
 
   // ---------------------------------------------------------------------
@@ -338,6 +348,8 @@ export function createWorld(scene) {
   debrisInst.castShadow = true
   debrisInst.receiveShadow = true
   let debrisIdx = 0
+  // Euler reutilizado para los escombros (antes se allocaba uno por iteración).
+  const _debrisEuler = new THREE.Euler()
   for (let i = 0; i < DEBRIS_COUNT; i++) {
     const s = 0.1 + rng() * 0.4
     _treePos.set(
@@ -345,7 +357,8 @@ export function createWorld(scene) {
       s * 0.5,
       (rng() - 0.5) * (FLOOR_SIZE - 8)
     )
-    _treeQuat.setFromEuler(new THREE.Euler(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI))
+    _debrisEuler.set(rng() * Math.PI, rng() * Math.PI, rng() * Math.PI)
+    _treeQuat.setFromEuler(_debrisEuler)
     _treeScale.set(s, s, s)
     _treeMat.compose(_treePos, _treeQuat, _treeScale)
     debrisInst.setMatrixAt(debrisIdx++, _treeMat)
@@ -432,9 +445,12 @@ export function createWorld(scene) {
 
   function collidesAt(x, z, radius = 0.4) {
     _p.set(x, 1, z)
-    // Colliders AABB via spatial hash (O(k) en vez de O(n)).
-    const candidates = grid.query(x, z, radius)
-    for (const c of candidates) {
+    // Colliders AABB via spatial hash. Usamos forEachCandidate para no
+    // allocar un array de resultados por llamada (antes grid.query()
+    // creaba un array nuevo en cada collidesAt, varios por frame).
+    let hit = false
+    grid.forEachCandidate(x, z, radius, (c) => {
+      if (hit) return
       c.box.getCenter(_center)
       c.box.getSize(_size)
       // Expandimos el margen in-place (sin clone).
@@ -444,8 +460,9 @@ export function createWorld(scene) {
       const dx = Math.abs(_p.x - _center.x)
       const dy = Math.abs(_p.y - _center.y)
       const dz = Math.abs(_p.z - _center.z)
-      if (dx <= hx && dy <= hy && dz <= hz) return true
-    }
+      if (dx <= hx && dy <= hy && dz <= hz) hit = true
+    })
+    if (hit) return true
     // Colliders circulares (plaza de toros): pocos, lineal es fine.
     for (const c of circleColliders) {
       const dx = x - c.cx
@@ -457,19 +474,21 @@ export function createWorld(scene) {
   }
 
   // Actualiza las farolas: activa las 4 más cercanas al jugador.
-  const _tmpLights = []
+  // Pre-asignamos los slots {ll, d} una sola vez para evitar allocar 12
+  // objetos por frame (antes _tmpLights.push({ll, d:...}) cada llamada).
+  const NEAREST_LAMPS = 4
+  const _tmpLights = lampLights.map((ll) => ({ ll, d: 0 }))
   function updateLamps(playerPos) {
     // Apagamos todas.
     for (const ll of lampLights) ll.light.intensity = 0
-    // Ordenamos por distancia y encendemos las 4 más cercanas.
-    _tmpLights.length = 0
-    for (const ll of lampLights) {
-      const dx = ll.x - playerPos.x
-      const dz = ll.z - playerPos.z
-      _tmpLights.push({ ll, d: dx * dx + dz * dz })
+    // Actualizamos distancias in-place y ordenamos.
+    for (const slot of _tmpLights) {
+      const dx = slot.ll.x - playerPos.x
+      const dz = slot.ll.z - playerPos.z
+      slot.d = dx * dx + dz * dz
     }
     _tmpLights.sort((a, b) => a.d - b.d)
-    for (let i = 0; i < Math.min(4, _tmpLights.length); i++) {
+    for (let i = 0; i < Math.min(NEAREST_LAMPS, _tmpLights.length); i++) {
       _tmpLights[i].ll.light.intensity = 2.5
     }
   }

@@ -116,10 +116,12 @@ export function makeConcreteTextures(size = 512) {
   const normalMap = new THREE.CanvasTexture(normalCanvas)
   normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping
   normalMap.repeat.set(12, 12)
+  normalMap.anisotropy = 8
 
   const roughnessMap = new THREE.CanvasTexture(roughCanvas)
   roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping
   roughnessMap.repeat.set(12, 12)
+  roughnessMap.anisotropy = 8
 
   return { map, normalMap, roughnessMap }
 }

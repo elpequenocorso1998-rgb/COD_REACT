@@ -1,0 +1,44 @@
+# Ingress: publica el juego al exterior por HTTP(S) en el host
+# modern-warfare.local (ajústalo a tu dominio real).
+#
+# Notas:
+# - Usa la clase de ingress "nginx" (ingress-nginx estándar). Si usas
+#   traefik u otro, cambia la annotation.
+# - pathType: Prefix enruta / y todos los subpath (assets, favicon).
+# - TLS opcional: descomenta el bloque tls y proporciona un Secret con
+#   el certificado (o usa cert-manager para Let's Encrypt automático).
+# - HSTS ya lo envía nginx, pero el Ingress puede terminar TLS y reenviar.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: modern-warfare
+  namespace: modern-warfare
+  labels:
+    app.kubernetes.io/name: modern-warfare-react
+    app.kubernetes.io/component: game
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Tamaño máximo de body (el juego no sube nada, pero por defecto).
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    # Timeout largo para conexiones idle (el juego es long-lived).
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Forzar HTTPS si se habilita TLS.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  # tls:
+  #   - hosts:
+  #       - modern-warfare.local
+  #     secretName: modern-warfare-tls
+  rules:
+    - host: modern-warfare.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: modern-warfare
+                port:
+                  name: http
