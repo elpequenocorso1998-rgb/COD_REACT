@@ -26,10 +26,14 @@ export const CAMERA_NEAR = 0.05
 export const CAMERA_FAR = 600
 
 // --- Sombras ---
+// Fase 1.7: bounds reducidos de 110 a 60 para mejor resolución cercana.
+// El sun sigue al jugador (updateShadows) para que el frustum siempre
+// cubra el área relevante. Esto es una aproximación a CSM (Cascaded
+// Shadow Maps) sin el coste de múltiples shadow maps.
 export const SHADOW_MAP_SIZE = 2048
 export const SHADOW_CAMERA_NEAR = 1
 export const SHADOW_CAMERA_FAR = 350
-export const SHADOW_CAMERA_BOUNDS = 110
+export const SHADOW_CAMERA_BOUNDS = 60
 export const SHADOW_BIAS = -0.0004
 export const SHADOW_NORMAL_BIAS = 0.02
 

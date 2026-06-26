@@ -78,6 +78,22 @@ export function createWorld(scene) {
   sun.shadow.normalBias = SHADOW_NORMAL_BIAS
   scene.add(sun)
 
+  // Fase 1.7: el sun sigue al jugador para que el frustum de sombras
+  // siempre cubra el área relevante (aproximación a CSM). Mantenemos la
+  // dirección del sol (SUN_DIR) y desplazamos posición + target juntos.
+  // Esto da sombras nítidas cerca del jugador sin necesitar múltiples maps.
+  const _shadowOffset = new THREE.Vector3()
+  function updateShadows(playerPos) {
+    _shadowOffset.copy(SUN_DIR_NORMALIZED).multiplyScalar(100)
+    sun.position.set(
+      playerPos.x + _shadowOffset.x,
+      _shadowOffset.y,
+      playerPos.z + _shadowOffset.z
+    )
+    sun.target.position.set(playerPos.x, 0, playerPos.z)
+    sun.target.updateMatrixWorld()
+  }
+
   const fill = new THREE.DirectionalLight(0x8a6a4a, 0.4)
   fill.position.set(-50, 40, -30)
   scene.add(fill)
@@ -129,6 +145,9 @@ export function createWorld(scene) {
       colliders.push({ box, type: 'wall' })
     })
   }
+  // Fase 1.7: materiales de agua para animar oleaje cada frame.
+  const waterMaterials = fountain.waterMaterials || []
+  let waterTime = 0
 
   // ---------------------------------------------------------------------
   // CASAS alrededor de la plaza, formando callejones.
@@ -511,7 +530,16 @@ export function createWorld(scene) {
     collidesAt,
     forEachCollider,
     updateLamps,
-    update() {},
+    updateShadows,
+    update(dt) {
+      // Fase 1.7: anima el oleaje del agua de la fuente.
+      if (waterMaterials.length > 0) {
+        waterTime += dt
+        for (const m of waterMaterials) {
+          if (m.userData.time) m.userData.time.value = waterTime
+        }
+      }
+    },
     dispose
   }
 

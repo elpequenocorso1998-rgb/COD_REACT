@@ -445,6 +445,8 @@ export function createEngine() {
       world.update(dt)
       // Farolas dinámicas: activa las cercanas al jugador.
       if (world.updateLamps) world.updateLamps(player.getPosition())
+      // Fase 1.7: sombras siguen al jugador (aproximación CSM).
+      if (world.updateShadows) world.updateShadows(player.getPosition())
       particles.update(dt)
       // Minimap: rotate-with-player, enemigos como puntos rojos.
       if (minimap) {

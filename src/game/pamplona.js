@@ -489,14 +489,11 @@ export function buildFountain(sillarTex) {
   topBowl.position.y = 2.6; group.add(topBowl)
 
   // Agua en la taza superior (realmente reflectante gracias al envMap).
+  // Fase 1.7: oleaje animado via onBeforeCompile (sin perder PBR/envMap).
+  const waterMatTop = makeWaterMaterial()
   const water = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.55, 0.55, 0.05, 16),
-    new THREE.MeshStandardMaterial({
-      color: 0x4a90c0, metalness: 1.0, roughness: 0.05,
-      transparent: true, opacity: 0.9,
-      emissive: 0x2a6080, emissiveIntensity: 0.3,
-      envMapIntensity: 3.0
-    })
+    new THREE.CylinderGeometry(0.55, 0.55, 0.05, 24),
+    waterMatTop
   )
   water.position.y = 2.65; group.add(water)
 
@@ -508,12 +505,11 @@ export function buildFountain(sillarTex) {
   basin.position.y = 0.3; basin.castShadow = true; basin.receiveShadow = true; group.add(basin)
 
   // Agua de la pila.
+  // Fase 1.7: oleaje animado.
+  const basinWaterMat = makeWaterMaterial()
   const basinWater = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.85, 1.85, 0.05, 24),
-    new THREE.MeshStandardMaterial({
-      color: 0x4a90c0, metalness: 1.0, roughness: 0.05,
-      transparent: true, opacity: 0.9, envMapIntensity: 3.0
-    })
+    new THREE.CylinderGeometry(1.85, 1.85, 0.05, 32),
+    basinWaterMat
   )
   basinWater.position.y = 0.55; group.add(basinWater)
 
@@ -521,7 +517,50 @@ export function buildFountain(sillarTex) {
   // Devolvemos un collider AABB aprox de la pila (suficiente para no
   // atravesarla; el cilindro exacto requeriría circleCollider).
   const colliders = [new THREE.Box3().setFromObject(basin)]
-  return { group, colliders }
+  // Fase 1.7: materiales de agua para animar su oleaje cada frame.
+  const waterMaterials = [waterMatTop, basinWaterMat]
+  return { group, colliders, waterMaterials }
+}
+
+/* ---------------------------------------------------------------------------
+   Material de agua con oleaje animado (Fase 1.7).
+   --------------------------------------------------------------------------
+   Usa MeshStandardMaterial (preserva PBR + envMap reflections) pero
+   inyecta un uniform de tiempo en el vertex shader para desplazar la
+   superficie con ondas senos. El caller debe actualizar material.userData.time
+   cada frame (lo hace world.update).
+   --------------------------------------------------------------------------- */
+function makeWaterMaterial() {
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x4a90c0, metalness: 1.0, roughness: 0.05,
+    transparent: true, opacity: 0.85,
+    emissive: 0x2a6080, emissiveIntensity: 0.3,
+    envMapIntensity: 3.0
+  })
+  mat.userData.time = { value: 0 }
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = mat.userData.time
+    shader.vertexShader = shader.vertexShader
+      .replace('void main() {', `
+        uniform float uTime;
+        varying float vWave;
+        void main() {
+          vWave = sin(position.x * 8.0 + uTime * 2.0) * 0.5
+                + cos(position.z * 6.0 + uTime * 1.5) * 0.5;
+      `)
+      .replace('#include <begin_vertex>', `
+        vec3 transformed = vec3(position);
+        transformed.y += vWave * 0.02;
+      `)
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', `
+        varying float vWave;
+        void main() {
+      `)
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );',
+        'vec4 diffuseColor = vec4( diffuse + vec3(0.0, 0.05, 0.1) * vWave, opacity );')
+  }
+  return mat
 }
 
 /* ---------------------------------------------------------------------------

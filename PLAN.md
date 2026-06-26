@@ -153,7 +153,7 @@ extended mags sube `magSize` a 45.
 
 **Verificación**: entrar en una casa y disparar desde la ventana.
 
-### 1.7 Visuales `[ ]`
+### 1.7 Visuales `[x]`
 
 **Tareas**:
 - **Cascaded Shadow Maps** (CSM) en `engine.js:64 sun` (ahora 1 sola
@@ -324,7 +324,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.4 — create-a-class + perks + attachments (UI + persistencia)
 - [x] Fase 1.5 — stamina + mantling + respiración (sniper) + footstep audio
 - [x] Fase 1.6 — casas con interior transitables + azoteas para combate vertical
-- [ ] Fase 1.7
+- [x] Fase 1.7 — sombras dinámicas (sun sigue al jugador) + agua con oleaje
 - [ ] Fase 1.8
 - [ ] Fase 1.9
 - [ ] Fase 2
