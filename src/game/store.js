@@ -119,7 +119,11 @@ export const useGameStore = create((set, get) => {
     playerLevel: getProgress().level,
     playerXP: getProgress().xp,
     playerXPNeeded: getProgress().xpNeeded,
-    levelUpFlash: null               // {level, unlocks} efímero al subir de nivel
+    levelUpFlash: null,              // {level, unlocks} efímero al subir de nivel
+
+    // --- Stamina (Fase 1.5) ---
+    stamina: 100,
+    maxStamina: 100
     }
   }
 
@@ -129,6 +133,9 @@ export const useGameStore = create((set, get) => {
     // --- Acciones ---
     setState: (gameState) => set({ gameState }),
     setLoading: (loading) => set({ loading }),
+
+    // Fase 1.5: actualiza la stamina (llamado cada frame desde engine).
+    setStamina: (stamina, maxStamina) => set({ stamina, maxStamina }),
 
     // Cambia de arma: guarda la munición del arma actual y carga la de la nueva.
     switchWeapon: (weaponId) => {
@@ -422,7 +429,10 @@ export const useGameStore = create((set, get) => {
         playerLevel: prog.level,
         playerXP: prog.xp,
         playerXPNeeded: prog.xpNeeded,
-        levelUpFlash: null
+        levelUpFlash: null,
+        // Fase 1.5: stamina al máximo al iniciar partida.
+        stamina: 100,
+        maxStamina: 100
       })
     }
   }

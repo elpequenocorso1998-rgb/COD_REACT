@@ -125,7 +125,7 @@ vacíos.
 **Verificación**: equipar Sleight of Hand recarga 2x más rápido. Equipar
 extended mags sube `magSize` a 45.
 
-### 1.5 Movimiento moderno `[ ]`
+### 1.5 Movimiento moderno `[x]`
 
 **Tareas**:
 - **Mantling/vaulting**: raycasts en `player.js` detectan borde de
@@ -322,7 +322,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.2 — IA táctica (state machine) + navmesh A* + ragdoll verlet + suppress
 - [x] Fase 1.3 — daño por zonas (head/neck/chest/stomach/limbs) + wallbang
 - [x] Fase 1.4 — create-a-class + perks + attachments (UI + persistencia)
-- [ ] Fase 1.5
+- [x] Fase 1.5 — stamina + mantling + respiración (sniper) + footstep audio
 - [ ] Fase 1.6
 - [ ] Fase 1.7
 - [ ] Fase 1.8

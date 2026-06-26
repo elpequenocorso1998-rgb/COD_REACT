@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import { buildViewModel, disposeViewModelShared } from './viewmodels.js'
-import { MOVEMENT, WEAPON, PLAYER } from './config.js'
+import { MOVEMENT, WEAPON, PLAYER, STAMINA } from './config.js'
 import { FOV, SPRINT_FOV } from './constants.js'
+import { hasPerk } from './loadout.js'
 
 /* =========================================================================
    Jugador (FPS controller) con controles suaves y responsivos.
@@ -36,6 +37,17 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   let leanAmount = 0             // -1=izq, 0=centro, 1=der (lerp suave)
   let leanTarget = 0             // objetivo de lean
   let tacticalSprint = false     // sprint táctico (arma baja, más rápido)
+
+  // --- Movimiento moderno (Fase 1.5) ---
+  let stamina = STAMINA.max      // stamina actual para sprintar
+  let isHoldingBreath = false    // manteniendo respiración (sniper)
+  let breathRegenDelay = 0       // delay antes de regenerar stamina de respiración
+  let isMantling = false         // trepando un obstáculo
+  let mantleTimer = 0            // duración restante del mantle
+  let mantleStartY = 0           // Y inicial del mantle
+  let mantleEndY = 0             // Y objetivo del mantle
+  let mantleTargetPos = new THREE.Vector3()
+  let lastFootstepAt = 0         // timestamp del último paso (audio)
 
   // --- Rotación de cámara (con smoothing) ---
   let targetYaw = 0, targetPitch = 0
@@ -114,6 +126,7 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   const raycaster = new THREE.Raycaster()
   raycaster.far = WEAPON.raycastFar
   let onShootCallback = null
+  let onFootstepCallback = null
 
   // --- Timeout del muzzle flash (para poder cancelarlo en dispose) ---
   let muzzleTimeout = null
@@ -177,9 +190,23 @@ export function createPlayer(scene, camera, world, particles, renderer) {
         if (canJump && !isProne) {
           velocity.y = MOVEMENT.jump
           canJump = false
+          // Fase 1.5: slide-jump (mantener momentum del slide al saltar).
+          // Si estábamos en slide, conservamos parte del impulso.
+          // (No hacemos nada especial: la velocity.x/z ya es alta del slide.)
         }
         // Jump cancela slide.
         if (isSliding) { isSliding = false; slideTimer = 0 }
+        // Fase 1.5: intentar mantle si estamos en el aire cerca de un borde.
+        if (!canJump) tryMantle()
+        break
+      case 'KeyF':
+        // Fase 1.5: mantle manual (trepado de obstáculos).
+        tryMantle()
+        break
+      case 'KeyV':
+        // Fase 1.5: mantener respiración (sniper). Reduce sway al apuntar.
+        isHoldingBreath = true
+        breathRegenDelay = STAMINA.breathRegenDelay
         break
     }
   }
@@ -199,6 +226,11 @@ export function createPlayer(scene, camera, world, particles, renderer) {
       case 'KeyE':
         // Al soltar Q o E, vuelve al centro.
         leanTarget = 0
+        break
+      case 'KeyV':
+        // Fase 1.5: soltar respiración.
+        isHoldingBreath = false
+        breathRegenDelay = STAMINA.breathRegenDelay
         break
     }
   }
@@ -343,6 +375,50 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   }
   function exitPointerLock() { document.exitPointerLock?.() }
 
+  // Fase 1.5: mantle (trepado de obstáculos).
+  // Detecta un borde a altura de pecho al frente del jugador y, si hay
+  // espacio libre encima, inicia una animación de subida.
+  const _mantleOrigin = new THREE.Vector3()
+  const _mantleDir = new THREE.Vector3()
+  const _mantleUp = new THREE.Vector3(0, 1, 0)
+  const _mantleHit = new THREE.Vector3()
+  function tryMantle() {
+    if (isMantling || isProne) return
+    camera.getWorldPosition(_mantleOrigin)
+    _mantleDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
+    _mantleDir.y = 0; _mantleDir.normalize()
+    // Raycast horizontal desde el pecho (1.2m).
+    _mantleOrigin.y = Math.max(_mantleOrigin.y, 1.2)
+    // Buscamos un collider al frente dentro de 1.5m.
+    let hitDist = Infinity
+    let hitBox = null
+    const _r = new THREE.Ray(_mantleOrigin, _mantleDir)
+    const _p = new THREE.Vector3()
+    if (world && world.colliders) {
+      for (const c of world.colliders) {
+        if (_r.intersectBox(c.box, _p)) {
+          const d = _mantleOrigin.distanceTo(_p)
+          if (d < hitDist && d < 1.5) { hitDist = d; hitBox = c.box }
+        }
+      }
+    }
+    if (!hitBox) return
+    // El borde superior del collider debe estar entre 0.5 y 1.8m (trepable).
+    const topY = hitBox.max.y
+    if (topY < 0.5 || topY > 1.8) return
+    // Comprobamos que encima del borde hay espacio libre (no es un muro alto).
+    const aboveX = _mantleOrigin.x + _mantleDir.x * (hitDist + 0.3)
+    const aboveZ = _mantleOrigin.z + _mantleDir.z * (hitDist + 0.3)
+    if (world.collidesAt(aboveX, aboveZ, 0.4)) return
+    // Iniciamos mantle: animación de 0.4s hasta (topY + standHeight).
+    isMantling = true
+    mantleTimer = 0.4
+    mantleStartY = camera.position.y
+    mantleEndY = topY + 0.1
+    mantleTargetPos.set(aboveX, mantleEndY, aboveZ)
+    velocity.set(0, 0, 0)
+  }
+
   // ---------------------------------------------------------------------
   // UPDATE: física y cámara.
   // ---------------------------------------------------------------------
@@ -381,6 +457,10 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     const worldWishZ = -sinY * wishDir.x + cosY * wishDir.z
 
     // --- 3. Velocidades objetivo según estado ---
+    // Fase 1.5: sprint requiere stamina (salvo Marathon perk).
+    const marathonPerk = hasPerk('marathon')
+    const canSprint = marathonPerk || stamina > STAMINA.minToSprint
+    if (sprinting && !canSprint) sprinting = false
     const moving = wishDir.lengthSq() > 0
     let maxSpeed
     // Slide: impulso fijo, sin control de dirección, decae con fricción.
@@ -395,11 +475,11 @@ export function createPlayer(scene, camera, world, particles, renderer) {
       maxSpeed = Math.max(MOVEMENT.crouch, slideSpeed)
     } else if (isProne) {
       maxSpeed = MOVEMENT.crouch * 0.4 // prone muy lento
-    } else if (tacticalSprint && moveForward) {
+    } else if (tacticalSprint && moveForward && canSprint) {
       maxSpeed = MOVEMENT.sprint * 1.25 // tactical sprint más rápido
     } else if (isCrouching) {
       maxSpeed = MOVEMENT.crouch
-    } else if (sprinting && moveForward) {
+    } else if (sprinting && moveForward && canSprint) {
       maxSpeed = MOVEMENT.sprint
     } else {
       maxSpeed = MOVEMENT.walk
@@ -407,6 +487,13 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     // Arma pesada reduce velocidad.
     const weaponSpeed = (currentWeaponDef || WEAPON).moveSpeedMul || 1.0
     maxSpeed *= weaponSpeed
+
+    // --- Fase 1.5: stamina drain / regen ---
+    if ((sprinting || tacticalSprint) && moveForward && !marathonPerk) {
+      stamina = Math.max(0, stamina - STAMINA.sprintDrainPerSec * dt)
+    } else {
+      stamina = Math.min(STAMINA.max, stamina + STAMINA.regenPerSec * dt)
+    }
 
     const groundAccel = MOVEMENT.groundAccel
     const airAccel = MOVEMENT.airAccel
@@ -539,6 +626,54 @@ export function createPlayer(scene, camera, world, particles, renderer) {
       0
     )
     viewmodel.rotation.set(viewmodelRotX, viewmodelRotY, 0)
+
+    // --- Fase 1.5: mantle (trepado de obstáculos) ---
+    if (isMantling) {
+      mantleTimer -= dt
+      const t = 1 - Math.max(0, mantleTimer / 0.4)
+      // Interpolamos Y y XZ hacia el objetivo.
+      camera.position.y = mantleStartY + (mantleEndY - mantleStartY) * t
+      camera.position.x += (mantleTargetPos.x - camera.position.x) * Math.min(1, dt * 8)
+      camera.position.z += (mantleTargetPos.z - camera.position.z) * Math.min(1, dt * 8)
+      if (mantleTimer <= 0) {
+        isMantling = false
+        camera.position.copy(mantleTargetPos)
+        canJump = true
+      }
+      // Durante mantle bloqueamos el resto de movimiento.
+      return
+    }
+
+    // --- Fase 1.5: respiración (sniper) ---
+    // Mantener Shift derecho + ADS con sniper reduce el sway.
+    // Solo tiene efecto con armas con scope (sniper) o adsFov bajo.
+    if (isHoldingBreath && adsProgress > 0.5) {
+      const w = currentWeaponDef || WEAPON
+      if (w.category === 'sniper' || w.adsFov < 30) {
+        if (breathRegenDelay <= 0) {
+          stamina = Math.max(0, stamina - STAMINA.breathDrainPerSec * dt)
+        }
+        // Si se acaba la stamina, forzamos soltar la respiración.
+        if (stamina <= 0) isHoldingBreath = false
+      }
+    } else {
+      if (breathRegenDelay > 0) breathRegenDelay -= dt
+      else if (!sprinting && !tacticalSprint) {
+        stamina = Math.min(STAMINA.max, stamina + STAMINA.regenPerSec * dt)
+      }
+    }
+
+    // --- Fase 1.5: footstep audio ---
+    // Emite pasos según cadencia (más rápido al sprintar).
+    if (canJump && horizontalSpeed > 1) {
+      const stepInterval = sprinting ? 0.32 : (isCrouching ? 0.55 : 0.45)
+      const t = (typeof _clockTime === 'number' ? _clockTime : performance.now() / 1000)
+      if (t - lastFootstepAt > stepInterval) {
+        lastFootstepAt = t
+        // El audio se reproduce via el callback onFootstep (engine lo conecta).
+        if (onFootstepCallback) onFootstepCallback(horizontalSpeed)
+      }
+    }
   }
 
   function reset() {
@@ -554,6 +689,12 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     isProne = false
     leanAmount = 0; leanTarget = 0
     tacticalSprint = false
+    // Fase 1.5: reset de stamina, respiración y mantle.
+    stamina = STAMINA.max
+    isHoldingBreath = false
+    breathRegenDelay = 0
+    isMantling = false; mantleTimer = 0
+    lastFootstepAt = 0
     currentHeight = STAND_HEIGHT
     camera.fov = baseFov
     camera.updateProjectionMatrix()
@@ -605,6 +746,9 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   return {
     update, reset, dispose, getPosition, getYaw,
     requestPointerLock, exitPointerLock, setWeapon,
-    set onShoot(fn) { onShootCallback = fn }
+    getStamina: () => stamina,
+    getMaxStamina: () => STAMINA.max,
+    set onShoot(fn) { onShootCallback = fn },
+    set onFootstep(fn) { onFootstepCallback = fn }
   }
 }

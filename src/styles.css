@@ -231,6 +231,27 @@ canvas { display: block; }
   box-shadow: 0 0 10px rgba(255,48,48,0.6);
 }
 
+/* --- Barra de stamina (Fase 1.5) --- */
+.stamina-bar {
+  width: 240px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.stamina-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d3ee, #5cf0e0);
+  transition: width 0.1s linear;
+  box-shadow: 0 0 6px rgba(34,211,238,0.5);
+}
+.stamina-fill.low {
+  background: linear-gradient(90deg, #ff8a3d, #ffd24d);
+  box-shadow: 0 0 6px rgba(255,138,61,0.6);
+}
+
 /* --- Indicador de munición con icono --- */
 .ammo-display { text-align: right; }
 .ammo-display .reserve {

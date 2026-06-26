@@ -126,7 +126,7 @@ function HUD() {
     damageFlash, damageDirections,
     killStreak, availableStreaks, multikillLabel,
     playerLevel, playerXP, playerXPNeeded, levelUpFlash, scoreboardOpen,
-    kills, deaths, currentWeapon
+    kills, deaths, currentWeapon, stamina, maxStamina
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -137,7 +137,8 @@ function HUD() {
     multikillLabel: s.multikillLabel,
     playerLevel: s.playerLevel, playerXP: s.playerXP, playerXPNeeded: s.playerXPNeeded,
     levelUpFlash: s.levelUpFlash, scoreboardOpen: s.scoreboardOpen,
-    kills: s.kills, deaths: s.deaths, currentWeapon: s.currentWeapon
+    kills: s.kills, deaths: s.deaths, currentWeapon: s.currentWeapon,
+    stamina: s.stamina, maxStamina: s.maxStamina
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -145,6 +146,7 @@ function HUD() {
   const lowAmmo = ammo <= 5
   const warnReserve = reserve <= 10
   const xpPct = Math.min(100, (playerXP / playerXPNeeded) * 100)
+  const staminaPct = Math.max(0, (stamina / maxStamina) * 100)
   const streakLabels = { uav: 'UAV', airstrike: 'Airstrike', heli: 'Heli', gunship: 'Gunship' }
   const streakKeys = { uav: '4', airstrike: '5', heli: '6', gunship: '7' }
 
@@ -258,6 +260,13 @@ function HUD() {
             <div
               className={`fill ${lowHealth ? 'low' : ''}`}
               style={{ width: `${hpPct}%` }}
+            />
+          </div>
+          {/* Fase 1.5: barra de stamina (sprint). */}
+          <div className="stamina-bar" aria-hidden="true">
+            <div
+              className={`stamina-fill ${staminaPct < 20 ? 'low' : ''}`}
+              style={{ width: `${staminaPct}%` }}
             />
           </div>
         </div>

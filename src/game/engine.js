@@ -252,6 +252,12 @@ export function createEngine() {
       enemies.markShot(enemy)
     }
 
+    player.onFootstep = (speed) => {
+      // Fase 1.5: pasos del jugador con audio procedural.
+      // Material: por defecto 'stone' (suelo de adoquines de Pamplona).
+      if (audio && audio.playFootstep) audio.playFootstep(speed, 'stone')
+    }
+
     player.onShoot = (originVec, dirVec, freeShot = false) => {
       // freeShot=true: pellets adicionales de shotgun, no consumen munición
       // ni reproducen sonido de disparo (solo hit-test).
@@ -429,14 +435,18 @@ export function createEngine() {
       // Actualizamos enemigos ANTES que player: así las posiciones que
       // player usa para raycast (handleShot) son del frame actual, no
       // del anterior (reduce latencia de hit-detection 1 frame).
+      const st = store.getState()
       enemies.update(dt, player.getPosition())
       player.update(dt, clock.elapsedTime)
+      // Fase 1.5: sincroniza stamina del player con el store (para HUD).
+      if (player.getStamina) {
+        st.setStamina(player.getStamina(), player.getMaxStamina())
+      }
       world.update(dt)
       // Farolas dinámicas: activa las cercanas al jugador.
       if (world.updateLamps) world.updateLamps(player.getPosition())
       particles.update(dt)
       // Minimap: rotate-with-player, enemigos como puntos rojos.
-      const st = store.getState()
       if (minimap) {
         minimap.update(dt, player.getPosition(), player.getYaw(), enemies, st.uavActive)
       }

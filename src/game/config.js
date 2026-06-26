@@ -33,6 +33,19 @@ export const MOVEMENT = {
   camSmooth: 0.35
 }
 
+// --- Stamina (Fase 1.5) ---
+// Sprint consume stamina; al llegar a 0 no se puede sprintar hasta
+// recuperarse. Marathon (perk) ignora el consumo. La respiración del
+// sniper también consume stamina (mantener Shift derecho).
+export const STAMINA = {
+  max: 100,                  // stamina máxima
+  sprintDrainPerSec: 20,     // cuánto consume sprintar
+  regenPerSec: 15,           // cuánto recupera al no sprintar
+  breathDrainPerSec: 25,     // cuánto consume mantener respiración (sniper)
+  breathRegenDelay: 1.5,     // delay tras soltar respiración antes de regenerar
+  minToSprint: 5             // mínimo necesario para iniciar sprint
+}
+
 // --- Arsenal de armas ---
 // IMPORTANTE: todos los tiempos en SEGUNDOS para consistencia interna.
 // store.js convierte a ms al llamar setTimeout.
