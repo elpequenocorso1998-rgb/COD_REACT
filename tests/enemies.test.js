@@ -116,15 +116,15 @@ describe('EnemyManager - handleShot (H2: headshot vs body)', () => {
     expect(mgr.count).toBe(2)
   })
 
-  it('update elimina cadáveres tras 2s de animación de muerte', () => {
+  it('update elimina cadáveres tras 2.5s de animación de muerte', () => {
     mgr.spawn(50, 2, 8, 100)
     const e = findEnemy(scene)
     e.dead = true
     e.dyingT = 0
-    // 1.9s: aún presente.
-    mgr.update(1.9, new THREE.Vector3(100, 0, 0))
+    // 2.4s: aún presente.
+    mgr.update(2.4, new THREE.Vector3(100, 0, 0))
     expect(scene.children.length).toBe(1)
-    // 0.2s más (>2s total): eliminado.
+    // 0.2s más (>2.5s total): eliminado.
     mgr.update(0.2, new THREE.Vector3(100, 0, 0))
     expect(scene.children.length).toBe(0)
   })

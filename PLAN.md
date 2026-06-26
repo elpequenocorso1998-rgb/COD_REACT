@@ -53,7 +53,7 @@ muestra para TODAS las armas (incluso pistol/sniper/shotgun). Inaceptable.
 **Verificación**: cambiar M4 → pistol → sniper → shotgun muestra modelos
 distintos en pantalla. Lint + tests + build.
 
-### 1.2 IA táctica + ragdoll `[ ]`
+### 1.2 IA táctica + ragdoll `[x]`
 
 **Problema actual**: `enemies.js:248 update()` = persecución recta + boids.
 Parecen zombies, no soldados.
@@ -319,7 +319,7 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 
 - [x] PLAN.md escrito
 - [x] Fase 1.1 — viewmodels por arma (m4, ak47, mp5, sniper, shotgun, lmg, pistol)
-- [ ] Fase 1.2
+- [x] Fase 1.2 — IA táctica (state machine) + navmesh A* + ragdoll verlet + suppress
 - [ ] Fase 1.3
 - [ ] Fase 1.4
 - [ ] Fase 1.5

@@ -1,23 +1,28 @@
 import * as THREE from 'three'
 import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
 import { WEAPON, ENEMY_TYPES, WAVE_SCALING } from './config.js'
+import { createAIController } from './ai.js'
+import { createRagdoll } from './ragdoll.js'
 
 /* =========================================================================
    Manager de enemigos (usando el humanoide anatómico).
    --------------------------------------------------------------------------
-   Mejoras:
-   - Separación entre enemigos (boids) para que no se apilen.
-   - Sin allocations por frame: emissive con setHex en lugar de new Color.
-   - Dispose de materiales clonados Y geometrías por-enemigo al eliminar.
-   - Doble bobbing eliminado: solo animateWalk mueve la cadera.
-   - Wall-avoidance: si el enemigo está bloqueado, deriva tangente al muro.
-   - hitFlash reseteado al morir (antes el cadáver quedaba rojo brillante).
+   Mejoras (Fase 1.2):
+   - AI táctica vía ai.js (state machine: Engage/Flank/TakeCover/etc).
+   - Pathfinding por navmesh (rutas reales, no persecución en línea recta).
+   - Ragdoll al morir (caída natural con verlet, no rotar+hundir).
+   - Suppression: el fuego del jugador cerca del bot lo manda a cobertura.
+   - Separación boids (heredado) para que no se apilen.
+   - Dispose de materiales clonados Y geometrías por-enemigo.
+   - Wall-avoidance (heredado).
+   - hitFlash reseteado al morir.
    - Hit-testing incluye chaleco y casco (no solo torso/cabeza).
    ========================================================================= */
-export function createEnemyManager(scene, world, _particles, audio) {
+export function createEnemyManager(scene, world, _particles, audio, navmesh = null) {
   const enemies = []
   let onKilledCb = null
   let onReachPlayerCb = null
+  const aiController = createAIController(navmesh)
   // Vectores reutilizados (sin allocations por frame).
   const _sep = new THREE.Vector3()
   // Array reutilizable para targets de raycast (evita alloc por disparo).
@@ -79,7 +84,15 @@ export function createEnemyManager(scene, world, _particles, audio) {
       coverTimer: 0,
       // Tracer visual: mesh efímero del rayo del disparo.
       tracerMesh: null,
-      tracerTimer: 0
+      tracerTimer: 0,
+      // AI táctica (Fase 1.2): se inicializa al spawnear via aiController.
+      ai: null,
+      // Ragdoll al morir (Fase 1.2): simulación verlet.
+      ragdoll: null,
+      // Contador de disparos (para IA: recarga cada 5).
+      shotsFired: 0,
+      // Cámara de muerte (animación legacy desactivada; ahora ragdoll).
+      dyingT: 0
     }
   }
 
@@ -99,6 +112,8 @@ export function createEnemyManager(scene, world, _particles, audio) {
     e.helmet.userData.enemy = e
     e.torso.userData.enemy = e
     e.vest.userData.enemy = e
+    // Inicializa el estado IA del bot.
+    aiController.init(e)
     scene.add(e.group)
     enemies.push(e)
   }
@@ -139,17 +154,22 @@ export function createEnemyManager(scene, world, _particles, audio) {
       onHit(enemy, isHead, _hitPoint, _hitNormal)
     }
 
-    if (enemy.hp <= 0) killEnemy(enemy, enemy.points)
+    if (enemy.hp <= 0) killEnemy(enemy, enemy.points, dirVec)
     return true
   }
 
-  function killEnemy(enemy, points = 0) {
+  function killEnemy(enemy, points = 0, impulseDir = null) {
     if (enemy.dead) return
     enemy.dead = true
     enemy.dyingT = 0
     enemy.hitFlash = 0
     // Apagamos el emissive inmediatamente para que el cadáver no brille.
     for (const m of enemy.materials) m.emissiveIntensity = 0
+    // Ragdoll: simulación verlet sobre los huesos del humanoid para una
+    // caída natural. Reemplaza la animación legacy de rotar+hundir.
+    if (enemy.humanoid) {
+      enemy.ragdoll = createRagdoll(enemy.humanoid, impulseDir)
+    }
     if (onKilledCb) onKilledCb(enemy, points)
   }
 
@@ -167,6 +187,8 @@ export function createEnemyManager(scene, world, _particles, audio) {
       e.tracerMesh.material.dispose()
       e.tracerMesh = null
     }
+    // Ragdoll (Fase 1.2): liberamos la simulación verlet.
+    if (e.ragdoll) { e.ragdoll.dispose(); e.ragdoll = null }
   }
 
   // --- Disparo enemigo: hitscan con tracer visual ---
@@ -249,21 +271,32 @@ export function createEnemyManager(scene, world, _particles, audio) {
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i]
 
-      // --- Animación de muerte: cae hacia adelante y se hunde ---
+      // --- Muerte: ragdoll verlet durante 2.5s, luego se elimina ---
       if (e.dead) {
         e.dyingT = (e.dyingT || 0) + dt
-        e.group.rotation.x = Math.min(Math.PI / 2, e.dyingT * 3)
-        e.group.position.y = -e.dyingT * 0.4
-        // Congelamos la pose; no llamamos a animateWalk (antes dejaba
-        // torcido el cadáver por no resetear spine.z / chest.y / hips.y).
-        if (e.dyingT > 2.0) {
+        if (e.ragdoll) {
+          // Step verlet (múltiples sub-steps para estabilidad con dt grande).
+          const subSteps = 2
+          const subDt = dt / subSteps
+          for (let s = 0; s < subSteps; s++) {
+            e.ragdoll.step(subDt, world)
+          }
+          e.ragdoll.apply()
+        } else {
+          // Sin ragdoll (fallback): animación legacy de caer+hundir.
+          e.group.rotation.x = Math.min(Math.PI / 2, e.dyingT * 3)
+          e.group.position.y = -e.dyingT * 0.4
+        }
+        if (e.dyingT > 2.5) {
           disposeEnemy(e)
           enemies.splice(i, 1)
         }
         continue
       }
 
-      // --- IA: perseguir al jugador + separación + wall avoidance ---
+      // --- IA táctica (Fase 1.2): state machine decide el waypoint ---
+      const aiTarget = aiController.update(e, dt, playerPos)
+
       const dx = playerPos.x - e.group.position.x
       const dz = playerPos.z - e.group.position.z
       const dist = Math.hypot(dx, dz)
@@ -285,32 +318,38 @@ export function createEnemyManager(scene, world, _particles, audio) {
       if (dist > 1.5) {
         const nx = dx / dist
         const nz = dz / dist
-        // --- IA de disparo: enemigos ranged se detienen a distancia y disparan ---
+        // --- IA de disparo: enemigos ranged en estado SUPPRESS disparan ---
+        const aiState = aiController.getState(e)
+        const isSuppressing = aiState === 'suppress'
         const PREFERRED_RANGE = 20
         const inRange = e.isRanged && dist < PREFERRED_RANGE && dist > 5
-        if (inRange) {
-          // En rango: no se mueve, dispara si tiene línea de visión.
+        if (inRange && (isSuppressing || aiState === 'engage')) {
           e.shootCooldown -= dt
           if (e.shootCooldown <= 0) {
-            e.shootCooldown = 1.0 + Math.random() * 1.5 // 1-2.5s entre disparos
+            e.shootCooldown = 1.0 + Math.random() * 1.5
             enemyShoot(e, playerPos)
+            e.shotsFired = (e.shotsFired || 0) + 1
           }
-          // Apunta al jugador pero no se mueve.
-          e.group.rotation.y = Math.atan2(nx, nz)
-          animateWalk(e.humanoid, e.walkPhase, 0) // idle
-        } else {
-          // Combina dirección al jugador con separación.
-          let moveX = nx + _sep.x * 0.5
-          let moveZ = nz + _sep.z * 0.5
+        }
 
-          // --- Wall avoidance: si apenas nos hemos movido desde el frame
-          // anterior, asumimos que estamos contra un muro y derivamos
-          // tangente al muro (90° respecto a la dirección al jugador).
+        // --- Movimiento hacia el target de la IA (o inmóvil si es null) ---
+        if (aiTarget) {
+          let moveX = aiTarget.x - e.group.position.x
+          let moveZ = aiTarget.z - e.group.position.z
+          const targetDist = Math.hypot(moveX, moveZ)
+          if (targetDist > 0.5) {
+            moveX = moveX / targetDist + _sep.x * 0.5
+            moveZ = moveZ / targetDist + _sep.z * 0.5
+          } else {
+            moveX = _sep.x
+            moveZ = _sep.z
+          }
+
+          // Wall-avoidance legacy (safety net para navmesh imperfecto).
           const moved = Math.hypot(e.group.position.x - e.lastX, e.group.position.z - e.lastZ)
           if (moved < e.speed * dt * 0.3) {
             e.stuckTime += dt
             if (e.stuckTime > 0.3) {
-              // Derivamos tangente (rotamos 90° la dirección deseada).
               if (e.avoidDir === 0) e.avoidDir = Math.random() < 0.5 ? 1 : -1
               moveX = -nz * e.avoidDir + _sep.x * 0.3
               moveZ = nx * e.avoidDir + _sep.z * 0.3
@@ -332,10 +371,13 @@ export function createEnemyManager(scene, world, _particles, audio) {
           if (!world.collidesAt(e.group.position.x, tz, 0.5)) e.group.position.z = tz
           e.group.rotation.y = Math.atan2(nx, nz)
 
-          // Animación de caminar.
           e.walkPhase += dt * (e.speed * 1.6)
           e.currentSpeed = 1
           animateWalk(e.humanoid, e.walkPhase, 1)
+        } else {
+          // Inmóvil (SUPPRESS / TAKE_COVER / RELOAD): rota hacia el jugador.
+          e.group.rotation.y = Math.atan2(nx, nz)
+          animateWalk(e.humanoid, e.walkPhase, 0)
         }
       } else {
         // Al llegar al jugador, idle breve antes de morir.
@@ -401,6 +443,16 @@ export function createEnemyManager(scene, world, _particles, audio) {
     },
     // Marca que un enemigo ha disparado/atacado (muzzle report para minimap).
     markShot(enemy) { if (enemy) enemy.lastShotAt = performance.now() },
+    // Fase 1.2: suprime un enemigo (fuego del jugador pasa cerca → cobertura).
+    suppress(enemy) { aiController.suppress(enemy) },
+    // Fase 1.2: suprime enemigos cercanos a un punto (ej. cerca de un disparo).
+    suppressNear(point, radius) {
+      for (const e of enemies) {
+        if (e.dead) continue
+        const d = Math.hypot(e.group.position.x - point.x, e.group.position.z - point.z)
+        if (d <= radius) aiController.suppress(e)
+      }
+    },
     get count() {
       // Sin allocation: contamos in-place.
       let n = 0

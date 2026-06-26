@@ -16,9 +16,11 @@ import { createMinimap } from './minimap.js'
 import { createStreakManager } from './streaks.js'
 import { createGrenadeSystem } from './grenades.js'
 import { createDecalSystem } from './decals.js'
+import { NavMesh } from './navmesh.js'
 import { useGameStore, GAME_STATES } from './store.js'
 import {
-  FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE
+  FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE,
+  FLOOR_SIZE
 } from './constants.js'
 import { FpsSampler, applyQuality } from './quality.js'
 
@@ -53,6 +55,7 @@ const WAVE_BASE_POINTS = 90      // puntos base por kill en oleada n
 export function createEngine() {
   let scene, camera, renderer, clock, composer
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals
+  let navmesh = null
   let sunMesh = null
   let cinematicPass = null
   let ssaoPass = null
@@ -192,11 +195,14 @@ export function createEngine() {
 
     // --- SISTEMAS DEL JUEGO ---
     world = createWorld(scene)
+    // NavMesh (Fase 1.2): grid walkable generado desde world.colliders.
+    // Se usa para pathfinding A* de la IA táctica.
+    navmesh = new NavMesh(world, FLOOR_SIZE, 2)
     envMap = createEnvironment(scene, renderer)
     particles = createParticleSystem(scene, { max: MAX_PARTICLES })
     player = createPlayer(scene, camera, world, particles, renderer)
     audio = createAudioSystem()
-    enemies = createEnemyManager(scene, world, particles, audio)
+    enemies = createEnemyManager(scene, world, particles, audio, navmesh)
     minimap = createMinimap()
     // El canvas del minimap lo adjuntamos al HUD via un callback que App.jsx
     // registra. Así React no re-renderiza el canvas (es imperativo).
@@ -278,6 +284,21 @@ export function createEngine() {
         if (decals) {
           // Raycast para encontrar el punto exacto y la normal de la pared.
           spawnBulletDecal(originVec, dirVec, weaponDef.raycastFar)
+        }
+        // Fase 1.2: fuego de supresión. Si el disparo pasó cerca de un
+        // enemigo sin impactar, lo mandamos a TakeCover. Esto simula el
+        // "fuego de supresión" de CoD: el enemigo se agacha al sentir balas.
+        if (enemies.suppressNear) {
+          // Sampleamos varios puntos a lo largo del rayo y suprimimos
+          // cualquier enemigo dentro de 2m del trayecto.
+          const samples = 8
+          for (let s = 1; s <= samples; s++) {
+            const t = s / samples
+            const px = originVec.x + dirVec.x * weaponDef.raycastFar * t
+            const py = originVec.y + dirVec.y * weaponDef.raycastFar * t
+            const pz = originVec.z + dirVec.z * weaponDef.raycastFar * t
+            enemies.suppressNear({ x: px, y: py, z: pz }, 2.5)
+          }
         }
       }
       return hitEnemy
@@ -579,21 +600,38 @@ export function createEngine() {
   }
 
   // Spawnea una oleada mezclando tipos de enemigo según el progreso.
-  // Usa ENEMY_TYPES de config.js (antes solo spawneaba walkers).
+  // Fase 1.2: composición realista (mayoría shooters armados, no zombies).
+  // Antes era 80% walkers melee — no parecía CoD.
   function spawnWave(n) {
     const count = WAVE_BASE + n * WAVE_PER_WAVE
     store.getState().startWave(n, count)
     // Tipos disponibles en esta oleada.
     const available = Object.values(ENEMY_TYPES).filter((t) => n >= t.minWave)
+    const shootersAvailable = available.filter((t) => t.ranged && t.name !== 'boss')
     for (let i = 0; i < count; i++) {
-      // 80% walkers, 20% otros (repartido por peso uniforme entre disponibles).
       let typeDef = ENEMY_TYPES.walker
-      if (available.length > 1 && Math.random() < 0.2) {
-        const pool = available.filter((t) => t.name !== 'walker')
-        if (pool.length > 0) typeDef = pool[Math.floor(Math.random() * pool.length)]
-        // Boss solo cada 5 oleadas y 1 unidad.
-        if (typeDef.name === 'boss') {
-          if (n % 5 !== 0 || i > 0) { typeDef = ENEMY_TYPES.walker }
+      // Composición por oleada (estilo CoD PvE):
+      //   - Oleada 1-2: 80% walkers melee (introducción suave).
+      //   - Oleada 3-5: 60% shooters, 30% walkers, 10% runners.
+      //   - Oleada 6+:  70% shooters, 15% walkers, 10% runners, 5% tanks.
+      //   - Boss cada 5 oleadas (1 unidad).
+      const r = Math.random()
+      if (n <= 2) {
+        if (available.length > 1 && r < 0.2) {
+          const pool = available.filter((t) => t.name !== 'walker' && t.name !== 'boss')
+          if (pool.length > 0) typeDef = pool[Math.floor(Math.random() * pool.length)]
+        }
+      } else if (n % 5 === 0 && i === 0) {
+        typeDef = ENEMY_TYPES.boss
+      } else {
+        if (shootersAvailable.length > 0 && r < 0.65) {
+          typeDef = shootersAvailable[Math.floor(Math.random() * shootersAvailable.length)]
+        } else if (r < 0.80) {
+          typeDef = ENEMY_TYPES.walker
+        } else if (n >= 4 && r < 0.95) {
+          typeDef = ENEMY_TYPES.tank
+        } else {
+          typeDef = ENEMY_TYPES.runner
         }
       }
       const hp = typeDef.baseHp + n * WAVE_SCALING.hpPerWave

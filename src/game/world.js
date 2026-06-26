@@ -493,12 +493,19 @@ export function createWorld(scene) {
     }
   }
 
+  // Itera colliders AABB cercanos a (x, z) sin allocar array.
+  // Usado por el ragdoll para colisión partícula-vs-mundo.
+  function forEachCollider(x, z, radius, fn) {
+    grid.forEachCandidate(x, z, radius, fn)
+  }
+
   return {
     colliders,
     sunMesh,
     sun,
     SUN_DIR: SUN_DIR_NORMALIZED,
     collidesAt,
+    forEachCollider,
     updateLamps,
     update() {},
     dispose
