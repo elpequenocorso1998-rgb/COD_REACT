@@ -286,6 +286,24 @@ canvas { display: block; }
   100% { opacity: 0; }
 }
 
+/* Fase 6: FPS counter */
+.fps-counter {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  z-index: 15;
+  font-family: monospace;
+  font-size: 13px;
+  color: #6ade80;
+  text-shadow: 1px 1px 2px #000;
+  pointer-events: none;
+}
+
+/* Fase 6: filtros colorblind (simuladores de daltonismo) */
+body.colorblind-protanopia .game-canvas { filter: url(#cb-protanopia); }
+body.colorblind-deuteranopia .game-canvas { filter: url(#cb-deuteranopia); }
+body.colorblind-tritanopia .game-canvas { filter: url(#cb-tritanopia); }
+
 /* =========================================================================
    Menús
    ========================================================================= */

@@ -99,6 +99,29 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
       p.mesh.rotation.x += dt * 5
       p.mesh.rotation.y += dt * 3
 
+      // Fase 6: throwing knife — detección de impacto con enemigos.
+      // El knife vuela y si pasa cerca de un enemigo le hace daño instantáneo.
+      if (p.type === 'knife' && enemies) {
+        let hit = false
+        enemies.forEachAlive((epos, _t, _ls, e) => {
+          if (hit) return
+          const d = Math.hypot(epos.x - p.mesh.position.x, epos.z - p.mesh.position.z)
+          if (d < 1.0 && Math.abs(p.mesh.position.y - 1.0) < 1.5) {
+            e.hp -= 150 // knife = kill instantáneo
+            e.hitFlash = 0.12
+            if (e.hp <= 0) { e.dead = true; e.dyingT = 0 }
+            if (particles) particles.spawnSparks(p.mesh.position, new THREE.Vector3(0, 1, 0))
+            hit = true
+          }
+        })
+        if (hit) {
+          scene.remove(p.mesh)
+          p.active = false
+          projectiles.splice(i, 1)
+          continue
+        }
+      }
+
       // Fuse: cuenta atrás y explosiona.
       p.fuse -= dt
       if (p.fuse <= 0) {

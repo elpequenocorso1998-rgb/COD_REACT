@@ -5,7 +5,7 @@ import { createEngine } from './game/engine.js'
 import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
 import { getLoadout, saveLoadout } from './game/loadout.js'
 import { getSettings, saveSettings } from './game/settings.js'
-import { t } from './i18n.js'
+import { t, setLang, getLang } from './i18n.js'
 import { createNetClient } from './net/client.js'
 import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
 
@@ -57,6 +57,12 @@ export default function App() {
 
   const engineRef = useRef(null)
   const containerRef = useRef(null)
+
+  // Fase 6: aplicar filtro colorblind al canvas según settings.
+  const settings = getSettings()
+  useEffect(() => {
+    document.body.className = settings.colorblind !== 'off' ? `colorblind-${settings.colorblind}` : ''
+  }, [settings.colorblind])
 
   useEffect(() => {
     // Guard: si el contenedor ya no está (StrictMode double-invoke rápido),
@@ -183,7 +189,8 @@ function HUD() {
     killStreak, availableStreaks, multikillLabel,
     playerLevel, playerXP, playerXPNeeded, levelUpFlash, scoreboardOpen,
     kills, deaths, currentWeapon, stamina, maxStamina,
-    grenadeCounts, flashbanged
+    grenadeCounts, flashbanged,
+    fps
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -196,7 +203,8 @@ function HUD() {
     levelUpFlash: s.levelUpFlash, scoreboardOpen: s.scoreboardOpen,
     kills: s.kills, deaths: s.deaths, currentWeapon: s.currentWeapon,
     stamina: s.stamina, maxStamina: s.maxStamina,
-    grenadeCounts: s.grenadeCounts, flashbanged: s.flashbanged
+    grenadeCounts: s.grenadeCounts, flashbanged: s.flashbanged,
+    fps: s.fps
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -212,6 +220,11 @@ function HUD() {
     <div className="hud">
       {/* --- Minimap (canvas inyectado imperativamente por el engine) --- */}
       <div className="minimap-container" aria-hidden="true" />
+
+      {/* Fase 6: FPS counter (si showFps activo en settings) */}
+      {fps > 0 && (
+        <div className="fps-counter" aria-hidden="true">{fps} FPS</div>
+      )}
 
       {/* --- Multikill callout (centro, efímero) --- */}
       {multikillLabel && (
@@ -542,6 +555,17 @@ function SettingsScreen({ onClose, onApply }) {
             checked={settings.showFps}
             onChange={(e) => update({ showFps: e.target.checked })}
           />
+        </div>
+        {/* Fase 6: selector de idioma */}
+        <div className="settings-row">
+          <label>Idioma / Language</label>
+          <select
+            value={getLang()}
+            onChange={(e) => { setLang(e.target.value); update({}) }}
+          >
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
         </div>
       </div>
       <button onClick={onClose}>{t('menu.back')}</button>

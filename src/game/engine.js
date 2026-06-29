@@ -25,6 +25,8 @@ import {
   FLOOR_SIZE
 } from './constants.js'
 import { GRENADES, PLAYER } from './config.js'
+import { getLoadout } from './loadout.js'
+import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
 
 /* =========================================================================
@@ -78,6 +80,10 @@ export function createEngine() {
   let container = null
   let prevState = null
   let envMap = null
+  // Fase 6: settings del jugador (showFps, etc.) + contador de FPS.
+  const _settings = getSettings()
+  let _fpsAccum = 0
+  let _fpsFrames = 0
   // Flag de pérdida de contexto WebGL: sesiones largas o cambio de pestaña
   // pueden hacer que el driver pierda el contexto. Lo manejamos para no
   // crashes; el renderer de Three.js re-sube recursos al reanudar.
@@ -444,6 +450,17 @@ export function createEngine() {
     const dt = Math.min(clock.getDelta(), MAX_DT)
     const state = store.getState().gameState
 
+    // Fase 6: FPS counter para el HUD (si showFps está activo en settings).
+    if (_settings.showFps) {
+      _fpsAccum += dt
+      _fpsFrames++
+      if (_fpsAccum >= 0.5) {
+        store.getState().setFps(Math.round(_fpsFrames / _fpsAccum))
+        _fpsAccum = 0
+        _fpsFrames = 0
+      }
+    }
+
     // Escalado de calidad: samplea FPS hasta detectar el perfil.
     if (fpsSampler) fpsSampler.sample(dt)
 
@@ -523,6 +540,33 @@ export function createEngine() {
       if (grenades) grenades.update(dt, player.getPosition())
       // Fase 5: pickups (detección de proximidad).
       if (pickups) pickups.update(dt, player.getPosition())
+      // Fase 6: aim assist suave (si está activo en settings y en ADS).
+      // Snap suave hacia el enemigo más cercano al centro de la pantalla.
+      if (_settings.aimAssist > 0 && player.isAiming && enemies) {
+        const pos = player.getPosition()
+        const yaw = player.getYaw()
+        let best = null, bestScore = Infinity
+        enemies.forEachAlive((epos, _t, _ls, _e) => {
+          const dx = epos.x - pos.x
+          const dz = epos.z - pos.z
+          const dist = Math.hypot(dx, dz)
+          if (dist > 60 || dist < 2) return
+          // Ángulo entre la dirección de mira y el enemigo.
+          const enemyAngle = Math.atan2(dx, dz)
+          let diff = enemyAngle - yaw
+          while (diff > Math.PI) diff -= Math.PI * 2
+          while (diff < -Math.PI) diff += Math.PI * 2
+          if (Math.abs(diff) > 0.15) return // fuera del cono de aim assist
+          const score = Math.abs(diff) + dist * 0.01
+          if (score < bestScore) { bestScore = score; best = { diff, dist } }
+        })
+        if (best) {
+          // Snap suave: mueve la cámara hacia el enemigo proporcional al
+          // setting de aimAssist y al dt.
+          const strength = _settings.aimAssist * 0.5 * dt
+          player.addYawDelta(best.diff * strength)
+        }
+      }
       // Decals: fade out gradual de los más antiguos.
       if (decals) decals.update(dt)
       // Música dinámica: intensidad según enemigos vivos y vida del jugador.
@@ -617,6 +661,18 @@ export function createEngine() {
         audio.playReload() // sonido de cambio de arma
       }
     }
+    // --- Fase 6: swap primary↔secondary con tecla Y ---
+    // Antes el loadout.secondary era config muerta: el jugador solo podía
+    // cambiar con Shift+1-7. Ahora Y intercambia entre primary y secondary.
+    if (e.code === 'KeyY' && st.gameState === GAME_STATES.PLAYING) {
+      const loadout = getLoadout()
+      const target = (st.currentWeapon === loadout.primary) ? loadout.secondary : loadout.primary
+      if (target && target !== st.currentWeapon) {
+        st.switchWeapon(target)
+        player.setWeapon(st.getCurrentWeapon())
+        audio.playReload()
+      }
+    }
     // --- Killstreaks: teclas 4-7 (sin Shift) ---
     if (st.gameState === GAME_STATES.PLAYING && st.availableStreaks.length > 0 && !e.shiftKey) {
       const streakMap = { Digit4: 'uav', Digit5: 'airstrike', Digit6: 'heli', Digit7: 'gunship' }
@@ -635,14 +691,17 @@ export function createEngine() {
     }
     // --- Granadas: G=frag, X=flash, C=smoke (Q/E son lean) ---
     // Fase 4: las granadas ahora tienen count finito en el store.
-    // Sin munición de granada = no se lanza (antes eran infinitas).
+    // Fase 6: el tipo de G y X viene del loadout (lethal/tactical),
+    // no hardcodeado. Antes loadout.tactical/lethal eran config muerta.
     if (st.gameState === GAME_STATES.PLAYING && grenades) {
       const now = performance.now()
       if (now - lastGrenadeAt >= GRENADE_COOLDOWN) {
+        const loadout = getLoadout()
         let grenadeType = null
-        if (e.code === 'KeyG') grenadeType = 'frag'
-        else if (e.code === 'KeyX') grenadeType = 'flash'
+        if (e.code === 'KeyG') grenadeType = loadout.lethal || 'frag'
+        else if (e.code === 'KeyX') grenadeType = loadout.tactical || 'flash'
         else if (e.code === 'KeyC') grenadeType = 'smoke'
+        else if (e.code === 'KeyB') grenadeType = 'knife'
         if (grenadeType) {
           if (st.useGrenade(grenadeType)) {
             lastGrenadeAt = now

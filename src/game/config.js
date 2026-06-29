@@ -27,7 +27,7 @@ export const PLAYER = {
 // (solo había cooldown) y el daño por área perdía todo balance.
 export const GRENADES = {
   maxPerType: 3,
-  startCounts: { frag: 2, flash: 2, smoke: 1 },
+  startCounts: { frag: 2, flash: 2, smoke: 1, knife: 2 },
   cooldown: 0.8              // segundos entre lanzamientos
 }
 
@@ -425,7 +425,7 @@ export const DEFAULT_LOADOUT = {
     red: 'stoppingPower',
     green: 'deadSilence'
   },
-  killstreaks: ['uav', 'airstrike', 'heli']
+  killstreaks: ['uav', 'airstrike', 'heli', 'gunship']
 }
 
 // --- Tipos de enemigo ---

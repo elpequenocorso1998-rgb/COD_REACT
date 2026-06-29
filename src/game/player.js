@@ -900,6 +900,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     setGunshipActive: (v) => { gunshipActive = v },
     getStamina: () => stamina,
     getMaxStamina: () => STAMINA.max,
+    get isAiming() { return isAiming },
+    addYawDelta: (d) => { targetYaw += d },
     set onShoot(fn) { onShootCallback = fn },
     set onFootstep(fn) { onFootstepCallback = fn }
   }

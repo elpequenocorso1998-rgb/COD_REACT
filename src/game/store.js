@@ -150,6 +150,9 @@ export const useGameStore = create((set, get) => {
     // --- Flashbang al jugador (Fase 4): overlay blanco + stun ---
     flashbanged: 0,               // timestamp hasta el que dura el flash
 
+    // --- FPS counter (Fase 6): actualizado por el engine cada 500ms ---
+    fps: 0,
+
     // --- Multijugador (Fase 2) ---
     mpConnected: false,            // true si conectado al servidor MP
     mpClientId: null,              // nuestro ID en el servidor
@@ -306,6 +309,9 @@ export const useGameStore = create((set, get) => {
       }, durationMs)
     },
 
+    // Fase 6: actualiza el FPS counter (llamado por el engine periódicamente).
+    setFps: (fps) => set({ fps }),
+
     // Acierto en enemigo: suma puntos y muestra hitmarker.
     // type: 'body' | 'headshot' | 'kill' (determina color + sonido).
     registerHit: (points = 10, type = 'body') => {
@@ -332,17 +338,15 @@ export const useGameStore = create((set, get) => {
 
       set((s) => {
         const newStreak = s.killStreak + 1
-        // Desbloquea killstreaks al cruzar umbrales (3/5/7/11).
+        // Desbloquea killstreaks al cruzar umbrales.
+        // Fase 6: los tipos vienen del loadout (loadout.killstreaks),
+        // no de thresholds fijos. Antes loadout.killstreaks era config muerta.
         const newAvailable = [...s.availableStreaks]
-        const thresholds = [
-          { count: 3, type: 'uav' },
-          { count: 5, type: 'airstrike' },
-          { count: 7, type: 'heli' },
-          { count: 11, type: 'gunship' }
-        ]
-        for (const t of thresholds) {
-          if (newStreak === t.count) {
-            newAvailable.push({ id: nextId(), type: t.type })
+        const loadoutKs = getLoadout().killstreaks || ['uav', 'airstrike', 'heli', 'gunship']
+        const thresholds = [3, 5, 7, 11]
+        for (let i = 0; i < thresholds.length && i < loadoutKs.length; i++) {
+          if (newStreak === thresholds[i]) {
+            newAvailable.push({ id: nextId(), type: loadoutKs[i] })
           }
         }
         return {
