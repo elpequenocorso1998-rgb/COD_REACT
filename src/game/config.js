@@ -14,7 +14,21 @@ export const PLAYER = {
   crouchHeight: 1.1,
   // i-frames tras recibir daño (evita melts instantáneos por múltiples
   // enemigos golpeando en el mismo frame).
-  invulnTime: 0.5
+  invulnTime: 0.5,
+  // Regen de vida (estilo CoD): tras no recibir daño durante un delay,
+  // la vida sube gradualmente hasta el máximo. Sin esto, el chip damage
+  // se acumula y el juego es injugable a partir de la oleada 3-4.
+  regenDelay: 5,            // segundos sin daño antes de empezar a regenerar
+  regenPerSec: 25           // vida recuperada por segundo
+}
+
+// --- Granadas tácticas y letales ---
+// Count inicial y máximo por tipo. Sin esto, las granadas eran infinitas
+// (solo había cooldown) y el daño por área perdía todo balance.
+export const GRENADES = {
+  maxPerType: 3,
+  startCounts: { frag: 2, flash: 2, smoke: 1 },
+  cooldown: 0.8              // segundos entre lanzamientos
 }
 
 // --- Movimiento ---

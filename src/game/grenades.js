@@ -17,7 +17,7 @@ const FRAG_DAMAGE = 80
 const FLASH_STUN_RADIUS = 6     // radio de aturdimiento de flashbang
 const SMOKE_PARTICLE_COUNT = 20 // partículas de humo por granada de humo
 
-export function createGrenadeSystem(scene, world, enemies, particles, audio, _player) {
+export function createGrenadeSystem(scene, world, enemies, particles, audio, _player, store) {
   const projectiles = []
   // Geometría/material compartidos para granadas.
   const fragGeo = new THREE.SphereGeometry(0.12, 8, 8)
@@ -136,19 +136,32 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
 
       case 'flash':
         if (audio) audio.playExplosion?.()
-        // Flash: cegada al jugador si está en línea de visión (simplificado:
-        // afecta si el jugador mira hacia la granada).
+        // Flash: cegada al jugador si está en el radio (sin importar línea
+        // de visión — simplificación para jugabilidad).
+        if (store && _player) {
+          const ppos = _player.getPosition()
+          const dToPlayer = Math.hypot(ppos.x - _pos.x, ppos.z - _pos.z)
+          if (dToPlayer <= FLASH_STUN_RADIUS) {
+            store.getState().flashPlayer(2000) // 2s de overlay blanco
+          }
+        }
         // Para enemigos: los aturde (reducen velocidad temporalmente).
+        // Bug fixed: antes `e.speed *= 0.3` y la restauración era
+        // `e.maxHp ? e.speed : e.speed / 0.3` que siempre evaluaba a
+        // `e.speed` (maxHp es truthy) → slow permanente acumulativo.
+        // Ahora guardamos originalSpeed y restauramos tras 2s.
         if (enemies) {
           enemies.forEachAlive((epos, _t, _ls, e) => {
             const d = Math.hypot(epos.x - _pos.x, epos.z - _pos.z)
             if (d <= FLASH_STUN_RADIUS) {
-              e.speed *= 0.3 // aturde (lento)
-              setTimeout(() => { e.speed = e.maxHp ? e.speed : e.speed / 0.3 }, 2000)
+              if (!e.originalSpeed) e.originalSpeed = e.speed
+              e.speed = e.originalSpeed * 0.3
+              setTimeout(() => {
+                if (e.originalSpeed) { e.speed = e.originalSpeed; e.originalSpeed = null }
+              }, 2000)
             }
           })
         }
-        // Screen flash blanco: lo maneja el store/HUD via un flag.
         break
 
       case 'smoke':

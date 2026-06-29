@@ -83,6 +83,12 @@ export class NavMesh {
     const cameFrom = new Map()
     const gScore = new Map()
     const fScore = new Map()
+    // Closed set: nodos ya expandidos (sacados de open). Sin esto, un nodo
+    // podía ser re-descubierto vía uno de sus propios descendientes y crear
+    // un ciclo en cameFrom, lo que hacía que _reconstruct entrara en bucle
+    // infinito pushing waypoints sin fin => pico de RAM + cuelgue al iniciar
+    // el juego (cada enemigo llama a findPath al spawnear).
+    const closed = new Set()
     gScore.set(startKey, 0)
     const h0 = this._heuristic(startCx, startCz, goalCx, goalCz)
     fScore.set(startKey, h0)
@@ -100,6 +106,7 @@ export class NavMesh {
         return this._reconstruct(cameFrom, curKey, goalX, goalZ)
       }
       open.delete(curKey)
+      closed.add(curKey)
 
       for (const [dx, dz] of NEIGHBORS_8) {
         const nx = curCx + dx
@@ -110,6 +117,7 @@ export class NavMesh {
           if (!this.isWalkable(curCx + dx, curCz) || !this.isWalkable(curCx, curCz + dz)) continue
         }
         const nKey = this._idx(nx, nz)
+        if (closed.has(nKey)) continue
         const cost = (dx !== 0 && dz !== 0) ? 1.414 : 1
         const tentative = (gScore.get(curKey) || 0) + cost
         if (tentative < (gScore.get(nKey) || Infinity)) {
@@ -134,7 +142,12 @@ export class NavMesh {
   _reconstruct(cameFrom, curKey, goalX, goalZ) {
     const path = [{ x: goalX, z: goalZ }]
     let k = curKey
-    while (cameFrom.has(k)) {
+    // Safety net: con el closed set del A* no deberían formarse ciclos en
+    // cameFrom, pero dejamos un guard por si una re-apertura futura los
+    // reintroduce. Sin esto, un ciclo colgaría el tab (pico de RAM infinito).
+    let guard = 0
+    while (cameFrom.has(k) && guard <= cameFrom.size) {
+      guard++
       const cx = k % this.cols
       const cz = Math.floor(k / this.cols)
       path.push({ x: this._cellToWorldX(cx), z: this._cellToWorldZ(cz) })

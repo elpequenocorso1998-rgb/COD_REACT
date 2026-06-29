@@ -261,6 +261,31 @@ canvas { display: block; }
 }
 .ammo-display .reserve.warn { color: #ffb84d; }
 
+/* Fase 4: contador de granadas por tipo */
+.grenade-counts {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #8aa0b3;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.grenade-count { white-space: nowrap; }
+
+/* Fase 4: overlay blanco de flashbang (cegada temporal) */
+.flashbang-overlay {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  z-index: 200;
+  pointer-events: none;
+  animation: flashFade 2s ease-out forwards;
+}
+@keyframes flashFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* =========================================================================
    Menús
    ========================================================================= */

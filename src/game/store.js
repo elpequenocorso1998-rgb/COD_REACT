@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { PLAYER, WEAPONS } from './config.js'
+import { PLAYER, WEAPONS, GRENADES } from './config.js'
 import { addXP, recordKill, recordDeath, recordWave, getProgress,
   addWeaponXP, addBattlePassXP, progressDaily } from './progression.js'
 import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon } from './loadout.js'
@@ -71,7 +71,19 @@ export const useGameStore = create((set, get) => {
   const initialState = () => {
     const loadout = getLoadout()
     const primary = getPrimaryWeapon(loadout)
+    const secondary = WEAPONS[loadout.secondary]
     const maxHp = getEffectiveMaxHealth(loadout)
+    // Inicializamos ammo/reserve de primary y secondary del loadout.
+    // El resto de armas NO se inicializan aquí: si el jugador cambia a un
+    // arma que no es de su loadout (Shift+1-7), obtiene 0 balas (no el
+    // exploit de full ammo on first switch). Antes el `?? w.magSize` daba
+    // munición gratis a cualquier arma nueva.
+    const weaponAmmo = { [loadout.primary]: primary.magSize }
+    const weaponReserve = { [loadout.primary]: primary.reserveStart }
+    if (secondary) {
+      weaponAmmo[loadout.secondary] = secondary.magSize
+      weaponReserve[loadout.secondary] = secondary.reserveStart
+    }
     return {
       // --- Estado general ---
       gameState: GAME_STATES.MENU,    // pantalla activa
@@ -87,8 +99,8 @@ export const useGameStore = create((set, get) => {
       // --- Arma ---
       // Fase 1.4: arma inicial = primary del loadout (con attachments).
       currentWeapon: loadout.primary,
-      weaponAmmo: { [loadout.primary]: primary.magSize },
-      weaponReserve: { [loadout.primary]: primary.reserveStart },
+      weaponAmmo,
+      weaponReserve,
       ammo: primary.magSize,
       magSize: primary.magSize,
       reserve: primary.reserveStart,
@@ -127,6 +139,16 @@ export const useGameStore = create((set, get) => {
     // --- Stamina (Fase 1.5) ---
     stamina: 100,
     maxStamina: 100,
+
+    // --- Granadas (Fase 4): count por tipo, no infinitas ---
+    grenadeCounts: { ...GRENADES.startCounts },
+    lastGrenadeAt: 0,             // timestamp del último lanzamiento (cooldown)
+
+    // --- Gunship activo (Fase 4): el player.update skipa la cámara ---
+    gunshipActive: false,
+
+    // --- Flashbang al jugador (Fase 4): overlay blanco + stun ---
+    flashbanged: 0,               // timestamp hasta el que dura el flash
 
     // --- Multijugador (Fase 2) ---
     mpConnected: false,            // true si conectado al servidor MP
@@ -180,10 +202,12 @@ export const useGameStore = create((set, get) => {
       const newReserve = { ...weaponReserve }
       newAmmo[currentWeapon] = get().ammo
       newReserve[currentWeapon] = get().reserve
-      // Cargamos munición del arma nueva (o inicializamos si es primera vez).
+      // Cargamos munición del arma nueva. Si no está en el map (arma fuera
+      // del loadout), devolvemos 0 balas — no full ammo. Antes el `?? w.magSize`
+      // era un exploit: cambiar a un arma nueva daba munición gratis.
       const w = WEAPONS[weaponId]
-      const ammo = newAmmo[weaponId] ?? w.magSize
-      const reserve = newReserve[weaponId] ?? w.reserveStart
+      const ammo = newAmmo[weaponId] ?? 0
+      const reserve = newReserve[weaponId] ?? 0
       set({
         currentWeapon: weaponId,
         ammo, reserve,
@@ -233,6 +257,55 @@ export const useGameStore = create((set, get) => {
       }, w.reloadTime * 1000) // config en segundos → ms para setTimeout
     },
 
+    // Fase 4: regeneración de vida (llamada cada frame desde engine si
+    // ha pasado el regenDelay sin recibir daño). Sin esto el chip damage
+    // se acumula y el juego es injugable.
+    regenHealth: (amount) => set((s) => {
+      if (s.gameState !== GAME_STATES.PLAYING) return s
+      if (s.health >= s.maxHealth) return s
+      return { health: Math.min(s.maxHealth, s.health + amount) }
+    }),
+
+    // Fase 4: curación directa (pickup de salud).
+    addHealth: (amount) => set((s) => ({
+      health: Math.min(s.maxHealth, s.health + amount)
+    })),
+
+    // Fase 4: añade munición de reserva al arma actual (pickup de munición).
+    addReserve: (amount) => set((s) => {
+      const newReserve = s.reserve + amount
+      const weaponReserve = { ...s.weaponReserve, [s.currentWeapon]: newReserve }
+      return { reserve: newReserve, weaponReserve }
+    }),
+
+    // Fase 4: consume una granada del tipo dado. Devuelve true si tenía.
+    useGrenade: (type) => {
+      const counts = get().grenadeCounts
+      const count = counts[type] ?? 0
+      if (count <= 0) return false
+      set({ grenadeCounts: { ...counts, [type]: count - 1 } })
+      return true
+    },
+
+    // Fase 4: añade granadas de un tipo (pickup de granada).
+    addGrenade: (type, amount = 1) => set((s) => {
+      const current = s.grenadeCounts[type] ?? 0
+      const maxed = Math.min(GRENADES.maxPerType, current + amount)
+      return { grenadeCounts: { ...s.grenadeCounts, [type]: maxed } }
+    }),
+
+    // Fase 4: marca el gunship como activo/inactivo (player.update lo lee).
+    setGunshipActive: (active) => set({ gunshipActive: active }),
+
+    // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
+    flashPlayer: (durationMs) => {
+      const until = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + durationMs
+      set({ flashbanged: until })
+      trackTimeout(() => {
+        if (get().flashbanged === until) set({ flashbanged: 0 })
+      }, durationMs)
+    },
+
     // Acierto en enemigo: suma puntos y muestra hitmarker.
     // type: 'body' | 'headshot' | 'kill' (determina color + sonido).
     registerHit: (points = 10, type = 'body') => {
@@ -247,7 +320,8 @@ export const useGameStore = create((set, get) => {
     },
 
     // Enemigo eliminado. Trackea killstreak, multikill y desbloquea streaks.
-    registerKill: (points = 100) => {
+    // Fase 6: `headshot` opcional para progresar el daily de headshots.
+    registerKill: (points = 100, headshot = false) => {
       const id = nextId()
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
       // Multikill: ventana de 3s desde la última kill.
@@ -288,6 +362,7 @@ export const useGameStore = create((set, get) => {
       }, 500)
       // El callout de multikill desaparece tras 1.5s.
       if (multikillLabel) {
+        progressDaily('multikill', 1)
         trackTimeout(() => {
           if (get().multikillLabel === multikillLabel) {
             set({ multikillLabel: null })
@@ -302,6 +377,7 @@ export const useGameStore = create((set, get) => {
       addWeaponXP(currentWeapon, points)
       addBattlePassXP(points * 2)
       progressDaily('kills_50', 1)
+      if (headshot) progressDaily('headshots_10', 1)
       if (xpResult.leveledUp) {
         set({
           playerLevel: xpResult.newLevel,
@@ -415,9 +491,32 @@ export const useGameStore = create((set, get) => {
     },
 
     // Inicia una nueva oleada.
+    // Fase 4: refill parcial entre oleadas — sin esto, el jugador se queda
+    // sin munición de reserva tras unas oleadas y el juego se atasca.
     startWave: (wave, count) => {
       recordWave(wave)
-      set({ wave, enemiesRemaining: count })
+      if (wave > 1) {
+        // Refill: 30% de la reserva máxima del arma actual + 1 granada frag.
+        // No es full heal ni full ammo: hay que seguir recogiendo pickups.
+        set((s) => {
+          const w = WEAPONS[s.currentWeapon]
+          const refillAmt = Math.ceil(w.reserveStart * 0.3)
+          const newReserve = s.reserve + refillAmt
+          const weaponReserve = { ...s.weaponReserve, [s.currentWeapon]: newReserve }
+          // +1 frag (si no está al máximo).
+          const fragCount = s.grenadeCounts.frag ?? 0
+          const grenadeCounts = fragCount < GRENADES.maxPerType
+            ? { ...s.grenadeCounts, frag: fragCount + 1 }
+            : s.grenadeCounts
+          return {
+            wave, enemiesRemaining: count,
+            reserve: newReserve, weaponReserve, grenadeCounts
+          }
+        })
+        progressDaily('waves_5', 1)
+      } else {
+        set({ wave, enemiesRemaining: count })
+      }
     },
 
     // Resetea todo para una nueva partida.
@@ -430,7 +529,16 @@ export const useGameStore = create((set, get) => {
       // Fase 1.4: aplica el loadout del jugador (perks + attachments).
       const loadout = getLoadout()
       const primary = getPrimaryWeapon(loadout)
+      const secondary = WEAPONS[loadout.secondary]
       const maxHp = getEffectiveMaxHealth(loadout)
+      // Inicializamos ammo/reserve de primary y secondary (igual que en
+      // initialState). El resto de armas empiezan con 0.
+      const weaponAmmo = { [loadout.primary]: primary.magSize }
+      const weaponReserve = { [loadout.primary]: primary.reserveStart }
+      if (secondary) {
+        weaponAmmo[loadout.secondary] = secondary.magSize
+        weaponReserve[loadout.secondary] = secondary.reserveStart
+      }
       set({
         gameState: GAME_STATES.PLAYING,
         score: 0,
@@ -441,8 +549,8 @@ export const useGameStore = create((set, get) => {
         lastDamageAt: 0,
         // Fase 1.4: arma inicial = primary del loadout (con attachments).
         currentWeapon: loadout.primary,
-        weaponAmmo: { [loadout.primary]: primary.magSize },
-        weaponReserve: { [loadout.primary]: primary.reserveStart },
+        weaponAmmo,
+        weaponReserve,
         ammo: primary.magSize,
         magSize: primary.magSize,
         reserve: primary.reserveStart,
@@ -470,7 +578,12 @@ export const useGameStore = create((set, get) => {
         levelUpFlash: null,
         // Fase 1.5: stamina al máximo al iniciar partida.
         stamina: 100,
-        maxStamina: 100
+        maxStamina: 100,
+        // Fase 4: granadas, gunship y flash reseteados.
+        grenadeCounts: { ...GRENADES.startCounts },
+        lastGrenadeAt: 0,
+        gunshipActive: false,
+        flashbanged: 0
       })
     }
   }

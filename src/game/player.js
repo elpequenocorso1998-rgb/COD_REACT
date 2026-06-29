@@ -79,7 +79,13 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   let adsProgress = 0         // 0=hipfire, 1=full ADS (lerp suave)
   let aimFov = FOV            // FOV objetivo según ADS
 
-  const startPos = new THREE.Vector3(0, PLAYER.standHeight, 0)
+  // Spawn en la plaza abierta, fuera de la fuente central.
+  // Antes era (0, standHeight, 0): caía DENTRO del collider de la pila
+  // de la fuente (radio ~2.2), y como el movimiento comprueba collidesAt
+  // antes de desplazarse, cualquier dirección estaba bloqueada => el
+  // jugador aparecía "pegado", sin poder moverse. (8,8) está a ~11m del
+  // centro de la fuente y a ~17m de las casas más cercanas, en zona libre.
+  const startPos = new THREE.Vector3(8, PLAYER.standHeight, 8)
   const STAND_HEIGHT = PLAYER.standHeight
   const CROUCH_HEIGHT = PLAYER.crouchHeight
   let currentHeight = STAND_HEIGHT
@@ -257,6 +263,10 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
   const onMouseDown = (e) => {
     if (!isPointerLocked()) return
+    // Fase 4: durante gunship, el click dispara el cañón (lo gestiona el
+    // engine via _onGunshipClick), no el arma del player. Sin esto, cada
+    // click gastaba munición del arma Y disparaba el cañón.
+    if (gunshipActive) return
     if (e.button === 0) {
       // Botón izquierdo: disparar.
       // Semi-auto (sniper, shotgun, pistol): un click = un disparo.
@@ -281,7 +291,7 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   const onContextMenu = (e) => e.preventDefault()
 
   function isPointerLocked() {
-    return canvas !== null && document.pointerLockElement === canvas
+    return (canvas !== null && document.pointerLockElement === canvas) || virtualLock
   }
 
   // ---------------------------------------------------------------------
@@ -376,10 +386,44 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     }
   }
 
+  let virtualLock = false
+
   function requestPointerLock() {
-    canvas?.requestPointerLock?.()
+    // Pointer lock real (requiere contexto seguro: HTTPS o localhost).
+    // Si el juego se sirve por HTTP desde un hostname/IP de LAN, el
+    // contexto NO es seguro y requestPointerLock falla silenciosamente.
+    // En ese caso caemos a un "virtual lock": ocultamos el cursor y
+    // usamos movementX/movementY de mousemove (que sí funcionan sin
+    // pointer lock en Chrome/Edge). Sin esto, el ratón no haría nada
+    // (onMouseMove/onMouseDown tienen guard isPointerLocked) y el juego
+    // sería injugable al acceder por http://hostname:9432.
+    if (window.isSecureContext && canvas && canvas.requestPointerLock) {
+      try {
+        const p = canvas.requestPointerLock()
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => enableVirtualLock())
+        }
+      } catch {
+        enableVirtualLock()
+      }
+    } else {
+      enableVirtualLock()
+    }
   }
-  function exitPointerLock() { document.exitPointerLock?.() }
+
+  function enableVirtualLock() {
+    if (virtualLock) return
+    virtualLock = true
+    if (canvas) canvas.style.cursor = 'none'
+  }
+
+  function exitPointerLock() {
+    virtualLock = false
+    if (canvas) canvas.style.cursor = ''
+    if (document.pointerLockElement) {
+      try { document.exitPointerLock?.() } catch {}
+    }
+  }
 
   // Fase 1.5: mantle (trepado de obstáculos).
   // Detecta un borde a altura de pecho al frente del jugador y, si hay
@@ -428,7 +472,21 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   // ---------------------------------------------------------------------
   // UPDATE: física y cámara.
   // ---------------------------------------------------------------------
+  // Fase 4: gunship activo — cuando es true, skipamos la actualización de
+  // cámara y movimiento del player (la cámara la controla el streak manager).
+  // Sin esto, player.update() sobrescribía la posición/rotación aérea del
+  // gunship cada frame, destruyendo la vista cenital.
+  let gunshipActive = false
+
   function update(dt, _clockTime) {
+    // Fase 4: si el gunship está activo, skipamos toda la actualización
+    // de cámara y movimiento (la cámara la controla el streak manager
+    // con vista aérea). Solo procesamos el auto-fire por si el jugador
+    // dispara (aunque en gunship el click dispara el cañón, no el arma).
+    if (gunshipActive) {
+      mouseDeltaX = 0; mouseDeltaY = 0
+      return
+    }
     // Fase 1.9: gamepad support. Lee el gamepad conectado y aplica
     // movimiento + cámara. Es input adicional al mouse/teclado (no
     // lo reemplaza). Aim assist suave si está activado en settings.
@@ -730,8 +788,34 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     }
   }
 
+  // Busca una posición libre (sin colisión) en espiral alrededor de `from`.
+  // Safety net: si startPos cae dentro de un collider, el jugador no
+  // quedaría bloqueado. Busca en anillos crecientes hasta radio 20m.
+  function _findFreeSpawn(from) {
+    for (let r = 2; r <= 20; r += 2) {
+      const steps = Math.max(8, r * 4)
+      for (let i = 0; i < steps; i++) {
+        const a = (i / steps) * Math.PI * 2
+        const x = from.x + Math.cos(a) * r
+        const z = from.z + Math.sin(a) * r
+        if (!world.collidesAt(x, z, 0.5)) {
+          return new THREE.Vector3(x, from.y, z)
+        }
+      }
+    }
+    // Último recurso: devolver la posición original (al menos no crashea).
+    return from
+  }
+
   function reset() {
-    camera.position.copy(startPos)
+    // Si la posición de spawn está dentro de un collider (la fuente, una
+    // casa movida, etc.), buscamos una posición libre en espiral para no
+    // dejar al jugador bloqueado sin poder moverse.
+    let spawn = startPos
+    if (world && world.collidesAt && world.collidesAt(spawn.x, spawn.z, 0.5)) {
+      spawn = _findFreeSpawn(spawn)
+    }
+    camera.position.copy(spawn)
     velocity.set(0, 0, 0)
     yaw = 0; pitch = 0; targetYaw = 0; targetPitch = 0
     moveForward = moveBackward = moveLeft = moveRight = false
@@ -813,6 +897,7 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   return {
     update, reset, dispose, getPosition, getYaw,
     requestPointerLock, exitPointerLock, setWeapon, applySettings,
+    setGunshipActive: (v) => { gunshipActive = v },
     getStamina: () => stamina,
     getMaxStamina: () => STAMINA.max,
     set onShoot(fn) { onShootCallback = fn },

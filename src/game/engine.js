@@ -23,6 +23,7 @@ import {
   FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE,
   FLOOR_SIZE
 } from './constants.js'
+import { GRENADES, PLAYER } from './config.js'
 import { FpsSampler, applyQuality } from './quality.js'
 
 /* =========================================================================
@@ -98,7 +99,7 @@ export function createEngine() {
   const _gunshipPoint = new THREE.Vector3()
   // Cooldown de granadas (evita spam).
   let lastGrenadeAt = 0
-  const GRENADE_COOLDOWN = 800 // ms
+  const GRENADE_COOLDOWN = GRENADES.cooldown * 1000 // ms (config en segundos)
   // Vectores scratch para lanzar granadas.
   const _grenadeOrigin = new THREE.Vector3()
   const _grenadeDir = new THREE.Vector3()
@@ -219,8 +220,8 @@ export function createEngine() {
     // El canvas del minimap lo adjuntamos al HUD via un callback que App.jsx
     // registra. Así React no re-renderiza el canvas (es imperativo).
     if (onMinimapReady) onMinimapReady(minimap.canvas)
-    streaks = createStreakManager(scene, enemies, particles, audio, player, camera)
-    grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player)
+    streaks = createStreakManager(scene, enemies, particles, audio, player, camera, store)
+    grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player, store)
     decals = createDecalSystem(scene, { maxDecals: 80 })
 
     sunMesh = world.sunMesh
@@ -436,7 +437,7 @@ export function createEngine() {
 
     // Detectar transiciones de estado para mutear audio y liberar pointer.
     if (state !== prevState) {
-      if (state === GAME_STATES.GAMEOVER || state === GAME_STATES.MENU) {
+      if (state === GAME_STATES.GAMEOVER || state === GAME_STATES.MENU || state === GAME_STATES.PAUSED) {
         audio.setMuted(true)
         player.exitPointerLock()
       }
@@ -467,6 +468,15 @@ export function createEngine() {
         st.setStamina(player.getStamina(), player.getMaxStamina())
       }
       world.update(dt)
+      // Fase 4: regeneración de vida (estilo CoD). Si ha pasado el
+      // regenDelay sin recibir daño, la vida sube gradualmente. Sin esto
+      // el chip damage se acumula y el juego es injugable.
+      if (st.health < st.maxHealth && st.lastDamageAt > 0) {
+        const now = performance.now()
+        if (now - st.lastDamageAt >= PLAYER.regenDelay * 1000) {
+          st.regenHealth(PLAYER.regenPerSec * dt)
+        }
+      }
       // Farolas dinámicas: activa las cercanas al jugador.
       if (world.updateLamps) world.updateLamps(player.getPosition())
       // Fase 1.7: sombras siguen al jugador (aproximación CSM).
@@ -610,6 +620,8 @@ export function createEngine() {
       st.toggleScoreboard(true)
     }
     // --- Granadas: G=frag, X=flash, C=smoke (Q/E son lean) ---
+    // Fase 4: las granadas ahora tienen count finito en el store.
+    // Sin munición de granada = no se lanza (antes eran infinitas).
     if (st.gameState === GAME_STATES.PLAYING && grenades) {
       const now = performance.now()
       if (now - lastGrenadeAt >= GRENADE_COOLDOWN) {
@@ -618,10 +630,12 @@ export function createEngine() {
         else if (e.code === 'KeyX') grenadeType = 'flash'
         else if (e.code === 'KeyC') grenadeType = 'smoke'
         if (grenadeType) {
-          lastGrenadeAt = now
-          _grenadeOrigin.copy(player.getPosition())
-          _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
-          grenades.throwGrenade(grenadeType, _grenadeOrigin, _grenadeDir)
+          if (st.useGrenade(grenadeType)) {
+            lastGrenadeAt = now
+            _grenadeOrigin.copy(player.getPosition())
+            _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
+            grenades.throwGrenade(grenadeType, _grenadeOrigin, _grenadeDir)
+          }
         }
       }
     }

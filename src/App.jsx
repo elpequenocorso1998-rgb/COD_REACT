@@ -182,7 +182,8 @@ function HUD() {
     damageFlash, damageDirections,
     killStreak, availableStreaks, multikillLabel,
     playerLevel, playerXP, playerXPNeeded, levelUpFlash, scoreboardOpen,
-    kills, deaths, currentWeapon, stamina, maxStamina
+    kills, deaths, currentWeapon, stamina, maxStamina,
+    grenadeCounts, flashbanged
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -194,7 +195,8 @@ function HUD() {
     playerLevel: s.playerLevel, playerXP: s.playerXP, playerXPNeeded: s.playerXPNeeded,
     levelUpFlash: s.levelUpFlash, scoreboardOpen: s.scoreboardOpen,
     kills: s.kills, deaths: s.deaths, currentWeapon: s.currentWeapon,
-    stamina: s.stamina, maxStamina: s.maxStamina
+    stamina: s.stamina, maxStamina: s.maxStamina,
+    grenadeCounts: s.grenadeCounts, flashbanged: s.flashbanged
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -331,8 +333,19 @@ function HUD() {
           <div className={`value ${lowAmmo ? 'warn' : ''}`}>
             {ammo}<span className={`reserve ${warnReserve ? 'warn' : ''}`}>/ {reserve}</span>
           </div>
+          {/* Fase 4: contador de granadas por tipo */}
+          <div className="grenade-counts" aria-label="Granadas">
+            <span className="grenade-count" title="Frag (G)">F:{grenadeCounts?.frag ?? 0}</span>
+            <span className="grenade-count" title="Flash (X)">X:{grenadeCounts?.flash ?? 0}</span>
+            <span className="grenade-count" title="Smoke (C)">S:{grenadeCounts?.smoke ?? 0}</span>
+          </div>
         </div>
       </div>
+
+      {/* Fase 4: overlay blanco de flashbang */}
+      {flashbanged > 0 && (
+        <div className="flashbang-overlay" aria-hidden="true" />
+      )}
 
       {/* --- Scoreboard overlay (Tab hold) --- */}
       {scoreboardOpen && (

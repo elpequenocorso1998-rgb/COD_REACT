@@ -13,7 +13,7 @@ import * as THREE from 'three'
      que mata al instante en el punto clickado.
    ========================================================================= */
 
-export function createStreakManager(scene, enemies, particles, audio, player, camera) {
+export function createStreakManager(scene, enemies, particles, audio, player, camera, store) {
   // --- Airstrike ---
   // Spawnea explosiones en una zona con retardo escalonado.
   function airstrike(playerPos) {
@@ -154,6 +154,11 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
     gunshipActive = true
     savedCameraPos = camera.position.clone()
     savedCameraQuat = camera.quaternion.clone()
+    // Avisamos al store para que player.update skipa la cámara.
+    // Bug fixed: antes player.update sobrescribía la posición/rotación
+    // de la cámara cada frame, destruyendo la vista aérea del gunship.
+    if (store) store.getState().setGunshipActive(true)
+    if (player && player.setGunshipActive) player.setGunshipActive(true)
     // Cámara aérea mirando hacia abajo.
     camera.position.set(player.getPosition().x, 80, player.getPosition().z)
     camera.lookAt(player.getPosition().x, 0, player.getPosition().z)
@@ -165,6 +170,8 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
   function endGunship() {
     if (!gunshipActive) return
     gunshipActive = false
+    if (store) store.getState().setGunshipActive(false)
+    if (player && player.setGunshipActive) player.setGunshipActive(false)
     if (savedCameraPos) camera.position.copy(savedCameraPos)
     if (savedCameraQuat) camera.quaternion.copy(savedCameraQuat)
     savedCameraPos = null
