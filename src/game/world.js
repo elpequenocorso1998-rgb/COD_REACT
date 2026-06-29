@@ -18,11 +18,12 @@ import {
 import { mulberry32 } from './math.js'
 import { createSkyMaterial } from './shaders/sky.js'
 import { SpatialGrid } from './spatial-grid.js'
+import { getMapConfig } from './maps/index.js'
 import {
-  SUN_DIR, SUN_DIR_NORMALIZED, SUN_COLOR, SUN_INTENSITY, SUN_GLOW_COLOR, SUN_MESH_COLOR,
+  SUN_DIR, SUN_DIR_NORMALIZED, SUN_GLOW_COLOR, SUN_MESH_COLOR,
   SHADOW_MAP_SIZE, SHADOW_CAMERA_NEAR, SHADOW_CAMERA_FAR, SHADOW_CAMERA_BOUNDS,
   SHADOW_BIAS, SHADOW_NORMAL_BIAS,
-  FOG_COLOR, FOG_DENSITY, FLOOR_SIZE, PRNG_SEEDS
+  FLOOR_SIZE, PRNG_SEEDS
 } from './constants.js'
 
 /* =========================================================================
@@ -48,21 +49,22 @@ import {
    - Niebla con color que coincide con el horizonte del cielo.
    ========================================================================= */
 
-export function createWorld(scene) {
+export function createWorld(scene, mapId = 'pamplona') {
+  const mapConfig = getMapConfig(mapId)
   const colliders = []
   // Collider circular de la plaza de toros: { cx, cz, rOuter, rInner }.
   const circleColliders = []
 
   // ---------------------------------------------------------------------
-  // LUCES: atardecer dorado pamplonés.
+  // LUCES: configurables por mapa (bioma).
   // ---------------------------------------------------------------------
-  const ambient = new THREE.AmbientLight(0x6a5a4a, 0.5)
+  const ambient = new THREE.AmbientLight(mapConfig.ambientColor, mapConfig.ambientIntensity)
   scene.add(ambient)
 
-  const hemi = new THREE.HemisphereLight(0xffd9a8, 0x3a2a1a, 0.7)
+  const hemi = new THREE.HemisphereLight(mapConfig.hemiSky, mapConfig.hemiGround, mapConfig.hemiIntensity)
   scene.add(hemi)
 
-  const sun = new THREE.DirectionalLight(SUN_COLOR, SUN_INTENSITY)
+  const sun = new THREE.DirectionalLight(mapConfig.sunColor, mapConfig.sunIntensity)
   sun.position.copy(SUN_DIR)
   sun.target.position.set(0, 0, 0)
   scene.add(sun.target)
@@ -98,10 +100,24 @@ export function createWorld(scene) {
   fill.position.set(-50, 40, -30)
   scene.add(fill)
 
+  // Niebla con color del bioma.
+  scene.fog = new THREE.FogExp2(mapConfig.fogColor, mapConfig.fogDensity)
+
+  let waterMaterials = []
+  let waterTime = 0
+  let tex = null
+  let sillarTex = null
+  let roofTex = null
+  let woodTex = null
+  let crateTex = null
+  let barrelTex = null
+  let lampLights = []
+
+  if (mapId === 'pamplona') {
   // ---------------------------------------------------------------------
   // SUELO: adoquines.
   // ---------------------------------------------------------------------
-  const tex = makeConcreteTextures(512)
+  tex = makeConcreteTextures(512)
   // Recoloreamos a tono adoquín. IMPORTANTE: alineamos repeat de color,
   // normal y roughness para que las juntas coincidan.
   tex.map.repeat.set(30, 30)
@@ -126,9 +142,9 @@ export function createWorld(scene) {
   scene.add(floor)
 
   // Texturas compartidas de Pamplona.
-  const sillarTex = makeSillarTexture(512)
-  const roofTex = makeRoofTexture(256)
-  const woodTex = makeWoodTexture(256, '#5a3a1c')
+  sillarTex = makeSillarTexture(512)
+  roofTex = makeRoofTexture(256)
+  woodTex = makeWoodTexture(256, '#5a3a1c')
 
   // ---------------------------------------------------------------------
   // PLAZA CENTRAL (estilo Plaza del Castillo).
@@ -146,8 +162,7 @@ export function createWorld(scene) {
     })
   }
   // Fase 1.7: materiales de agua para animar oleaje cada frame.
-  const waterMaterials = fountain.waterMaterials || []
-  let waterTime = 0
+  waterMaterials = fountain.waterMaterials || []
 
   // ---------------------------------------------------------------------
   // CASAS alrededor de la plaza, formando callejones.
@@ -279,7 +294,7 @@ export function createWorld(scene) {
     [-15, 0], [15, 0], [0, -15], [0, 15],
     [-30, -30], [30, -30], [-30, 30], [30, 30]
   ]
-  const lampLights = []
+  lampLights = []
   lampPositions.forEach(([x, z]) => {
     const pole = new THREE.Mesh(
       new THREE.CylinderGeometry(0.08, 0.12, 5, 8), poleMat
@@ -390,13 +405,13 @@ export function createWorld(scene) {
   scene.add(debrisInst)
 
   // Algunos bidones y cajas dispersos como cobertura táctica.
-  const crateTex = makeCrateTextures(256)
+  crateTex = makeCrateTextures(256)
   const crateMat = new THREE.MeshStandardMaterial({
     map: crateTex.map, normalMap: crateTex.normalMap,
     roughness: 0.9, metalness: 0.05,
     normalScale: new THREE.Vector2(0.7, 0.7)
   })
-  const barrelTex = makeBarrelTexture(256)
+  barrelTex = makeBarrelTexture(256)
   barrelTex.wrapS = THREE.RepeatWrapping
   barrelTex.repeat.set(2, 1)
   const barrelMat = new THREE.MeshStandardMaterial({
@@ -424,14 +439,17 @@ export function createWorld(scene) {
       colliders.push({ box: new THREE.Box3().setFromObject(barrel), type: 'crate' })
     }
   }
+  } else if (mapConfig.builder) {
+    const result = mapConfig.builder(colliders)
+    if (result.group) scene.add(result.group)
+    if (result.waterMaterials) waterMaterials = result.waterMaterials
+  }
 
   // ---------------------------------------------------------------------
   // CIELO: gradiente esférico con sol.
-  // Niebla con color que coincide con el horizonte del cielo.
   // El shader de cielo está compartido en shaders/sky.js (antes duplicado
   // aquí y en environment.js).
   // ---------------------------------------------------------------------
-  scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY)
 
   const skyGeo = new THREE.SphereGeometry(500, 32, 16)
   const skyMat = createSkyMaterial()
@@ -562,10 +580,12 @@ export function createWorld(scene) {
         }
       }
     })
-    // Texturas (no están en el traverse como objetos, hay que liberarlas a mano).
-    tex.map.dispose(); tex.normalMap.dispose(); tex.roughnessMap.dispose()
-    sillarTex.dispose(); roofTex.dispose(); woodTex.dispose()
-    crateTex.map.dispose(); crateTex.normalMap.dispose()
-    barrelTex.dispose()
+    // Texturas Pamplona (no están en el traverse como objetos, hay que liberarlas a mano).
+    if (tex) { tex.map.dispose(); tex.normalMap.dispose(); tex.roughnessMap.dispose() }
+    if (sillarTex) sillarTex.dispose()
+    if (roofTex) roofTex.dispose()
+    if (woodTex) woodTex.dispose()
+    if (crateTex) { crateTex.map.dispose(); crateTex.normalMap.dispose() }
+    if (barrelTex) barrelTex.dispose()
   }
 }

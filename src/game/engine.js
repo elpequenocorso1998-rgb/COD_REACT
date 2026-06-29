@@ -79,6 +79,7 @@ export function createEngine() {
   let mounted = false
   let container = null
   let prevState = null
+  let selectedMapId = 'pamplona'
   let envMap = null
   // Fase 6: settings del jugador (showFps, etc.) + contador de FPS.
   const _settings = getSettings()
@@ -214,7 +215,7 @@ export function createEngine() {
     clock = new THREE.Clock()
 
     // --- SISTEMAS DEL JUEGO ---
-    world = createWorld(scene)
+    world = createWorld(scene, selectedMapId)
     // NavMesh (Fase 1.2): grid walkable generado desde world.colliders.
     // Se usa para pathfinding A* de la IA táctica.
     navmesh = new NavMesh(world, FLOOR_SIZE, 2)
@@ -949,7 +950,16 @@ export function createEngine() {
     if (audio && audio.setMasterVolume) audio.setMasterVolume(settings.masterVolume)
   }
 
+  function setMap(mapId) {
+    selectedMapId = mapId
+  }
+
+  function getMap() {
+    return selectedMapId
+  }
+
   return { mount, dispose, startGame, startMPGame, resumeGame, quitToMenu, spawnWave, applySettings,
+    setMap, getMap,
     set onMinimapReady(fn) { onMinimapReady = fn } }
 }
 
