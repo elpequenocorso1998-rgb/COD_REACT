@@ -141,10 +141,12 @@ export default function App() {
       {!loading && gameState === GAME_STATES.MENU && mpOpen && (
         <MultiplayerScreen
           onClose={() => setMpOpen(false)}
-          onConnect={(url) => {
+          onConnect={(url, name) => {
             const client = createNetClient(url)
             netClientRef.current = client
             client.on('onInit', (msg) => {
+              // Fase 9: enviar nombre al servidor tras init.
+              if (name) client.sendName(name)
               useGameStore.getState().setMpInit(msg.clientId, msg.team, msg.scoreLimit, msg.teams)
               useGameStore.getState().setState(GAME_STATES.PLAYING)
               engineRef.current?.startMPGame(client)
@@ -204,7 +206,8 @@ function HUD() {
     playerLevel, playerXP, playerXPNeeded, levelUpFlash, scoreboardOpen,
     kills, deaths, currentWeapon, stamina, maxStamina,
     grenadeCounts, flashbanged,
-    fps
+    fps,
+    mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -218,7 +221,9 @@ function HUD() {
     kills: s.kills, deaths: s.deaths, currentWeapon: s.currentWeapon,
     stamina: s.stamina, maxStamina: s.maxStamina,
     grenadeCounts: s.grenadeCounts, flashbanged: s.flashbanged,
-    fps: s.fps
+    fps: s.fps,
+    mpConnected: s.mpConnected, mpRemotePlayers: s.mpRemotePlayers,
+    mpTeamScores: s.mpTeamScores, mpTeam: s.mpTeam, mpScoreLimit: s.mpScoreLimit
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -376,7 +381,10 @@ function HUD() {
 
       {/* --- Scoreboard overlay (Tab hold) --- */}
       {scoreboardOpen && (
-        <Scoreboard kills={kills} deaths={deaths} score={score} wave={wave} />
+        <Scoreboard kills={kills} deaths={deaths} score={score} wave={wave}
+          mpConnected={mpConnected} mpRemotePlayers={mpRemotePlayers}
+          mpTeamScores={mpTeamScores} mpTeam={mpTeam} mpScoreLimit={mpScoreLimit}
+        />
       )}
     </div>
   )
@@ -384,9 +392,48 @@ function HUD() {
 
 /* =========================================================================
    Scoreboard: tabla de puntuaciones (Tab hold).
+   Fase 9: en MP muestra equipos reales con scores del servidor.
    ========================================================================= */
-function Scoreboard({ kills, deaths, score, wave }) {
+function Scoreboard({ kills, deaths, score, wave, mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit }) {
   const kd = deaths > 0 ? (kills / deaths).toFixed(2) : kills.toFixed(2)
+
+  if (mpConnected && mpTeamScores) {
+    // Scoreboard MP: dos equipos con jugadores reales.
+    const axisPlayers = mpRemotePlayers.filter((p) => p.team === 'axis')
+    const alliesPlayers = mpRemotePlayers.filter((p) => p.team === 'allies')
+    const renderTeam = (name, players, score, isMyTeam) => (
+      <div className="scoreboard-team">
+        <div className="scoreboard-team-name">{name} — {score}/{mpScoreLimit}</div>
+        <div className="scoreboard-row scoreboard-header-row">
+          <span>Jugador</span><span>Alive</span><span>Firing</span>
+        </div>
+        {isMyTeam && (
+          <div className="scoreboard-row">
+            <span>Tú</span><span>✓</span><span>-</span>
+          </div>
+        )}
+        {players.map((p) => (
+          <div key={p.id} className="scoreboard-row">
+            <span>Player {p.id}</span>
+            <span>{p.alive !== false ? '✓' : '✗'}</span>
+            <span>{p.firing ? '🔫' : '-'}</span>
+          </div>
+        ))}
+      </div>
+    )
+    return (
+      <div className="scoreboard" role="dialog" aria-label="Scoreboard">
+        <div className="scoreboard-header">Team Deathmatch</div>
+        <div className="scoreboard-teams">
+          {renderTeam('AXIS', axisPlayers, mpTeamScores.axis, mpTeam === 'axis')}
+          {renderTeam('ALLIES', alliesPlayers, mpTeamScores.allies, mpTeam === 'allies')}
+        </div>
+        <div className="scoreboard-hint">Mantén Tab para ver el scoreboard</div>
+      </div>
+    )
+  }
+
+  // Scoreboard PvE (fallback original).
   return (
     <div className="scoreboard" role="dialog" aria-label="Scoreboard">
       <div className="scoreboard-header">
@@ -699,6 +746,15 @@ function BarracksScreen({ onClose }) {
    ========================================================================= */
 function MultiplayerScreen({ onClose, onConnect }) {
   const [url, setUrl] = useState('ws://localhost:9433')
+  // Fase 9: input de nombre de jugador (antes era Player${id} del servidor).
+  const [name, setName] = useState(() => {
+    try { return localStorage.getItem('mw_player_name') || '' } catch { return '' }
+  })
+
+  const handleConnect = () => {
+    try { localStorage.setItem('mw_player_name', name) } catch {}
+    onConnect(url, name)
+  }
 
   return (
     <div className="menu">
@@ -711,12 +767,20 @@ function MultiplayerScreen({ onClose, onConnect }) {
       <div className="mp-connect">
         <input
           type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Tu nombre"
+          className="mp-url-input"
+          maxLength={16}
+        />
+        <input
+          type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="ws://host:9433"
           className="mp-url-input"
         />
-        <button onClick={() => onConnect(url)}>Conectar</button>
+        <button onClick={handleConnect}>Conectar</button>
       </div>
       <button onClick={onClose}>{t('menu.back')}</button>
     </div>

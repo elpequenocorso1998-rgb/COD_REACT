@@ -317,7 +317,19 @@ export function createEngine() {
         // Splat de sangre en el suelo si el impacto fue bajo.
         if (hitPoint.y < 1.5 && decals) decals.spawnBloodSplat(hitPoint)
       }, weaponDef)
-      if (!hitEnemy && !freeShot) {
+      // Fase 9: si no hitteamos un bot, intentamos con jugadores remotos (MP).
+      let hitRemote = false
+      if (!hitEnemy && remotePlayers && netClientRef) {
+        hitRemote = remotePlayers.handleShot(originVec, dirVec, weaponDef.raycastFar, (remoteId, isHead, hitPoint) => {
+          // Reportamos la kill al servidor (trusted client de momento).
+          netClientRef.sendKill(remoteId, store.getState().currentWeapon, isHead)
+          store.getState().registerHit(isHead ? 25 : 10, isHead ? 'headshot' : 'body')
+          audio.playHitMarker(isHead ? 'headshot' : 'body')
+          audio.playHitFlesh()
+          particles.spawnBlood(hitPoint, new THREE.Vector3(0, 1, 0))
+        })
+      }
+      if (!hitEnemy && !hitRemote && !freeShot) {
         audio.playHitWall()
         // Decal de agujero de bala en la pared.
         if (decals) {
@@ -512,7 +524,34 @@ export function createEngine() {
       if (world.updateShadows) world.updateShadows(player.getPosition())
       particles.update(dt)
       // Fase 2: actualiza jugadores remotos (interpolación entre snapshots).
-      if (remotePlayers) remotePlayers.update(dt)
+      if (remotePlayers) {
+        remotePlayers.update(dt)
+        // Fase 9: remotos disparando al local. Si un remote está firing y
+        // dentro de rango + línea de visión, aplica daño al local.
+        if (netClientRef && netClientRef.connected) {
+          const ppos = player.getPosition()
+          remotePlayers.forEach((entry) => {
+            if (!entry.firing || !entry.alive || entry.dead) return
+            // Cooldown de disparo remoto (simplificado: 1 disparo/0.3s).
+            const now = performance.now()
+            if (!entry._lastRemoteShotAt) entry._lastRemoteShotAt = 0
+            if (now - entry._lastRemoteShotAt < 300) return
+            const dx = ppos.x - entry.group.position.x
+            const dz = ppos.z - entry.group.position.z
+            const dist = Math.hypot(dx, dz)
+            if (dist > 80 || dist < 1) return
+            // Hit chance: 50% base, reducida por distancia.
+            if (Math.random() > Math.max(0.15, 0.5 - dist * 0.005)) return
+            entry._lastRemoteShotAt = now
+            // Dirección relativa para el indicador de daño.
+            const worldAngle = Math.atan2(dx, dz)
+            const playerYaw = player.getYaw ? player.getYaw() : 0
+            const relAngle = worldAngle - playerYaw
+            store.getState().takeDamage(8, relAngle)
+            if (audio) audio.playDamage()
+          })
+        }
+      }
       // Fase 2: envía input del player local al servidor MP (60Hz).
       if (netClientRef && netClientRef.connected) {
         netInputTimer += dt

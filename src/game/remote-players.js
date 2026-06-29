@@ -7,10 +7,15 @@ import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js
    Mantiene un pool de humanoides (uno por jugador remoto) y los actualiza
    con interpolación entre snapshots del servidor. Reaprovecha el sistema
    de humanoid.js para que los jugadores remotos se vean igual que los bots.
+
+   Fase 9: hit detection — los meshes del humanoide tienen userData.remotePlayer
+   para que el raycast del player local los detecte como objetivos.
    ========================================================================= */
 
+const _hitTargets = []
+
 export function createRemotePlayerManager(scene) {
-  const remotes = new Map() // id -> { humanoid, group, lastPos, targetPos, lastYaw, targetYaw, walkPhase, firing, weapon }
+  const remotes = new Map() // id -> { humanoid, group, lastPos, targetPos, lastYaw, targetYaw, walkPhase, firing, weapon, hp, dead }
 
   function ensurePlayer(id, team) {
     if (remotes.has(id)) return remotes.get(id)
@@ -23,11 +28,19 @@ export function createRemotePlayerManager(scene) {
     const vestMat = humanoid.vestMesh.material.clone()
     vestMat.color.setHex(teamColor)
     humanoid.vestMesh.material = vestMat
+    // Fase 9: hit targets — marcamos los meshes del humanoide para que el
+    // raycast del player local los detecte como objetivos remotos.
+    const hitTargets = [humanoid.head, humanoid.helmet, humanoid.torsoMesh, humanoid.vestMesh]
+    for (const m of hitTargets) {
+      m.userData.remotePlayer = id
+      m.userData.part = m === humanoid.head ? 'head' : 'chest'
+    }
     scene.add(humanoid.root)
     const entry = {
       humanoid,
       group: humanoid.root,
       materials: [torsoMat, vestMat],
+      hitTargets,
       lastPos: new THREE.Vector3(),
       targetPos: new THREE.Vector3(),
       lastYaw: 0,
@@ -35,7 +48,9 @@ export function createRemotePlayerManager(scene) {
       walkPhase: 0,
       firing: false,
       weapon: 'm4',
-      team
+      team,
+      hp: 100,
+      dead: false
     }
     remotes.set(id, entry)
     return entry
@@ -91,6 +106,35 @@ export function createRemotePlayerManager(scene) {
     }
   }
 
+  // Fase 9: hit detection desde el player local.
+  // Raycast contra los meshes de los jugadores remotos vivos.
+  // Devuelve { id, isHead, point } o null.
+  const _ray = new THREE.Raycaster()
+  function handleShot(originVec, dirVec, far, onHit) {
+    _ray.set(originVec, dirVec)
+    _ray.far = far
+    _hitTargets.length = 0
+    for (const entry of remotes.values()) {
+      if (entry.dead || !entry.group.visible) continue
+      for (const m of entry.hitTargets) _hitTargets.push(m)
+    }
+    if (_hitTargets.length === 0) return false
+    const hits = _ray.intersectObjects(_hitTargets, false)
+    if (hits.length === 0) return false
+    const hit = hits[0]
+    const remoteId = hit.object.userData.remotePlayer
+    if (!remoteId) return false
+    const entry = remotes.get(remoteId)
+    if (!entry) return false
+    const isHead = hit.object.userData.part === 'head'
+    if (onHit) onHit(remoteId, isHead, hit.point)
+    return true
+  }
+
+  // Callback registrado por el engine para reportar kills al servidor.
+  let _onHitRemote = null
+  function setOnHitRemote(fn) { _onHitRemote = fn }
+
   function reset() {
     for (const entry of remotes.values()) {
       scene.remove(entry.group)
@@ -104,7 +148,7 @@ export function createRemotePlayerManager(scene) {
     disposeHumanoidShared()
   }
 
-  return { updateSnapshot, update, reset, dispose,
+  return { updateSnapshot, update, reset, dispose, handleShot, setOnHitRemote,
     get count() { return remotes.size },
     forEach(fn) { for (const entry of remotes.values()) fn(entry) }
   }
