@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "baseURL": "/assets",
+  "decoders": {
+    "draco": "/decoders/draco/",
+    "basis": "/decoders/basis/"
+  },
+  "assets": {
+    "weapon_m4": {
+      "type": "gltf",
+      "path": "weapons/m4.glb",
+      "hash": null,
+      "fallback": "procedural"
+    },
+    "weapon_ak47": {
+      "type": "gltf",
+      "path": "weapons/ak47.glb",
+      "hash": null,
+      "fallback": "procedural"
+    },
+    "operator_base": {
+      "type": "gltf",
+      "path": "operators/base.glb",
+      "hash": null,
+      "fallback": "procedural"
+    },
+    "tex_concrete": {
+      "type": "texture",
+      "path": "textures/concrete.ktx2",
+      "hash": null
+    },
+    "audio_shoot_m4": {
+      "type": "audio",
+      "path": "audio/shoot_m4.ogg",
+      "hash": null
+    },
+    "audio_reload_m4": {
+      "type": "audio",
+      "path": "audio/reload_m4.ogg",
+      "hash": null
+    },
+    "audio_footstep_stone": {
+      "type": "audio",
+      "path": "audio/footstep_stone.ogg",
+      "hash": null
+    }
+  }
+}

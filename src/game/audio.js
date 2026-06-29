@@ -15,12 +15,12 @@ export function createAudioSystem() {
   let ambientNodes = []
   let started = false
   let muted = false
-  // Buffer de ruido blanco pre-creado: lo reutilizamos en cada disparo para
-  // no allocar ~13k samples por cada shot (cada 100ms en ráfaga).
   let noiseBuffer = null
-  // Delay node reutilizable para el eco de los disparos.
   let shootDelay = null
   let shootFeedback = null
+  const sampleBank = new Map()
+  const reverbIRs = new Map()
+  let convolverCache = new Map()
 
   // Inicialización perezosa: el AudioContext solo puede crearse tras
   // interacción del usuario (política de autostart de los navegadores).
@@ -66,6 +66,61 @@ export function createAudioSystem() {
     return ctx && ctx.state !== 'closed'
   }
 
+  function loadSamples(map) {
+    if (!map) return
+    for (const [name, buffer] of Object.entries(map)) {
+      if (buffer && buffer instanceof AudioBuffer) sampleBank.set(name, buffer)
+    }
+  }
+
+  function loadReverbIR(name, buffer) {
+    if (buffer && buffer instanceof AudioBuffer) reverbIRs.set(name, buffer)
+  }
+
+  function hasSample(name) {
+    return sampleBank.has(name)
+  }
+
+  function playSample(name, { position = null, volume = 1, rate = 1 } = {}) {
+    if (!alive()) return false
+    const buf = sampleBank.get(name)
+    if (!buf) return false
+    const t = ctx.currentTime
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.playbackRate.value = rate
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(volume, t)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + buf.duration)
+    let node = src
+    if (position) {
+      const panner = ctx.createPanner()
+      panner.panningModel = 'HRTF'
+      panner.setPosition(position.x, position.y, position.z)
+      src.connect(panner)
+      node = panner
+    }
+    src.connect(gain)
+    node.connect(gain)
+    gain.connect(masterGain)
+    src.start(t)
+    src.onended = () => {
+      try { src.disconnect(); gain.disconnect(); if (node !== src) node.disconnect() } catch (e) {}
+    }
+    return true
+  }
+
+  function getReverb(name) {
+    if (!alive() || !reverbIRs.has(name)) return null
+    let conv = convolverCache.get(name)
+    if (!conv) {
+      conv = ctx.createConvolver()
+      conv.buffer = reverbIRs.get(name)
+      convolverCache.set(name, conv)
+    }
+    return conv
+  }
+
   // --- Sonido de disparo ---
   // Combinación de:
   // 1. Click del percutor (tono corto y agudo).
@@ -73,6 +128,7 @@ export function createAudioSystem() {
   // 3. Eco (delay con feedback reutilizable).
   function playShoot() {
     if (!alive()) return
+    if (playSample('shoot')) return
     const t = ctx.currentTime
 
     // 1. Click del percutor: oscilador cuadrado corto.
@@ -114,6 +170,7 @@ export function createAudioSystem() {
   // Dos clicks metálicos separados ~0.5s.
   function playReload() {
     if (!alive()) return
+    if (playSample('reload')) return
     const t = ctx.currentTime
     metalClick(t, 0.4)
     metalClick(t + 0.4, 0.5)
@@ -544,6 +601,10 @@ export function createAudioSystem() {
     ambientNodes = []
     if (shootDelay) { try { shootDelay.disconnect() } catch (e) {}  shootDelay = null }
     if (shootFeedback) { try { shootFeedback.disconnect() } catch (e) {}  shootFeedback = null }
+    convolverCache.forEach(c => { try { c.disconnect() } catch (e) {} })
+    convolverCache.clear()
+    sampleBank.clear()
+    reverbIRs.clear()
     if (ctx) {
       try { ctx.close() } catch (e) {}
       ctx = null
@@ -558,6 +619,7 @@ export function createAudioSystem() {
     playHitMarker, playCallout,
     playAirstrike, playExplosion, playHeliIncoming, playHeliShoot, playGunshipIncoming,
     playLevelUp, playEnemyShoot, playFootstep,
-    startMusic, stopMusic, setMusicIntensity
+    startMusic, stopMusic, setMusicIntensity,
+    loadSamples, loadReverbIR, hasSample, playSample, getReverb
   }
 }
