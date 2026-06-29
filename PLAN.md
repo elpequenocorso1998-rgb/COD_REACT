@@ -1003,3 +1003,48 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 10 — tests (navmesh, grenades, pickups, streaks — 151 tests)
 - [x] Fase 11 — documentación (README, AGENTS, repo hygiene)
 - [x] Fase 12 — orden del repo + commits por fase
+
+### Fases 4-17 (CoD real) — implementadas como esqueletos funcionales
+
+- [x] Fase 4 (assets) — createAssetLoader (GLTF/DRACO/KTX2 + IndexedDB cache
+  + fallback procedural), createAnimGraph (state machine + blend trees),
+  audio sample bank + reverb IR. Manifest ejemplo en public/assets/.
+- [x] Fase 5 (arsenal) — 28 armas (7 originales + 21 nuevas: kilo/grau/fr556/
+  oden/mp7/p90/uzi/aug/m91/pkm/model680/r90/hdr/ax50/ebr14/mk2/kar98k/x16/
+  deagle/rpg/pila), WEAPON_PLATFORMS (11), 35 attachments en 6 slots, 8 field
+  upgrades, 15 grenade types, multi-class (10 slots), UNLOCK_CATALOG 55 niveles.
+- [x] Fase 6 (mapas) — 5 mapas (pamplona + desert/urban/snow/industrial),
+  MAPS registry con metadata por bioma (fog/sun/ambient/hemi), createWorld
+  acepta mapId, engine.setMap/getMap.
+- [x] Fase 7 (campaña) — 5 misiones (Operator/Blackout/Cold Front/Iron Works/
+  Pamplona) en 3 actos, 8 objective types, allies NPCs, cinemáticas, 4
+  dificultades (recruit/regular/hardened/veteran), persistencia + unlock chain.
+- [x] Fase 8 (modos) — 14 modos: survival, campaign, tdm, ffa, domination,
+  hardpoint, killConfirmed, searchDestroy, gunfight, gunGame, infected,
+  groundWar, warzone, hardcore. API getGameMode/isPvP/isPvE/getMaxPlayers.
+- [x] Fase 9 (netcode) — createInputValidator (speed/teleport/aimbot/fire rate
+  detection, shouldBan), createLagCompensator (history buffer + rewind for
+  "favor the shooter"), createSnapshotDelta (delta compression),
+  createRateLimiter (per-IP buckets), createAntiCheat (HS rate/accuracy/KD
+  tracking, bans, reports). Config 60Hz tick / 30Hz snapshot / 120Hz input.
+- [x] Fase 10 (ranked) — CDL ruleset (3 modos, 4 mapas, banned list), 8 tiers
+  Bronze→Top250, SR ELO-like (K=32, MVP bonus, quit penalty, weekly decay),
+  placements (10 matches), rewards per tier, persistencia. Spectator (4 modos:
+  free/follow 1st-3rd/director) + X-ray + PiP. Theater (record/playback demos).
+- [x] Fase 11 (crossplay/móvil) — createTouchControls (virtual sticks, 10
+  botones, gyro aim, aim assist slider), isTouchDevice/isMobile/detectInputType,
+  MATCHMAKING_POOLS (mnk/controller/touch/mixed), getMatchmakingPool.
+- [x] Fase 12 (backend) — createApiClient (26 métodos: auth email+OAuth 6
+  providers, inventory sync, matchmaking, friends, party, voice, reports,
+  matches, leaderboard, telemetry). DB_SCHEMA Postgres (16 tablas + índices).
+- [x] Fase 13 (live service) — STORE_ITEMS (11 bundles/blueprints/operators/
+  cards/emblems/sprays/finishing moves), COD Points, Battle Pass v2 (100 tiers,
+  premium, bundle skip 20), Prestige (11 niveles), Seasons (90 días),
+  Challenges (daily 3/6, weekly 5/5, seasonal 3, weapon 6 con camo rewards).
+- [x] Fase 14-17 (perf/a11y) — createFrameProfiler (FPS/frame time/draw calls/
+  memory), createLODSystem (4 niveles HIGH/MEDIUM/LOW/IMPOSTOR),
+  createMemoryTracker (snapshots, budget check, leak detection),
+  createQualityScaler (dynamic pixel ratio). Accessibility: COLORBLIND_TYPES
+  (4 con matrices), subtítulos, screen reader, key remapping (25+ acciones),
+  motion sickness presets, aim assist/FOV sliders, keyboard nav.
+- [x] Verificación: lint limpio, 471 tests, build OK.
