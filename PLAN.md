@@ -5,6 +5,14 @@ Tras cada sub-fase: lint + tests + build + commit.
 
 Estado de cada sub-fase: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho.
 
+> **Alcance ampliado (Fases 4-17)**: las Fases 1-3 entregan el esqueleto
+> jugable web (procedural, zero-assets). Las Fases 4-17 llevan el
+> proyecto a un **CoD real**: assets GLTF + animación esquelética, gunsmith
+> completo, 5+ mapas, campaña SP, Warzone/BR, ranked/competitivo, netcode
+> AAA, crossplay/móvil, backend de cuentas, live service, visuales/audio
+> AAA, performance y QA profesional. Es ambicioso pero cada sub-fase es
+> shippable por sí sola.
+
 ---
 
 ## Convenciones (no negociables)
@@ -295,6 +303,650 @@ Objetivo: monetización y retención a largo plazo.
 - [ ] Touch controls con aim assist agresivo.
 - [ ] Controller support en móvil.
 - [ ] Performance budget para móvil (LOW en `quality.js`).
+
+---
+
+## FASES 4-17 — Hacia un CoD real
+
+Las Fases 1-3 entregan el esqueleto jugable web (zero-assets, procedural).
+Las siguientes lo convierten en un producto AAA. **Grafo de dependencias**:
+
+```
+4 (assets+anim) ──┬─→ 5 (gunsmith)   ──┐
+                  ├─→ 6 (mapas)         ├─→ 8 (modos: Warzone/Ground War/Gunfight)
+                  └─→ 14 (visuales AAA) ┤
+                                       │
+9 (netcode AAA) ──┬─→ 10 (ranked)      ├─→ 11 (crossplay/móvil) ──→ 12 (backend)
+                  └─→ 8                │
+7 (campaña SP) ← 4 + IA existente      │
+13 (live service) ← 12                 │
+15 (audio AAA) ← 4                     │
+16 (performance) ← 14 + 11             │
+17 (QA/polish) ← todo                  │
+```
+
+Orden sugerido: 4 → 5 + 6 + 7 (paralelizables) → 9 → 8 → 10 → 12 → 11
+→ 13 → 14 + 15 → 16 → 17.
+
+### FASE 4 — Asset pipeline real + animación esquelética
+
+**Objetivo**: reemplazar primitivas por assets GLTF y audio samples, con
+fallback procedural. Sin esto, el juego nunca se verá como CoD.
+
+#### 4.1 Asset loader + manifest `[ ]`
+- Crear `src/game/assets/loader.js` con `loadManifest(jsonUrl)` (URLs,
+  hashes SHA-256, dependencias).
+- Integrar `GLTFLoader` + `DRACOLoader` + `KTX2Loader` en `engine.js`.
+- CDN vía Vite env `VITE_CDN_URL` con fallback a `/assets/`.
+- Cache en IndexedDB (chunked) para no redescargar.
+- Progress bar en `App.jsx` (extender `store.loading`).
+- `AssetLoader.dispose()` libera geometries/materials/textures.
+
+#### 4.2 Viewmodels GLTF `[ ]`
+- Migrar `viewmodels.js` (primitivas) a modelos GLTF por arma.
+- Mantener `buildViewModel(weaponId)` API para no romper `player.js`.
+- Skeletal animations: idle, draw, reload, ADS in/out, inspect, sprint
+  pose, fire (semi + auto), last shot.
+- Hand rig (first-person hands) skinned mesh.
+- Procedural fallback si el GLTF falla (lo actual se queda como backup).
+
+#### 4.3 Character models GLTF `[ ]`
+- Migrar `humanoid.js` (primitivas) a GLTF skinned mesh (operator base).
+- Animaciones: idle/walk/run/crouch/prone/jump/slide/death ×4/flinch
+  por zona (head/torso/limbs).
+- `enemies.js` usa el mismo modelo con variantes de material (uniform,
+  helmet, vest).
+- `remote-players.js` usa el skinned mesh en MP.
+
+#### 4.4 Animation graph `[ ]`
+- `src/game/anim/graph.js`: state machine con blend trees y
+  transiciones por parámetros (`speed`, `isAiming`, `isReloading`,
+  `healthPct`, `stance`).
+- IK procedural para hands sobre weapon (aim pose).
+- Camera shake / weapon bob / sway (parcial en `player.js`, ampliar).
+- Motion blur per-object (Three.js o aproximación velocity-buffer).
+- `dispose()` de todos los `AnimationMixer` y tracks.
+
+#### 4.5 Audio samples + 3D engine `[ ]`
+- Cargar samples reales (fire, reload, footsteps, explosions,
+  hitmarkers, ambient, foley).
+- Migrar `audio.js` a sample-based con fallback procedural (lo actual).
+- HRTF posicional + occlusion/obstruction vía raycast.
+- Reverb zones (convolver con impulse responses por área del mapa).
+- Música stem-based (calma / combate / clímax / death).
+
+**Verificación**: cambiar M4→AK muestra GLTF real con animación de
+recarga. Disparo suena a sample real. Enemigo muere con anim+ragdoll
+transitional. Lint + tests + build.
+
+---
+
+### FASE 5 — Gunsmith avanzado + arsenal expandido
+
+**Objetivo**: igualar MW2/WZ en variedad y customización.
+
+#### 5.1 Arsenal 25+ armas `[ ]`
+- Ampliar `WEAPONS` en `config.js` a todas las categorías:
+  - **AR** (5+): M4, AK-47, Kilo 141, Grau 5.56, FR 5.56, Oden.
+  - **SMG** (5+): MP5, MP7, P90, Uzi, AUG.
+  - **LMG** (3+): M91, PKM, Holger.
+  - **Shotgun** (3+): Model 680, R9-0, 725.
+  - **Sniper** (3+): HDR, AX-50, Rytec.
+  - **Marksman** (3+): EBR-14, MK2, Kar98k.
+  - **Pistol** (4+): X16, 1911, Renetti, Deagle.
+  - **Launcher** (3+): RPG, PILA, JOKR.
+  - **Melee** (4+): knife, bat, katana, sai.
+- Cada arma con GLTF viewmodel (Fase 4.2) y stats balanceadas.
+- Unlock por nivel en `progression.js UNLOCK_CATALOG`.
+
+#### 5.2 Platform / receiver system `[ ]`
+- Armas comparten "receiver" (M4 platform: M4, M16, Grau — mismo
+  receiver, diferencias en barrel/stock/grip).
+- Reduce modelado: 1 receiver + N barrels/stocks/grips combinables.
+- `WEAPON_PLATFORMS` en `config.js`.
+
+#### 5.3 Attachments expandidos (60+) `[ ]`
+- 5+ slots por arma: sight, barrel, underbarrel, mag, stock, muzzle,
+  laser, perk.
+- Cada attachment afecta ≥1 stat con tradeoff (no upgrades puros).
+- Tuning visual: stats bars en UI (`App.jsx` loadout).
+
+#### 5.4 Field upgrades `[ ]`
+- 8+ field upgrades: Trophy System, Dead Silence (field), EMP,
+  Deployable Cover, Recon Drone, Munitions Box, Recon Tower,
+  Suppressing Drone.
+- Charge timer, deployable entity con `update()` propio en
+  `src/game/field-upgrades.js`.
+
+#### 5.5 Tacticals + lethals ampliados `[ ]`
+- Tacticals: stun, gas, smoke, flash, decoy, snapshot, stim, heartbreaker.
+- Lethals: frag, semtex, thermite, molotov, C4, claymore, proximity
+  mine, throwing knife, thermobaric, shuriken.
+- `GRENADES` en `config.js` ampliado (sin mutar el catálogo base).
+
+#### 5.6 Custom classes múltiples `[ ]`
+- 10+ custom classes (save slots en `loadout.js`).
+- UI para nombrar, duplicar, resetear.
+
+#### 5.7 Firing range `[ ]`
+- Mapa dedicado para testear armas/attachments.
+- Targets con daño por zona visible.
+- Dummies a varias distancias.
+
+**Verificación**: crear clase con M4 + 5 attachments, ver stats cambiar
+en UI, probar en firing range. Lint + tests + build.
+
+---
+
+### FASE 6 — Más mapas y entornos
+
+**Objetivo**: 5-10 mapas distintos (Pamplona ya está).
+
+#### 6.1 Map library `[ ]`
+- Migrar `world.js` a `createWorld(mapId)` con mapas:
+  - `pamplona` (actual).
+  - `desert` (dunas, outpost militar).
+  - `urban` (ciudad moderna destruida).
+  - `snow` (base ártica).
+  - `industrial` (fábrica + tanques).
+  - `military_base` (hangares + barracas).
+  - `coastal` (puerto + barcos).
+- Cada mapa con `colliders`, `navmesh` propio, spawn points, sky config.
+
+#### 6.2 Map voting + pre-game `[ ]`
+- Vote screen en `App.jsx` (3 mapas aleatorios, veto).
+- Map preview 3D orbit antes de empezar.
+
+#### 6.3 Dynamic time/weather `[ ]`
+- Day/night cycle (sol de `shaders/sky.js` rotando).
+- Lluvia, niebla, nieve (particle system).
+- Reflejos en suelo mojado (SSR ya en roadmap Fase 1.7).
+
+#### 6.4 Map events `[ ]`
+- Door breach (explosión + debris).
+- Player-triggered events (alarma, lights off, reinforcements).
+
+**Verificación**: jugar TDM en 3 mapas distintos sin reiniciar el server.
+Lint + tests + build.
+
+---
+
+### FASE 7 — Campaña SP completa
+
+**Objetivo**: story mode con misiones, no solo survival.
+
+#### 7.1 Mission system `[ ]`
+- `src/game/campaign/missions.js` con lista de misiones (8-12).
+- Cada misión: `mapId`, `objectives[]`, `allies[]`, `enemies[]`,
+  `cinematics[]`, `winCondition`.
+- Objective types: `kill_target`, `reach_point`, `defend`, `extract`,
+  `plant_explosive`, `follow_npc`, `survive_timer`.
+
+#### 7.2 Ally NPCs `[ ]`
+- Squadmates con IA aliada (cover, suppress, revive).
+- Voice lines (callouts: "reloading", "enemy spotted", "down").
+- `ai.js` extendido con `faction: 'player' | 'enemy'`.
+
+#### 7.3 Cinematics `[ ]`
+- `src/game/campaign/cinematics.js`: camera sequences con keyframes.
+- Machinima (in-engine) o pre-rendered (video overlay).
+- Skip button.
+
+#### 7.4 Difficulty levels `[ ]`
+- Recruit / Regular / Hardened / Veteran.
+- Afecta HP enemigos, accuracy, HP jugador, AI aggression.
+- `DIFFICULTY` en `config.js`.
+
+#### 7.5 Vehicle sections `[ ]`
+- Turret section (jeep/heli/tanque).
+- Heli section (piloteable con WASD).
+- Rail shooter sections.
+
+#### 7.6 Mission UI `[ ]`
+- Mission selector con capítulos.
+- Briefing screen (text + map).
+- Mission stats (time, accuracy, kills) al final.
+
+**Verificación**: completar misión 1 "Operator" con cinematics + 2
+objectives + extract. Lint + tests + build.
+
+---
+
+### FASE 8 — Modos de juego extras
+
+**Objetivo**: igualar variedad de modos de MW.
+
+#### 8.1 Battle Royale / Warzone `[ ]`
+- Mapa grande (4 km²) con POIs.
+- Contraction zone (gas, daño escalante).
+- Loot system (ground loot + crates + supply drops).
+- Squads: solo/duo/trio/quad.
+- Gulag (1v1 respawn al inicio).
+- Buy stations (cash + items).
+- Loadout drops (event).
+- 60-100 players.
+- Resurgence mode (auto-respawn).
+
+#### 8.2 Ground War `[ ]`
+- 32v32, vehicles (jeeps, tanques, helis).
+- Mapa grande con capturas.
+- Vehicle physics + controls.
+
+#### 8.3 Gunfight `[ ]`
+- 2v2, rounds 40s, weapon rotation per round.
+- Overtime capture flag.
+
+#### 8.4 Search & Destroy competitive `[ ]`
+- Bomb plant/defuse, no respawn.
+- 6v6, best of 11.
+
+#### 8.5 Hardcore mode `[ ]`
+- No HUD, 1-shot kill (35 HP jugador), friendly fire.
+
+#### 8.6 Party modes `[ ]`
+- Infected (1 vs all, infectados son runners).
+- Prop Hunt.
+- Gun Game (arma cambia por kill).
+- One in the Chamber.
+
+#### 8.7 Free For All `[ ]`
+- (Migrado de Fase 2.2.)
+- 8 players, 30 kills gana.
+
+#### 8.8 Domination / Hardpoint / Kill Confirmed `[ ]`
+- (Migrados de Fase 2.2.)
+
+**Verificación**: entrar a Warzone con 60 bots, jugar 1 partida completa
+hasta último vivo. Lint + tests + build.
+
+---
+
+### FASE 9 — Netcode AAA
+
+**Objetivo**: hit-reg consistente, sin desync, sin lag visible.
+
+#### 9.1 Server-authoritative movement `[ ]`
+- `server/server.js` valida posiciones (speed cap, noclip check).
+- Client-side prediction + reconciliation (autoritativo).
+- Input buffering (120 Hz) + snapshot interpolation (20 Hz snap).
+
+#### 9.2 Lag compensation `[ ]`
+- "Favor the shooter": rewind server world al tick del cliente al
+  validar hit.
+- Hit registration server-side (no trusted-client como ahora).
+- Interp delay 100ms.
+
+#### 9.3 Tickrate upgrade `[ ]`
+- Snapshot 60 Hz (vs 20 actual).
+- Input 120 Hz.
+- Snapshot delta compression (solo cambios).
+
+#### 9.4 Anti-cheat server-side `[ ]`
+- Validation de inputs imposibles (velocidad, fire rate, FOV).
+- Rate limiting por IP.
+- Heuristics (HS rate, K/D ratio, tracking speed).
+- Ban system (account + HWID).
+- Replay upload en reportes.
+
+#### 9.5 Reconnect + matchmaking drop-in `[ ]`
+- Reconnect si DC < 30s (sin perder stats).
+- Mid-match drop-in (respawn tras 5s).
+
+**Verificación**: jugar con 100ms ping simulado y matar a alguien
+corriendo sin queja de hit-reg. Lint + tests + build.
+
+---
+
+### FASE 10 — Competitivo / Ranked / Esports
+
+**Objetivo**: igualar CDL.
+
+#### 10.1 CDL ruleset `[ ]`
+- Hardpoint, S&D, Control.
+- Mapas restringidos (3 por modo).
+- Armas/attachments/perks baneados.
+- 4v4.
+
+#### 10.2 Ranked ladder `[ ]`
+- SR (Skill Rating) ELO-like.
+- Tiers: Bronze → Silver → Gold → Platinum → Diamond → Crimson →
+  Iridescent → Top 250.
+- Seasons 1 mes.
+- Rewards por tier.
+
+#### 10.3 Spectator mode `[ ]`
+- Cámara libre (fly).
+- Follow player (1st/3rd person).
+- Director mode (auto-cameras inteligente).
+- X-ray (ver enemigos a través de walls).
+- Picture-in-picture.
+
+#### 10.4 Theater / replay `[ ]`
+- Record demos (server-side).
+- Replay UI con timeline, cámara libre.
+- Share highlights (export video).
+
+#### 10.5 Pause/dispute `[ ]`
+- Pause tactical (1 por equipo, 30s).
+- Dispute system (report resultado).
+
+**Verificación**: subir de Bronze a Silver en 5 partidas. Lint + tests +
+build.
+
+---
+
+### FASE 11 — Crossplay / Mobile / Native
+
+**Objetivo**: jugar desde cualquier dispositivo con cualquier input.
+
+#### 11.1 Touch controls `[ ]`
+- Virtual sticks (move + look).
+- Fire buttons (primary, ADS, lethal, tactical).
+- Gestures (swipe para knife, drag para grenade arc).
+- Gyro aim (con toggle).
+- Aim assist agresivo (rotation + slowdown).
+
+#### 11.2 Input-based matchmaking `[ ]`
+- Pools: MnK only / Controller only / Mixed.
+- Crossplay toggle.
+
+#### 11.3 Native desktop `[ ]`
+- Electron / Tauri wrapper.
+- Steam integration (achievements, rich presence, workshop).
+- Steam Deck verified.
+
+#### 11.4 Mobile builds `[ ]`
+- PWA (offline-first).
+- iOS/Android via Capacitor.
+- App Store / Play Store submission.
+
+#### 11.5 Performance budget móvil `[ ]`
+- LOW quality por defecto (en `quality.js`).
+- 30 FPS target.
+- Dynamic resolution scaling.
+- Thermal throttling detect (reducir calidad si calienta).
+- Memoria < 1GB.
+
+**Verificación**: jugar partida MP en iPhone mid-range a 30fps estables.
+Lint + tests + build.
+
+---
+
+### FASE 12 — Online services / Backend / Cuentas
+
+**Objetivo**: reemplazar `localStorage` por backend real.
+
+#### 12.1 Account system `[ ]`
+- Login: email + password, OAuth (Google, Steam, Discord, Apple, Sony).
+- JWT tokens + refresh.
+- 2FA opcional.
+
+#### 12.2 Inventario backend `[ ]`
+- API REST/GraphQL para inventario (reemplaza `progression.js`
+  localStorage).
+- DB: Postgres (users, inventory, matches) + Redis (sessions,
+  matchmaking).
+- Migración: al primer login, sincronizar `localStorage` → backend.
+
+#### 12.3 Matchmaking `[ ]`
+- MMR + ping + input + party.
+- Pool regions: EU, NA-E, NA-W, SA, Asia.
+- Queue times < 30s.
+
+#### 12.4 Dedicated servers regionales `[ ]`
+- Game server binary deployable en cloud (AWS GameLift, GCP Agones).
+- Auto-scaling por region.
+- Server browser (custom games).
+
+#### 12.5 Social `[ ]`
+- Friends list + invites.
+- Party system (6 jugadores, party chat).
+- Clans/regiments.
+
+#### 12.6 Voice chat `[ ]`
+- WebRTC posicional (proximity chat).
+- Party voice (no posicional).
+- Push-to-talk + open mic.
+
+#### 12.7 Rich presence + integrations `[ ]`
+- Discord RPC.
+- Steam rich presence.
+
+#### 12.8 Telemetry / analytics `[ ]`
+- Event tracking (armas, win rates, churn, accidents).
+- A/B testing de balance en `config.js`.
+- Crash reporting (Sentry).
+
+#### 12.9 Reports & moderation `[ ]`
+- In-game report (toxicidad, cheating, nombre).
+- Chat moderation (filtros + ML).
+- Ban infra (account + HWID + IP temporal).
+
+**Verificación**: registrarse con Google, jugar 1 partida, ver progreso
+sincronizado entre 2 dispositivos. Lint + tests + build.
+
+---
+
+### FASE 13 — Live service / Monetización / Seasons
+
+**Objetivo**: monetización y retención a largo plazo.
+
+#### 13.1 In-game store `[ ]`
+- Bundles (operator + skin + blueprint + calling card).
+- Weapon blueprints (cosmético, mismos stats).
+- Operator skins (10+ operators).
+- Calling cards, emblems, sprays.
+- Finishing moves.
+
+#### 13.2 COD Points `[ ]`
+- Currency comprada con dinero real.
+- Stripe / Steam IAP / Apple / Google.
+- Anti-fraude.
+
+#### 13.3 Battle Pass v2 `[ ]`
+- 100+ tiers, free + premium track.
+- Sector system (MW2-style: elegir path).
+- 3-month seasons.
+- Battle Pass Bundle (skip 20 tiers).
+
+#### 13.4 Seasons `[ ]`
+- Nuevo contenido cada 3 meses: 1-2 armas nueva, 1-2 mapas, 1 operator,
+  1 mode, 1 Battle Pass.
+- Season events (double XP, limited modes).
+- Mid-season update.
+
+#### 13.5 Prestige `[ ]`
+- Tras lvl 55 (o 100), reset con icono.
+- 10+ prestige levels.
+- Prestige rewards (skins exclusivas).
+
+#### 13.6 Challenges ampliados `[ ]`
+- Daily (3), Weekly (5), Seasonal (10).
+- Weapon challenges (50 kills, 50 HS, no-attachment, etc.).
+- Camo challenges (Gold → Diamond → Orion/Platinum).
+
+#### 13.7 Cosméticos `[ ]`
+- Calling cards (50+).
+- Emblems (50+).
+- Sprays (20+).
+- Finishing moves (10+).
+
+**Verificación**: comprar BP premium, subir 10 tiers, desbloquear arma
+nueva de la temporada. Lint + tests + build.
+
+---
+
+### FASE 14 — Visuales AAA
+
+**Objetivo**: paridad con CoD moderno.
+
+#### 14.1 WebGPU backend `[ ]`
+- Migrar de WebGL2 a WebGPU (cuando esté widely supported).
+- Compute shaders (GPU particles, GI).
+- Bind groups para batches más grandes.
+
+#### 14.2 Ray tracing `[ ]`
+- RT shadows (sun + point lights).
+- RT reflections (suelos mojados, mirrors).
+- RT GI (diffuse interreflection).
+- Hybrid rendering (raster + RT).
+
+#### 14.3 Volumetric fog `[ ]`
+- Froxel fog (3D texture).
+- God rays volumétricos (mejorar los actuales en `engine.js`).
+
+#### 14.4 Screen-space GI `[ ]`
+- SSDO / RTGI approx.
+- Light bleeding en esquinas.
+
+#### 14.5 TAA + upscaling `[ ]`
+- TAA (reemplazar SMAA actual).
+- FSR/DLSS-equivalent (WebGPU upscalers).
+
+#### 14.6 Depth of field + motion blur `[ ]`
+- DoF cinematográfico (bokeh).
+- Per-object motion blur.
+
+#### 14.7 Color grading + LUTs `[ ]`
+- LUT por mapa / modo / tiempo.
+- HDR pipeline (float targets).
+
+#### 14.8 Particle system upgrade `[ ]`
+- GPU particles (compute).
+- VFX library: explosions, smoke trails, muzzle flashes, sparks, debris.
+- Soft particles.
+
+#### 14.9 Weather + day/night `[ ]`
+- Lluvia (con ripple en chars/suelos).
+- Niebla volumétrica.
+- Nieve.
+- Storm.
+
+**Verificación**: comparar screenshot side-by-side con MW2 (2022). Lint +
+tests + build.
+
+---
+
+### FASE 15 — Audio AAA
+
+#### 15.1 Audio engine `[ ]`
+- 3D posicional HRTF (mejorar lo actual en `audio.js`).
+- Occlusion/obstruction (raycast).
+- Reverb zones (convolver con IR por área).
+- Audio ducking (voice > SFX > music).
+
+#### 15.2 Real weapon recordings `[ ]`
+- Fire (close + distant + tail).
+- Reload (per stage).
+- Mechanical sounds (bolt, mag insertion, safety).
+
+#### 15.3 Foley `[ ]`
+- Footsteps por superficie + gear rattle.
+- Gear movement (vest, pouches).
+- Impact foley (body falls, ragdoll).
+
+#### 15.4 Music `[ ]`
+- Stem-based dynamic music (calma / combate / clímax / death).
+- Licensed tracks para menús (opcional).
+- Composer integration.
+
+#### 15.5 Voice over `[ ]`
+- Operator callouts (reloading, enemy spotted, downed, etc.).
+- Multi-language VO (es, en, fr, de, it, ja, ko, zh, pt, ru).
+- Announcer (match start, last enemy, victory, defeat).
+- Campaign dialogue + subtitles.
+
+#### 15.6 Voice chat `[ ]`
+- WebRTC posicional (proximity).
+- Push-to-talk + open mic.
+- Mute/report UI.
+
+**Verificación**: disparar M4 en exterior vs interior suena distinto
+(reverb). Lint + tests + build.
+
+---
+
+### FASE 16 — Performance / Scalability
+
+#### 16.1 Profiling infra `[ ]`
+- In-game overlay (FPS, frame time, draw calls, memory).
+- Capture frame (Chrome Trace).
+- Regression tests en CI.
+
+#### 16.2 Worker threads `[ ]`
+- Pathfinding (A*) en Worker.
+- Physics (ragdoll) en Worker (opcional).
+- Audio mix en AudioWorklet.
+
+#### 16.3 Streaming `[ ]`
+- Async chunk load (mapa se carga en background).
+- Texture streaming (KTX2 + LOD).
+- Mesh streaming (LOD).
+
+#### 16.4 LOD system `[ ]`
+- Geometry LOD por distancia (3-4 niveles).
+- Material LOD (simplificar shaders lejos).
+- Impostor billboard para muy lejos.
+
+#### 16.5 Memory budget `[ ]`
+- Mobile: < 1GB.
+- Desktop: < 4GB.
+- Pool everything (partículas ya, extender a bullets/tracers/decals).
+
+#### 16.6 Frame budget `[ ]`
+- Mobile: 33ms (30fps).
+- Desktop: 8ms (120fps).
+- Auto quality (mejorar `quality.js`).
+
+**Verificación**: perfil Chrome trace de 1 frame sin spikes > 50ms. Lint
++ tests + build.
+
+---
+
+### FASE 17 — QA / Polish / Accesibilidad / i18n
+
+#### 17.1 Testing `[ ]`
+- Unit tests coverage > 80% (actual: ~60% en lógica pura).
+- Integration tests (engine mount + 1 frame + dispose sin leaks).
+- E2E Playwright (play 1 partida MP).
+- Visual regression tests (screenshots).
+- Performance regression (frame time per map).
+
+#### 17.2 Accesibilidad (WCAG 2.1 AA) `[ ]`
+- Subtitles + captions (audio cues textuales).
+- Colorblind (3 modos, ya parcial).
+- Contrast modes.
+- Input remapping completo.
+- Aim assist slider.
+- FOV slider (60-120).
+- Motion sickness options (FOV, bob, blur off).
+- Screen reader (menús).
+- Keyboard navigation en UI.
+
+#### 17.3 Localización `[ ]`
+- 10+ idiomas: es, en, fr, de, it, ja, ko, zh-CN, zh-TW, pt-BR, ru, pl.
+- Extracción completa de strings (no hardcoded).
+- VO multi-idioma (parcial).
+- RTL support (árabe/hebreo) si procede.
+
+#### 17.4 Bug tracking `[ ]`
+- Issue templates (bug, feature, balance).
+- Triage workflow (P0/P1/P2/P3).
+- Repro steps + logs.
+
+#### 17.5 Crash reporting `[ ]`
+- Sentry SDK.
+- Source maps.
+- Client-side error boundary.
+- Server-side crash logs.
+
+#### 17.6 Playtesting infra `[ ]`
+- Feedback form in-game.
+- Heatmaps (muertes, posiciones).
+- Telemetría de dificultad.
+
+**Verificación**: pasar WCAG AA audit, jugar 1 partida con screen reader
++ subtitles + colorblind + key remap. Lint + tests + build.
 
 ---
 
