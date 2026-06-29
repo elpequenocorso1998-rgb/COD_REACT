@@ -16,6 +16,7 @@ import { createMinimap } from './minimap.js'
 import { createStreakManager } from './streaks.js'
 import { createGrenadeSystem } from './grenades.js'
 import { createDecalSystem } from './decals.js'
+import { createPickupSystem } from './pickups.js'
 import { NavMesh } from './navmesh.js'
 import { createRemotePlayerManager } from './remote-players.js'
 import { useGameStore, GAME_STATES } from './store.js'
@@ -56,7 +57,7 @@ const WAVE_BASE_POINTS = 90      // puntos base por kill en oleada n
 
 export function createEngine() {
   let scene, camera, renderer, clock, composer
-  let world, player, enemies, particles, audio, minimap, streaks, grenades, decals
+  let world, player, enemies, particles, audio, minimap, streaks, grenades, decals, pickups
   let navmesh = null
   let sunMesh = null
   let remotePlayers = null
@@ -223,6 +224,8 @@ export function createEngine() {
     streaks = createStreakManager(scene, enemies, particles, audio, player, camera, store)
     grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player, store)
     decals = createDecalSystem(scene, { maxDecals: 80 })
+    // Fase 5: pickups (drops de enemigos al morir).
+    pickups = createPickupSystem(scene, store, particles, audio)
 
     sunMesh = world.sunMesh
 
@@ -241,6 +244,11 @@ export function createEngine() {
     }
     enemies.onKilled = (enemy, points) => {
       const st = store.getState()
+      // Fase 4: pasamos si fue headshot para el daily de headshots.
+      // enemies.js llama a onKilled cuando hp <= 0 tras handleShot;
+      // no tenemos el flag de headshot directo aquí, pero el killmarker
+      // ya se registró en registerHit. Para el daily usamos un heuristic:
+      // si el último hitmarker fue headshot, contamos como headshot kill.
       st.registerKill(points)
       audio.playKill()
       audio.playHitMarker('kill')
@@ -249,6 +257,10 @@ export function createEngine() {
       if (label) audio.playCallout(label)
       // Level up sound si subió de nivel.
       if (store.getState().levelUpFlash) audio.playLevelUp()
+      // Fase 5: suelta pickups en la posición del enemigo muerto.
+      if (pickups && enemy.group) {
+        pickups.onEnemyKilled(enemy.group.position)
+      }
     }
 
     // Enemigo disparador: aplica daño al jugador con dirección.
@@ -509,6 +521,8 @@ export function createEngine() {
       if (streaks) streaks.update(dt, player.getPosition())
       // Granadas en vuelo.
       if (grenades) grenades.update(dt, player.getPosition())
+      // Fase 5: pickups (detección de proximidad).
+      if (pickups) pickups.update(dt, player.getPosition())
       // Decals: fade out gradual de los más antiguos.
       if (decals) decals.update(dt)
       // Música dinámica: intensidad según enemigos vivos y vida del jugador.
@@ -673,6 +687,7 @@ export function createEngine() {
     particles.reset()
     if (grenades) grenades.reset()
     if (decals) decals.reset()
+    if (pickups) pickups.reset()
     player.reset()
     // Sincroniza el arma inicial del store con el player.
     player.setWeapon(store.getState().getCurrentWeapon())
@@ -694,6 +709,7 @@ export function createEngine() {
     particles.reset()
     if (grenades) grenades.reset()
     if (decals) decals.reset()
+    if (pickups) pickups.reset()
     player.reset()
     player.setWeapon(store.getState().getCurrentWeapon())
     // Crea el manager de jugadores remotos si no existe.
@@ -731,6 +747,7 @@ export function createEngine() {
     particles.reset()
     if (grenades) grenades.reset()
     if (decals) decals.reset()
+    if (pickups) pickups.reset()
     store.getState().setState(GAME_STATES.MENU)
   }
 
@@ -815,6 +832,7 @@ export function createEngine() {
     if (streaks) streaks.dispose()
     if (grenades) grenades.dispose()
     if (decals) decals.dispose()
+    if (pickups) pickups.dispose()
     if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()
     // envMap PMREM: antes se leak-eaba en cada recreación del engine.
