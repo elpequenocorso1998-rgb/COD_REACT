@@ -35,6 +35,14 @@ docker run -d --name modern_warfare -p 9432:9432 --restart unless-stopped \
 ```
 El juego queda en http://localhost:9432
 
+### Servidor multijugador (opcional)
+```
+npm run server                 # puerto 9433
+# o con Docker:
+docker build -f Dockerfile.server -t mw-server .
+docker run -p 9433:9433 mw-server
+```
+
 ### Kubernetes
 ```
 kubectl apply -k k8s/
@@ -53,11 +61,27 @@ kubectl apply -k k8s/
 - `src/game/constants.js` — constantes de render/motor.
 - `src/game/minimap.js` — minimap canvas 2D (rotate-with-player).
 - `src/game/streaks.js` — killstreaks (UAV, airstrike, heli, gunship).
-- `src/game/grenades.js` — granadas (frag, flash, smoke) con física de rebote.
+- `src/game/grenades.js` — granadas (frag, flash, smoke, knife) con física de rebote.
+- `src/game/pickups.js` — sistema de drops (salud, munición, granadas) + scavenger.
 - `src/game/decals.js` — decals de impacto de bala y splatter de sangre.
 - `src/game/progression.js` — XP/niveles/unlocks con persistencia localStorage.
 - `src/game/audio.js` — audio procedural + 3D posicional + música dinámica.
 - `src/game/particles.js` — pool de partículas (sangre, chispas, humo).
+- `src/game/ai.js` — state machine táctica (engage, flank, cover, suppress, retreat).
+- `src/game/navmesh.js` — pathfinding A* con binary heap.
+- `src/game/world.js` — mundo procedural (Pamplona: plaza, casas, murallas).
+- `src/game/pamplona.js` — builder de casas, fuente, plaza de toros.
+- `src/game/viewmodels.js` — modelo 3D propio por arma (M4, AK, MP5, etc).
+- `src/game/ragdoll.js` — simulación verlet para caída de enemigos.
+- `src/game/remote-players.js` — renderizado + hit detection de jugadores MP.
+- `src/game/environment.js` — env map procedural (PMREM).
+- `src/game/quality.js` — escalado de calidad dinámico por FPS.
+- `src/game/loadout.js` — create-a-class (perks, attachments, secondary).
+- `src/game/settings.js` — preferencias del jugador (FOV, sens, volúmenes).
+- `src/game/meta.js` — stats, battle pass, weapon mastery, dailies.
+- `src/net/client.js` — cliente WebSocket para MP.
+- `src/i18n.js` — internacionalización (es/en).
+- `server/server.js` — servidor WebSocket TDM.
 - `k8s/` — manifiestos de Kubernetes.
 
 ## Convenciones

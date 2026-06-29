@@ -1,8 +1,8 @@
 # docker-compose.yml
 # Levanta el juego en un contenedor y lo publica en el puerto 9432 del host.
 # Uso:
-#   docker compose up --build      (modo producción, sirve estáticos con nginx)
-#   docker compose up watch        (modo dev con hot-reload)
+#   docker compose up --build            (modo producción, sirve estáticos con nginx)
+#   docker compose --profile dev up      (modo dev con hot-reload)
 services:
   game:
     build:
