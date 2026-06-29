@@ -166,9 +166,17 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     raycaster.set(originVec, dirVec)
     raycaster.far = far
     // Reutilizamos _targets: lo vaciamos y lo llenamos sin allocar.
+    // Fase 8: broadphase — solo incluimos enemigos dentro del rango del
+    // raycast. Antes se metían todos los enemigos vivos (hasta 456 meshes
+    // en oleada 10) aunque estuvieran detrás del shooter o fuera de rango.
     _targets.length = 0
+    const far2 = far * far
     for (const e of enemies) {
       if (e.dead) continue
+      // Pre-check distancia al cuadrado (sin sqrt).
+      const dx = e.group.position.x - originVec.x
+      const dz = e.group.position.z - originVec.z
+      if (dx * dx + dz * dz > far2) continue
       // Fase 1.3: además de head/helmet/torso/vest, incluimos stomach y
       // limbs como hit-targets con su propio multiplier de daño.
       _targets.push(e.head, e.helmet, e.torso, e.vest)
@@ -285,14 +293,14 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       playerPos.z - _shootOrigin.z
     ).normalize()
     // Línea de visión: comprobamos si hay un collider entre el enemigo y el jugador.
+    // Fase 8: reusamos scratch vectors _wbRay/_wbPoint (antes allocaba por shot).
     const distToPlayer = Math.hypot(playerPos.x - _shootOrigin.x, playerPos.z - _shootOrigin.z)
     let blocked = false
     if (world && world.colliders) {
-      const _ray = new THREE.Ray(_shootOrigin, _shootDir)
-      const _hitPoint = new THREE.Vector3()
+      _wbRay.set(_shootOrigin, _shootDir)
       for (const c of world.colliders) {
-        if (_ray.intersectBox(c.box, _hitPoint)) {
-          const d = _shootOrigin.distanceTo(_hitPoint)
+        if (_wbRay.intersectBox(c.box, _wbPoint)) {
+          const d = _shootOrigin.distanceTo(_wbPoint)
           if (d < distToPlayer) { blocked = true; break }
         }
       }
@@ -376,13 +384,17 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       const dist = Math.hypot(dx, dz)
 
       // Vector de separación: empuja al enemigo lejos de sus vecinos.
+      // Fase 8: optimizado con distancia al cuadrado (sin sqrt por par).
+      // El radio de separación es 2.0, así que comprobamos dx²+dz² < 4.
       _sep.set(0, 0, 0)
+      const epx = e.group.position.x, epz = e.group.position.z
       for (const other of enemies) {
         if (other === e || other.dead) continue
-        const odx = e.group.position.x - other.group.position.x
-        const odz = e.group.position.z - other.group.position.z
-        const odist = Math.hypot(odx, odz)
-        if (odist < 2.0 && odist > 0.01) {
+        const odx = epx - other.group.position.x
+        const odz = epz - other.group.position.z
+        const odist2 = odx * odx + odz * odz
+        if (odist2 < 4.0 && odist2 > 0.0001) {
+          const odist = Math.sqrt(odist2)
           const force = (2.0 - odist) / 2.0
           _sep.x += (odx / odist) * force
           _sep.z += (odz / odist) * force

@@ -59,7 +59,7 @@ export class NavMesh {
 
   // A* desde (startX, startZ) hasta (goalX, goalZ) en coords mundo.
   // Devuelve array de waypoints [{x, z}, ...] en coords mundo, o null.
-  // Sin allocations por celda: usamos Map y arrays reutilizables.
+  // Fase 8: binary heap para O(log n) por pop en vez de O(n) linear scan.
   findPath(startX, startZ, goalX, goalZ, maxIterations = 1000) {
     const startCx = this._worldToCellX(startX)
     const startCz = this._worldToCellZ(startZ)
@@ -79,33 +79,36 @@ export class NavMesh {
       return [{ x: goalX, z: goalZ }]
     }
 
-    const open = new Map()
     const cameFrom = new Map()
     const gScore = new Map()
-    const fScore = new Map()
     // Closed set: nodos ya expandidos (sacados de open). Sin esto, un nodo
     // podía ser re-descubierto vía uno de sus propios descendientes y crear
     // un ciclo en cameFrom, lo que hacía que _reconstruct entrara en bucle
     // infinito pushing waypoints sin fin => pico de RAM + cuelgue al iniciar
     // el juego (cada enemigo llama a findPath al spawnear).
     const closed = new Set()
+    // Fase 8: open set como binary heap (min-heap por fScore).
+    // Antes era un Map con linear scan O(n) por iteración; ahora O(log n).
+    const heap = new MinHeap()
+    // Mapa paralelo: key → {cx, cz, f} para acceso rápido.
+    const openInfo = new Map()
     gScore.set(startKey, 0)
     const h0 = this._heuristic(startCx, startCz, goalCx, goalCz)
-    fScore.set(startKey, h0)
-    open.set(startKey, [startCx, startCz, h0])
+    openInfo.set(startKey, { cx: startCx, cz: startCz, f: h0 })
+    heap.push(startKey, h0)
 
     let iter = 0
-    while (open.size > 0 && iter < maxIterations) {
+    while (heap.size > 0 && iter < maxIterations) {
       iter++
-      // Nodo con menor fScore (linear scan; grid pequeño).
-      let curKey = null, curF = Infinity, curCx = 0, curCz = 0
-      for (const [k, v] of open) {
-        if (v[2] < curF) { curKey = k; curF = v[2]; curCx = v[0]; curCz = v[1] }
-      }
+      const curKey = heap.pop()
+      const info = openInfo.get(curKey)
+      openInfo.delete(curKey)
+      if (!info) continue
+      const curCx = info.cx, curCz = info.cz
+
       if (curKey === goalKey) {
         return this._reconstruct(cameFrom, curKey, goalX, goalZ)
       }
-      open.delete(curKey)
       closed.add(curKey)
 
       for (const [dx, dz] of NEIGHBORS_8) {
@@ -124,8 +127,14 @@ export class NavMesh {
           cameFrom.set(nKey, curKey)
           gScore.set(nKey, tentative)
           const f = tentative + this._heuristic(nx, nz, goalCx, goalCz)
-          fScore.set(nKey, f)
-          open.set(nKey, [nx, nz, f])
+          const existing = openInfo.get(nKey)
+          if (existing) {
+            existing.f = f
+            heap.decreaseKey(nKey, f)
+          } else {
+            openInfo.set(nKey, { cx: nx, cz: nz, f })
+            heap.push(nKey, f)
+          }
         }
       }
     }
@@ -199,5 +208,91 @@ export class NavMesh {
       }
     }
     return null
+  }
+}
+
+/* =========================================================================
+   MinHeap — binary heap para el open set del A*.
+   --------------------------------------------------------------------------
+   Fase 8: antes el A* usaba un Map con linear scan O(n) para encontrar el
+   nodo con menor fScore. Con 24 enemigos re-pathfindando cada 0.5s en un
+   grid de 110×110, eso era ~144M ops/seg en el peor caso. Un binary heap
+   reduce el pop a O(log n) y el decreaseKey a O(log n).
+   ========================================================================= */
+class MinHeap {
+  constructor() {
+    this._keys = []     // keys (cell indices)
+    this._fscores = []  // fScores paralelo
+    this._pos = new Map() // key → índice en _keys
+  }
+
+  get size() { return this._keys.length }
+
+  push(key, f) {
+    const i = this._keys.length
+    this._keys.push(key)
+    this._fscores.push(f)
+    this._pos.set(key, i)
+    this._siftUp(i)
+  }
+
+  pop() {
+    const topKey = this._keys[0]
+    const lastIdx = this._keys.length - 1
+    if (lastIdx === 0) {
+      this._keys.pop()
+      this._fscores.pop()
+    } else {
+      this._keys[0] = this._keys[lastIdx]
+      this._fscores[0] = this._fscores[lastIdx]
+      this._pos.set(this._keys[0], 0)
+      this._keys.pop()
+      this._fscores.pop()
+      this._siftDown(0)
+    }
+    this._pos.delete(topKey)
+    return topKey
+  }
+
+  decreaseKey(key, newF) {
+    const i = this._pos.get(key)
+    if (i === undefined) return
+    if (newF < this._fscores[i]) {
+      this._fscores[i] = newF
+      this._siftUp(i)
+    }
+  }
+
+  _siftUp(i) {
+    while (i > 0) {
+      const parent = (i - 1) >> 1
+      if (this._fscores[i] < this._fscores[parent]) {
+        this._swap(i, parent)
+        i = parent
+      } else break
+    }
+  }
+
+  _siftDown(i) {
+    const n = this._keys.length
+    let guard = 0
+    for (;;) {
+      if (++guard > n) break
+      const l = 2 * i + 1, r = 2 * i + 2
+      let smallest = i
+      if (l < n && this._fscores[l] < this._fscores[smallest]) smallest = l
+      if (r < n && this._fscores[r] < this._fscores[smallest]) smallest = r
+      if (smallest !== i) {
+        this._swap(i, smallest)
+        i = smallest
+      } else break
+    }
+  }
+
+  _swap(a, b) {
+    const tmpK = this._keys[a]; this._keys[a] = this._keys[b]; this._keys[b] = tmpK
+    const tmpF = this._fscores[a]; this._fscores[a] = this._fscores[b]; this._fscores[b] = tmpF
+    this._pos.set(this._keys[a], a)
+    this._pos.set(this._keys[b], b)
   }
 }
