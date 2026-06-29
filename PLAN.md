@@ -342,3 +342,12 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
 - [x] Fase 1.9 — i18n (es/en) + gamepad support + tests (122 tests)
 - [~] Fase 2 — MP base (servidor + cliente + TDM + killfeed); faltan modos extra, matchmaking, anti-cheat
 - [~] Fase 3 — meta base (weapon levels, camos, battle pass, dailies, Barracks); faltan cuentas online, monetización real, seasons
+- [x] Fase 4 — bugfixes críticos (vida, munición, granadas, gunship, flashbang)
+- [x] Fase 5 — sistema de pickups + scavenger
+- [x] Fase 6 — wiring config muerta (secondary, tactical/lethal, dailies, settings, idioma)
+- [x] Fase 7 — calidad (input, gamepad, leaks, minimap, decals)
+- [x] Fase 8 — performance (A* heap, boids hash, raycast, allocs)
+- [x] Fase 9 — MP funcional (kill chain, hit detection, scoreboard)
+- [x] Fase 10 — tests (navmesh, grenades, pickups, streaks — 151 tests)
+- [x] Fase 11 — documentación (README, AGENTS, repo hygiene)
+- [x] Fase 12 — orden del repo + commits por fase
