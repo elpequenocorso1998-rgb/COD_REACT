@@ -51,6 +51,14 @@ function loadState() {
       battlePass: { tier: 0, premium: false, xp: 0 }
     }
   }
+  // Fase 7: guard contra estado legacy sin campos Fase 3.
+  // Sin esto, getDailies() crasheaba en s.dailies.date si dailies era undefined.
+  if (!_state.dailies || typeof _state.dailies !== 'object') _state.dailies = {}
+  if (!_state.weaponXP) _state.weaponXP = {}
+  if (!_state.weaponLevel) _state.weaponLevel = {}
+  if (!_state.weaponCamos) _state.weaponCamos = {}
+  if (!_state.battlePass) _state.battlePass = { tier: 0, premium: false, xp: 0 }
+  if (!_state.unlocks) _state.unlocks = []
   return _state
 }
 

@@ -36,12 +36,16 @@ export function createDecalSystem(scene, { maxDecals = 80 } = {}) {
       // Elimina el decal más antiguo.
       const old = decals.shift()
       scene.remove(old.mesh)
+      old.mesh.material.dispose() // Fase 7: dispose del material clonado
     }
     _pos.copy(point)
     _normal.copy(normal).normalize()
     // Orientamos el plano perpendicular a la normal.
     _quat.setFromUnitVectors(_up, _normal)
-    const mesh = new THREE.Mesh(bulletGeo, bulletMat)
+    // Fase 7: clonamos el material para que cada decal tenga su propia
+    // opacidad independiente. Antes todos compartían bulletMat y el fade
+    // los hacía parpadear en conjunto.
+    const mesh = new THREE.Mesh(bulletGeo, bulletMat.clone())
     mesh.position.copy(_pos).addScaledVector(_normal, 0.01) // offset para evitar z-fighting
     mesh.quaternion.copy(_quat)
     // Variación de tamaño.
@@ -56,8 +60,10 @@ export function createDecalSystem(scene, { maxDecals = 80 } = {}) {
     if (decals.length >= maxDecals) {
       const old = decals.shift()
       scene.remove(old.mesh)
+      old.mesh.material.dispose() // Fase 7: dispose del material clonado
     }
-    const mesh = new THREE.Mesh(bloodGeo, bloodMat)
+    // Fase 7: clonamos el material (opacidad independiente por decal).
+    const mesh = new THREE.Mesh(bloodGeo, bloodMat.clone())
     mesh.position.copy(point)
     mesh.position.y = 0.02 // justo encima del suelo
     mesh.rotation.x = -Math.PI / 2 // tumbado en el suelo
@@ -79,6 +85,7 @@ export function createDecalSystem(scene, { maxDecals = 80 } = {}) {
         d.mesh.material.opacity = d.type === 'bullet' ? 0.85 * (1 - fadeT) : 0.8 * (1 - fadeT)
         if (fadeT >= 1) {
           scene.remove(d.mesh)
+          d.mesh.material.dispose() // Fase 7: dispose del material clonado
           decals.splice(i, 1)
         }
       }
@@ -86,7 +93,10 @@ export function createDecalSystem(scene, { maxDecals = 80 } = {}) {
   }
 
   function reset() {
-    for (const d of decals) scene.remove(d.mesh)
+    for (const d of decals) {
+      scene.remove(d.mesh)
+      d.mesh.material.dispose() // Fase 7: dispose del material clonado
+    }
     decals.length = 0
   }
 

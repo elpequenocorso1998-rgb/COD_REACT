@@ -68,8 +68,11 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       // Los identificamos por nombre o por posición. Aquí usamos el hecho
       // de que legL/legR.thigh etc. están en la lista en orden conocido:
       // [armL.upperArm, armL.lowerArm, armL.hand, armR..., legL.thigh...]
+      // Fase 7: bug fixed — el loop empezaba en i=12 pero las piernas
+      // empiezan en i=6 (6 meshes de brazos: 2 brazos × 3 partes).
+      // Indices 6-13 son piernas (2 piernas × 4 partes: thigh/shin/calf/foot).
       const limbs = humanoid.limbMeshes
-      for (let i = 12; i < limbs.length; i++) {
+      for (let i = 6; i < limbs.length; i++) {
         limbs[i].userData.part = 'leg'
       }
     }

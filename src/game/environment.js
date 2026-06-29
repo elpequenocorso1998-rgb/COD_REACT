@@ -21,18 +21,22 @@ export function createEnvironment(scene, renderer) {
 
   // Cielo con el mismo shader que el mundo (compartido en shaders/sky.js).
   const skyMat = createSkyMaterial()
-  skyScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), skyMat))
+  // Fase 7: guardamos las geometrías para disposal correcto (antes leak).
+  const skyGeo = new THREE.SphereGeometry(100, 32, 16)
+  skyScene.add(new THREE.Mesh(skyGeo, skyMat))
 
   // Sol emisivo dentro de la escena del env map.
   // Misma dirección que la luz direccional y el mesh del mundo (SUN_DIR).
+  const sunGeo = new THREE.SphereGeometry(8, 24, 24)
   const sun = new THREE.Mesh(
-    new THREE.SphereGeometry(8, 24, 24),
+    sunGeo,
     new THREE.MeshBasicMaterial({ color: SUN_MESH_COLOR })
   )
   sun.position.copy(SUN_DIR)
   skyScene.add(sun)
+  const sunGlowGeo = new THREE.SphereGeometry(16, 24, 24)
   const sunGlow = new THREE.Mesh(
-    new THREE.SphereGeometry(16, 24, 24),
+    sunGlowGeo,
     new THREE.MeshBasicMaterial({ color: SUN_GLOW_COLOR, transparent: true, opacity: 0.5 })
   )
   sunGlow.position.copy(SUN_DIR)
@@ -60,11 +64,15 @@ export function createEnvironment(scene, renderer) {
   scene.environment = envMap
 
   // Limpieza de los recursos efímeros.
+  // Fase 7: disposal completo de geometrías (antes solo materials).
   pmrem.dispose()
   cubeCam.renderTarget.dispose()
   skyMat.dispose()
+  skyGeo.dispose()
   sun.material.dispose()
+  sunGeo.dispose()
   sunGlow.material.dispose()
+  sunGlowGeo.dispose()
 
   return envMap
 }

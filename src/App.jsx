@@ -57,6 +57,9 @@ export default function App() {
 
   const engineRef = useRef(null)
   const containerRef = useRef(null)
+  // Fase 7: ref para el canvas del minimap (inyección diferida).
+  const minimapCanvasRef = useRef(null)
+  const minimapAttachRef = useRef(null)
 
   // Fase 6: aplicar filtro colorblind al canvas según settings.
   const settings = getSettings()
@@ -72,15 +75,25 @@ export default function App() {
     engineRef.current = engine
     // El engine nos pasa el canvas del minimap cuando está listo; lo
     // adjuntamos al contenedor del HUD (imperativo, sin React re-render).
-    // Usamos querySelector porque el contenedor vive en <HUD/>, que es un
-    // componente hijo separado (no podemos pasarle un ref fácilmente).
+    // Fase 7: bug fixed — antes onMinimapReady se llamaba dentro de mount(),
+    // antes de que el HUD existiera en el DOM, así que el canvas se perdía.
+    // Ahora guardamos el canvas y lo inyectamos cuando el HUD aparezca.
     engine.onMinimapReady = (canvas) => {
+      minimapCanvasRef.current = canvas
+      attachMinimap()
+    }
+    const attachMinimap = () => {
+      const canvas = minimapCanvasRef.current
+      if (!canvas) return
       const container = document.querySelector('.minimap-container')
-      if (container) {
+      if (container && !container.contains(canvas)) {
         container.innerHTML = ''
         container.appendChild(canvas)
       }
     }
+    // Retry: el HUD puede no estar montado aún cuando onMinimapReady dispara.
+    // Intentamos periódicamente hasta que el contenedor exista.
+    minimapAttachRef.current = setInterval(attachMinimap, 500)
     try {
       engine.mount(containerRef.current)
     } catch (err) {
@@ -88,6 +101,7 @@ export default function App() {
       useGameStore.getState().setLoading(false)
     }
     return () => {
+      clearInterval(minimapAttachRef.current)
       engine.dispose()
       engineRef.current = null
     }

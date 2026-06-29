@@ -502,12 +502,15 @@ export function createPlayer(scene, camera, world, particles, renderer) {
       const rx = Math.abs(pad.axes[2] || 0) > dz ? pad.axes[2] : 0
       const ry = Math.abs(pad.axes[3] || 0) > dz ? pad.axes[3] : 0
       // Movimiento.
-      if (lx !== 0 || ly !== 0) {
-        if (ly < -0.5) moveForward = true; else if (ly > 0.5) moveForward = false
-        if (ly > 0.5) moveBackward = true; else if (ly < -0.5) moveBackward = false
-        if (lx < -0.5) moveLeft = true; else if (lx > 0.5) moveLeft = false
-        if (lx > 0.5) moveRight = true; else if (lx < -0.5) moveRight = false
-      }
+      // Fase 7: bug fixed — el stick release no limpiaba los booleans.
+      // Ahora si el stick está en deadzone, reseteamos los booleans de
+      // movimiento para que el player no siga avanzando solo.
+      if (Math.abs(ly) < 0.5) { moveForward = false; moveBackward = false }
+      if (Math.abs(lx) < 0.5) { moveLeft = false; moveRight = false }
+      if (ly < -0.5) moveForward = true
+      else if (ly > 0.5) moveBackward = true
+      if (lx < -0.5) moveLeft = true
+      else if (lx > 0.5) moveRight = true
       // Cámara (right stick).
       if (rx !== 0 || ry !== 0) {
         const sensMul = 5.0
@@ -841,6 +844,22 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   function getPosition() { return camera.position }
   function getYaw() { return yaw }
 
+  // Fase 7: reset de input al perder foco (evita teclas pegadas en alt-tab).
+  // Sin esto, si el jugador suelta la tecla fuera de la ventana, el keyup
+  // nunca se dispara y el player sigue moviéndose solo al volver.
+  function resetInput() {
+    moveForward = moveBackward = moveLeft = moveRight = false
+    sprinting = false
+    tacticalSprint = false
+    isCrouching = false
+    isFiring = false
+    isAiming = false
+    leanTarget = 0
+    isHoldingBreath = false
+  }
+  const onBlur = () => resetInput()
+  const onGamepadDisconnect = () => resetInput()
+
   // Registramos listeners para poder eliminarlos en dispose.
   document.addEventListener('keydown', onKeyDown)
   document.addEventListener('keyup', onKeyUp)
@@ -848,6 +867,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   document.addEventListener('mousedown', onMouseDown)
   document.addEventListener('mouseup', onMouseUp)
   document.addEventListener('contextmenu', onContextMenu)
+  window.addEventListener('blur', onBlur)
+  window.addEventListener('gamepaddisconnected', onGamepadDisconnect)
 
   function dispose() {
     document.removeEventListener('keydown', onKeyDown)
@@ -856,6 +877,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     document.removeEventListener('mousedown', onMouseDown)
     document.removeEventListener('mouseup', onMouseUp)
     document.removeEventListener('contextmenu', onContextMenu)
+    window.removeEventListener('blur', onBlur)
+    window.removeEventListener('gamepaddisconnected', onGamepadDisconnect)
     if (muzzleTimeout) clearTimeout(muzzleTimeout)
     isFiring = false
     // Dispose del viewmodel actual (cada arma tiene SU propio modelo).

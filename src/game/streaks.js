@@ -73,6 +73,8 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
   // simple que orbita + un timer que dispara a enemigos cercanos.
   let heliMesh = null
   let heliLight = null
+  let heliRotorGeo = null
+  let heliRotorMat = null
   let heliUntil = 0
   const _heliPos = new THREE.Vector3()
 
@@ -85,9 +87,10 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
     heliMesh.position.set(0, 30, 0)
     scene.add(heliMesh)
     // Rotor (disco plano).
-    const rotorGeo = new THREE.CylinderGeometry(4, 4, 0.1, 16)
-    const rotorMat = new THREE.MeshStandardMaterial({ color: 0x111111, transparent: true, opacity: 0.4 })
-    const rotor = new THREE.Mesh(rotorGeo, rotorMat)
+    // Fase 7: guardamos geo/mat del rotor para disposal correcto (antes leak).
+    heliRotorGeo = new THREE.CylinderGeometry(4, 4, 0.1, 16)
+    heliRotorMat = new THREE.MeshStandardMaterial({ color: 0x111111, transparent: true, opacity: 0.4 })
+    const rotor = new THREE.Mesh(heliRotorGeo, heliRotorMat)
     rotor.position.y = 0.5
     heliMesh.add(rotor)
     heliLight = new THREE.PointLight(0xffaa44, 0, 30, 2)
@@ -103,9 +106,12 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
     const now = performance.now()
     if (now > heliUntil) {
       // Expira: remover.
+      // Fase 7: dispose del rotor (antes solo se disposaba el heliMesh).
       scene.remove(heliMesh)
       heliMesh.geometry.dispose()
       heliMesh.material.dispose()
+      if (heliRotorGeo) { heliRotorGeo.dispose(); heliRotorGeo = null }
+      if (heliRotorMat) { heliRotorMat.dispose(); heliRotorMat = null }
       heliMesh = null
       if (heliLight) { scene.remove(heliLight); heliLight = null }
       return
@@ -206,6 +212,9 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
       scene.remove(heliMesh)
       heliMesh.geometry.dispose()
       heliMesh.material.dispose()
+      // Fase 7: dispose del rotor (antes leak).
+      if (heliRotorGeo) { heliRotorGeo.dispose(); heliRotorGeo = null }
+      if (heliRotorMat) { heliRotorMat.dispose(); heliRotorMat = null }
       heliMesh = null
     }
     if (heliLight) { scene.remove(heliLight); heliLight = null }
