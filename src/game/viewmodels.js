@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { makeGunMetalTexture } from './textures.js'
+import { WEAPONS } from './config.js'
 
 /* =========================================================================
    Viewmodels en primera persona — UNO por arma.
@@ -611,9 +612,23 @@ const BUILDERS = {
   pistol: buildPistol
 }
 
+const CATEGORY_FALLBACKS = {
+  ar: buildM4,
+  smg: buildMP5,
+  sniper: buildSniper,
+  marksman: buildSniper,
+  shotgun: buildShotgun,
+  lmg: buildLMG,
+  pistol: buildPistol,
+  launcher: buildM4
+}
+
 export function buildViewModel(weaponId) {
-  const builder = BUILDERS[weaponId] || buildM4
-  return builder()
+  const builder = BUILDERS[weaponId]
+  if (builder) return builder()
+  const weapon = WEAPONS && WEAPONS[weaponId]
+  const fallback = (weapon && CATEGORY_FALLBACKS[weapon.category]) || buildM4
+  return fallback()
 }
 
 // Dispose compartido de texturas (gunTex + muzzleTex) al destruir engine.

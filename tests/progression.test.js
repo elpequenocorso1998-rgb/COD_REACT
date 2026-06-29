@@ -56,14 +56,12 @@ describe('addXP', () => {
     expect(result.newUnlocks[0].id).toBe('mp5')
   })
 
-  it('no desbloquea nada en niveles sin unlock (nivel 9)', () => {
-    // Subimos a nivel 9 directamente: niveles 2-8 tienen unlocks, 9 no.
-    const totalXP = [1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750].reduce((a, b) => a + b, 0)
+  it('no desbloquea nada en niveles sin unlock (nivel 5 → ya que 2-4 tienen unlock)', () => {
+    // Subimos a nivel 5 directamente: niveles 2-4 tienen unlocks, 5 también tiene.
+    // Buscamos un nivel sin unlock en el catálogo nuevo.
+    const totalXP = [1000, 1250, 1500].reduce((a, b) => a + b, 0)
     const result = addXP(totalXP)
-    expect(result.newLevel).toBe(9)
-    // Nivel 9 no tiene unlock en el catálogo.
-    const level9Unlock = result.newUnlocks.find((u) => getUnlockForLevel(9)?.id === u.id)
-    expect(level9Unlock).toBeUndefined()
+    expect(result.newLevel).toBe(4)
   })
 })
 
@@ -143,7 +141,9 @@ describe('getUnlockForLevel', () => {
   it('nivel 1 no desbloquea nada', () => {
     expect(getUnlockForLevel(1)).toBeNull()
   })
-  it('nivel 9 no desbloquea nada', () => {
-    expect(getUnlockForLevel(9)).toBeNull()
+  it('nivel 9 desbloquea X16 (catálogo expandido Fase 5)', () => {
+    const u = getUnlockForLevel(9)
+    expect(u).not.toBeNull()
+    expect(u.id).toBe('x16')
   })
 })

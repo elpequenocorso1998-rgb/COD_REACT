@@ -241,7 +241,212 @@ export const WEAPONS = {
     moveSpeedMul: 1.15,
     automatic: false,
     minWave: 1
+  },
+  kilo141: {
+    id: 'kilo141', name: 'Kilo 141', category: 'ar',
+    magSize: 30, reserveStart: 120, fireInterval: 0.105, reloadTime: 1.6,
+    bodyDamage: 32, headDamage: 96, raycastFar: 200,
+    recoilPerShot: 0.035, recoilMax: 0.12, recoilRecover: 0.88,
+    pitchKick: 0.01, yawKick: 0.006, adsTime: 0.26, adsFov: 45,
+    hipFireSpread: 0.9, adsSpread: 0.1, adsSensMul: 0.6,
+    moveSpeedMul: 1.0, automatic: true, minWave: 1
+  },
+  grau: {
+    id: 'grau', name: 'Grau 5.56', category: 'ar',
+    magSize: 30, reserveStart: 120, fireInterval: 0.095, reloadTime: 1.55,
+    bodyDamage: 30, headDamage: 90, raycastFar: 220,
+    recoilPerShot: 0.03, recoilMax: 0.1, recoilRecover: 0.9,
+    pitchKick: 0.009, yawKick: 0.005, adsTime: 0.24, adsFov: 45,
+    hipFireSpread: 0.95, adsSpread: 0.09, adsSensMul: 0.6,
+    moveSpeedMul: 1.02, automatic: true, minWave: 1
+  },
+  fr556: {
+    id: 'fr556', name: 'FR 5.56', category: 'ar',
+    magSize: 30, reserveStart: 90, fireInterval: 0.12, reloadTime: 1.7,
+    bodyDamage: 44, headDamage: 132, raycastFar: 200,
+    recoilPerShot: 0.055, recoilMax: 0.16, recoilRecover: 0.84,
+    pitchKick: 0.014, yawKick: 0.01, adsTime: 0.27, adsFov: 45,
+    hipFireSpread: 1.0, adsSpread: 0.11, adsSensMul: 0.6,
+    moveSpeedMul: 0.98, automatic: false, burst: 3, minWave: 1
+  },
+  oden: {
+    id: 'oden', name: 'Oden', category: 'ar',
+    magSize: 21, reserveStart: 84, fireInterval: 0.14, reloadTime: 2.0,
+    bodyDamage: 55, headDamage: 165, raycastFar: 200,
+    recoilPerShot: 0.07, recoilMax: 0.2, recoilRecover: 0.8,
+    pitchKick: 0.018, yawKick: 0.012, adsTime: 0.32, adsFov: 45,
+    hipFireSpread: 1.2, adsSpread: 0.13, adsSensMul: 0.55,
+    moveSpeedMul: 0.94, automatic: true, minWave: 1
+  },
+  mp7: {
+    id: 'mp7', name: 'MP7', category: 'smg',
+    magSize: 40, reserveStart: 160, fireInterval: 0.07, reloadTime: 1.3,
+    bodyDamage: 22, headDamage: 66, raycastFar: 110,
+    recoilPerShot: 0.025, recoilMax: 0.08, recoilRecover: 0.9,
+    pitchKick: 0.007, yawKick: 0.005, adsTime: 0.17, adsFov: 50,
+    hipFireSpread: 0.65, adsSpread: 0.08, adsSensMul: 0.65,
+    moveSpeedMul: 1.12, automatic: true, minWave: 1
+  },
+  p90: {
+    id: 'p90', name: 'P90', category: 'smg',
+    magSize: 50, reserveStart: 150, fireInterval: 0.075, reloadTime: 1.6,
+    bodyDamage: 20, headDamage: 60, raycastFar: 110,
+    recoilPerShot: 0.028, recoilMax: 0.09, recoilRecover: 0.88,
+    pitchKick: 0.008, yawKick: 0.006, adsTime: 0.2, adsFov: 50,
+    hipFireSpread: 0.7, adsSpread: 0.09, adsSensMul: 0.65,
+    moveSpeedMul: 1.1, automatic: true, minWave: 1
+  },
+  uzi: {
+    id: 'uzi', name: 'Uzi', category: 'smg',
+    magSize: 32, reserveStart: 128, fireInterval: 0.08, reloadTime: 1.4,
+    bodyDamage: 27, headDamage: 81, raycastFar: 115,
+    recoilPerShot: 0.032, recoilMax: 0.1, recoilRecover: 0.87,
+    pitchKick: 0.009, yawKick: 0.007, adsTime: 0.19, adsFov: 50,
+    hipFireSpread: 0.75, adsSpread: 0.1, adsSensMul: 0.65,
+    moveSpeedMul: 1.13, automatic: true, minWave: 1
+  },
+  aug: {
+    id: 'aug', name: 'AUG', category: 'smg',
+    magSize: 25, reserveStart: 100, fireInterval: 0.085, reloadTime: 1.5,
+    bodyDamage: 29, headDamage: 87, raycastFar: 130,
+    recoilPerShot: 0.029, recoilMax: 0.09, recoilRecover: 0.89,
+    pitchKick: 0.008, yawKick: 0.006, adsTime: 0.21, adsFov: 50,
+    hipFireSpread: 0.8, adsSpread: 0.1, adsSensMul: 0.64,
+    moveSpeedMul: 1.08, automatic: true, minWave: 1
+  },
+  m91: {
+    id: 'm91', name: 'M91', category: 'lmg',
+    magSize: 100, reserveStart: 300, fireInterval: 0.085, reloadTime: 4.5,
+    bodyDamage: 32, headDamage: 96, raycastFar: 250,
+    recoilPerShot: 0.038, recoilMax: 0.15, recoilRecover: 0.84,
+    pitchKick: 0.011, yawKick: 0.008, adsTime: 0.38, adsFov: 48,
+    hipFireSpread: 1.2, adsSpread: 0.14, adsSensMul: 0.55,
+    moveSpeedMul: 0.78, automatic: true, minWave: 1
+  },
+  pkm: {
+    id: 'pkm', name: 'PKM', category: 'lmg',
+    magSize: 100, reserveStart: 200, fireInterval: 0.1, reloadTime: 5.0,
+    bodyDamage: 38, headDamage: 114, raycastFar: 260,
+    recoilPerShot: 0.045, recoilMax: 0.17, recoilRecover: 0.82,
+    pitchKick: 0.013, yawKick: 0.009, adsTime: 0.4, adsFov: 48,
+    hipFireSpread: 1.3, adsSpread: 0.15, adsSensMul: 0.54,
+    moveSpeedMul: 0.76, automatic: true, minWave: 1
+  },
+  model680: {
+    id: 'model680', name: 'Model 680', category: 'shotgun',
+    magSize: 6, reserveStart: 30, fireInterval: 0.8, reloadTime: 2.5,
+    bodyDamage: 22, headDamage: 44, raycastFar: 55,
+    recoilPerShot: 0.13, recoilMax: 0.26, recoilRecover: 0.74,
+    pitchKick: 0.042, yawKick: 0.022, adsTime: 0.32, adsFov: 55,
+    hipFireSpread: 0.5, adsSpread: 0.3, adsSensMul: 0.7,
+    moveSpeedMul: 0.96, automatic: false, pellets: 8, minWave: 1
+  },
+  r90: {
+    id: 'r90', name: 'R9-0', category: 'shotgun',
+    magSize: 8, reserveStart: 32, fireInterval: 0.5, reloadTime: 3.2,
+    bodyDamage: 18, headDamage: 36, raycastFar: 50,
+    recoilPerShot: 0.1, recoilMax: 0.22, recoilRecover: 0.78,
+    pitchKick: 0.035, yawKick: 0.018, adsTime: 0.28, adsFov: 55,
+    hipFireSpread: 0.55, adsSpread: 0.32, adsSensMul: 0.72,
+    moveSpeedMul: 0.98, automatic: false, pellets: 10, burst: 2, minWave: 1
+  },
+  hdr: {
+    id: 'hdr', name: 'HDR', category: 'sniper',
+    magSize: 7, reserveStart: 35, fireInterval: 1.4, reloadTime: 2.8,
+    bodyDamage: 160, headDamage: 500, raycastFar: 450,
+    recoilPerShot: 0.22, recoilMax: 0.32, recoilRecover: 0.68,
+    pitchKick: 0.055, yawKick: 0.022, adsTime: 0.42, adsFov: 18,
+    hipFireSpread: 3.2, adsSpread: 0.0, adsSensMul: 0.28,
+    moveSpeedMul: 0.84, automatic: false, minWave: 1
+  },
+  ax50: {
+    id: 'ax50', name: 'AX-50', category: 'sniper',
+    magSize: 5, reserveStart: 25, fireInterval: 1.1, reloadTime: 2.6,
+    bodyDamage: 145, headDamage: 500, raycastFar: 420,
+    recoilPerShot: 0.19, recoilMax: 0.28, recoilRecover: 0.72,
+    pitchKick: 0.048, yawKick: 0.02, adsTime: 0.38, adsFov: 20,
+    hipFireSpread: 2.8, adsSpread: 0.0, adsSensMul: 0.3,
+    moveSpeedMul: 0.86, automatic: false, minWave: 1
+  },
+  ebr14: {
+    id: 'ebr14', name: 'EBR-14', category: 'marksman',
+    magSize: 10, reserveStart: 40, fireInterval: 0.2, reloadTime: 2.0,
+    bodyDamage: 70, headDamage: 210, raycastFar: 280,
+    recoilPerShot: 0.08, recoilMax: 0.18, recoilRecover: 0.82,
+    pitchKick: 0.02, yawKick: 0.01, adsTime: 0.3, adsFov: 35,
+    hipFireSpread: 1.5, adsSpread: 0.05, adsSensMul: 0.5,
+    moveSpeedMul: 0.95, automatic: false, minWave: 1
+  },
+  mk2: {
+    id: 'mk2', name: 'MK2 Carbine', category: 'marksman',
+    magSize: 8, reserveStart: 32, fireInterval: 0.4, reloadTime: 1.8,
+    bodyDamage: 75, headDamage: 225, raycastFar: 250,
+    recoilPerShot: 0.1, recoilMax: 0.2, recoilRecover: 0.8,
+    pitchKick: 0.025, yawKick: 0.012, adsTime: 0.28, adsFov: 38,
+    hipFireSpread: 1.4, adsSpread: 0.06, adsSensMul: 0.52,
+    moveSpeedMul: 0.98, automatic: false, minWave: 1
+  },
+  kar98k: {
+    id: 'kar98k', name: 'Kar98k', category: 'marksman',
+    magSize: 5, reserveStart: 25, fireInterval: 0.6, reloadTime: 2.2,
+    bodyDamage: 90, headDamage: 270, raycastFar: 300,
+    recoilPerShot: 0.12, recoilMax: 0.22, recoilRecover: 0.78,
+    pitchKick: 0.028, yawKick: 0.014, adsTime: 0.32, adsFov: 35,
+    hipFireSpread: 1.6, adsSpread: 0.05, adsSensMul: 0.5,
+    moveSpeedMul: 0.97, automatic: false, minWave: 1
+  },
+  x16: {
+    id: 'x16', name: 'X16', category: 'pistol',
+    magSize: 15, reserveStart: 60, fireInterval: 0.12, reloadTime: 1.1,
+    bodyDamage: 26, headDamage: 78, raycastFar: 100,
+    recoilPerShot: 0.03, recoilMax: 0.09, recoilRecover: 0.9,
+    pitchKick: 0.009, yawKick: 0.006, adsTime: 0.16, adsFov: 55,
+    hipFireSpread: 0.75, adsSpread: 0.1, adsSensMul: 0.7,
+    moveSpeedMul: 1.16, automatic: false, minWave: 1
+  },
+  deagle: {
+    id: 'deagle', name: 'Desert Eagle', category: 'pistol',
+    magSize: 7, reserveStart: 28, fireInterval: 0.2, reloadTime: 1.4,
+    bodyDamage: 55, headDamage: 165, raycastFar: 110,
+    recoilPerShot: 0.06, recoilMax: 0.15, recoilRecover: 0.84,
+    pitchKick: 0.018, yawKick: 0.012, adsTime: 0.2, adsFov: 50,
+    hipFireSpread: 0.9, adsSpread: 0.12, adsSensMul: 0.65,
+    moveSpeedMul: 1.12, automatic: false, minWave: 1
+  },
+  rpg: {
+    id: 'rpg', name: 'RPG-7', category: 'launcher',
+    magSize: 1, reserveStart: 3, fireInterval: 1.5, reloadTime: 3.5,
+    bodyDamage: 200, headDamage: 200, raycastFar: 200,
+    recoilPerShot: 0.3, recoilMax: 0.4, recoilRecover: 0.6,
+    pitchKick: 0.08, yawKick: 0.04, adsTime: 0.5, adsFov: 60,
+    hipFireSpread: 1.0, adsSpread: 0.0, adsSensMul: 0.6,
+    moveSpeedMul: 0.85, automatic: false, projectile: true,
+    explosionRadius: 6, explosionDamage: 200, minWave: 1
+  },
+  pila: {
+    id: 'pila', name: 'PILA', category: 'launcher',
+    magSize: 1, reserveStart: 2, fireInterval: 1.2, reloadTime: 3.0,
+    bodyDamage: 180, headDamage: 180, raycastFar: 250,
+    recoilPerShot: 0.25, recoilMax: 0.35, recoilRecover: 0.65,
+    pitchKick: 0.07, yawKick: 0.03, adsTime: 0.45, adsFov: 55,
+    hipFireSpread: 0.9, adsSpread: 0.0, adsSensMul: 0.6,
+    moveSpeedMul: 0.88, automatic: false, projectile: true,
+    explosionRadius: 5, explosionDamage: 180, lockOn: true, minWave: 1
   }
+}
+
+export const WEAPON_PLATFORMS = {
+  ar_m4: { name: 'M4 Platform', receiver: 'm4', members: ['m4', 'kilo141', 'grau', 'fr556'] },
+  ar_ak: { name: 'AK Platform', receiver: 'ak47', members: ['ak47', 'oden'] },
+  smg_mp5: { name: 'MP5 Platform', receiver: 'mp5', members: ['mp5', 'mp7', 'aug'] },
+  smg_uzi: { name: 'Uzi Platform', receiver: 'uzi', members: ['uzi', 'p90'] },
+  lmg_m91: { name: 'M91 Platform', receiver: 'm91', members: ['m91', 'pkm'] },
+  shotgun_680: { name: 'Model 680 Platform', receiver: 'model680', members: ['model680', 'r90'] },
+  sniper_hdr: { name: 'HDR Platform', receiver: 'hdr', members: ['hdr', 'ax50'] },
+  marksman_ebr: { name: 'EBR Platform', receiver: 'ebr14', members: ['ebr14', 'mk2'] },
+  marksman_kar: { name: 'Kar98k Platform', receiver: 'kar98k', members: ['kar98k'] },
+  pistol_x16: { name: 'X16 Platform', receiver: 'x16', members: ['x16', 'deagle'] },
+  launcher_rpg: { name: 'RPG Platform', receiver: 'rpg', members: ['rpg', 'pila'] }
 }
 
 // WEAPON: alias del arma por defecto (M4) para compatibilidad con código
@@ -372,31 +577,81 @@ export const ATTACHMENTS = {
     id: 'acog', name: 'ACOG Scope', slot: 'sight',
     adsFovMul: 0.7, adsTimeMul: 1.2
   },
+  vlk: {
+    id: 'vlk', name: 'VLK 3.0x Optic', slot: 'sight',
+    adsFovMul: 0.6, adsSpreadMul: 0.3, adsTimeMul: 1.25
+  },
+  cronen: {
+    id: 'cronen', name: 'Cronen Mini Pro', slot: 'sight',
+    adsSpreadMul: 0.45, adsTimeMul: 0.95
+  },
+  sniperScope: {
+    id: 'sniperScope', name: 'Sniper Scope', slot: 'sight',
+    adsFovMul: 0.5, adsSpreadMul: 0.0, adsTimeMul: 1.4
+  },
+  thermal: {
+    id: 'thermal', name: 'Thermal Scope', slot: 'sight',
+    adsFovMul: 0.7, adsSpreadMul: 0.2, adsTimeMul: 1.3, thermal: true
+  },
   suppressor: {
     id: 'suppressor', name: 'Suppressor', slot: 'barrel',
-    // No aparece en minimap enemigo al disparar (futuro MP). Reduce daño.
     damageMul: 0.9, raycastFarMul: 0.95
-  },
-  foregrip: {
-    id: 'foregrip', name: 'Foregrip', slot: 'underbarrel',
-    recoilMul: 0.7, hipFireSpreadMul: 0.8
-  },
-  extendedmags: {
-    id: 'extendedmags', name: 'Extended Mags', slot: 'mag',
-    magSizeMul: 1.5, reloadTimeMul: 1.1
-  },
-  laser: {
-    id: 'laser', name: 'Laser Sight', slot: 'underbarrel',
-    hipFireSpreadMul: 0.6
   },
   compensator: {
     id: 'compensator', name: 'Compensator', slot: 'barrel',
     recoilMul: 0.6
   },
+  muzzleBrake: {
+    id: 'muzzleBrake', name: 'Muzzle Brake', slot: 'barrel',
+    recoilMul: 0.7, yawKickMul: 0.6
+  },
+  flashGuard: {
+    id: 'flashGuard', name: 'Flash Guard', slot: 'barrel',
+    muzzleFlashReduction: 0.8
+  },
   fmj: {
     id: 'fmj', name: 'FMJ', slot: 'barrel',
-    // Aumenta penetración de paredes.
     penetrationMul: 1.5
+  },
+  longBarrel: {
+    id: 'longBarrel', name: 'Long Barrel', slot: 'barrel',
+    raycastFarMul: 1.15, damageMul: 1.05, adsTimeMul: 1.1
+  },
+  shortBarrel: {
+    id: 'shortBarrel', name: 'Short Barrel', slot: 'barrel',
+    raycastFarMul: 0.85, moveSpeedMul: 1.05, adsTimeMul: 0.9
+  },
+  foregrip: {
+    id: 'foregrip', name: 'Foregrip', slot: 'underbarrel',
+    recoilMul: 0.7, hipFireSpreadMul: 0.8
+  },
+  laser: {
+    id: 'laser', name: 'Laser Sight', slot: 'underbarrel',
+    hipFireSpreadMul: 0.6
+  },
+  tacLaser: {
+    id: 'tacLaser', name: 'Tac Laser', slot: 'underbarrel',
+    adsSpreadMul: 0.5, adsTimeMul: 0.9
+  },
+  bipod: {
+    id: 'bipod', name: 'Bipod', slot: 'underbarrel',
+    recoilMul: 0.5, adsSpreadMul: 0.5, requiresCrouch: true
+  },
+  grenadeLauncher: {
+    id: 'grenadeLauncher', name: 'Grenade Launcher', slot: 'underbarrel',
+    secondaryFire: 'frag'
+  },
+  extendedmags: {
+    id: 'extendedmags', name: 'Extended Mags', slot: 'mag',
+    magSizeMul: 1.5, reloadTimeMul: 1.1
+  },
+  fastMag: {
+    id: 'fastMag', name: 'Fast Mag', slot: 'mag',
+    reloadTimeMul: 0.6, magSizeMul: 1.1
+  },
+  drumMag: {
+    id: 'drumMag', name: 'Drum Mag', slot: 'mag',
+    magSizeMul: 2.0, reloadTimeMul: 1.3, moveSpeedMul: 0.95
   },
   quickdraw: {
     id: 'quickdraw', name: 'Quickdraw Handle', slot: 'stock',
@@ -405,26 +660,134 @@ export const ATTACHMENTS = {
   stock: {
     id: 'stock', name: 'Stock', slot: 'stock',
     moveSpeedMul: 1.05
+  },
+  noStock: {
+    id: 'noStock', name: 'No Stock', slot: 'stock',
+    moveSpeedMul: 1.1, adsSpreadMul: 1.2
+  },
+  heavyStock: {
+    id: 'heavyStock', name: 'Heavy Stock', slot: 'stock',
+    recoilMul: 0.85, moveSpeedMul: 0.92
+  },
+  rubberized: {
+    id: 'rubberized', name: 'Rubberized Grip Tape', slot: 'stock',
+    recoilMul: 0.9, adsSpreadMul: 0.9
+  },
+  perkSleightOfHand: {
+    id: 'perkSleightOfHand', name: 'Sleight of Hand (perk)', slot: 'perk',
+    reloadTimeMul: 0.7
+  },
+  perkFrangible: {
+    id: 'perkFrangible', name: 'Frangible - Wounding', slot: 'perk',
+    damageMul: 1.05, slowOnHit: true
+  },
+  perkHeavy: {
+    id: 'perkHeavy', name: 'Heavy Hitter', slot: 'perk',
+    damageMul: 1.1, recoilMul: 1.1
+  },
+  perkFastHands: {
+    id: 'perkFastHands', name: 'Fast Hands', slot: 'perk',
+    reloadTimeMul: 0.8, adsTimeMul: 0.9
+  },
+  perkRecon: {
+    id: 'perkRecon', name: 'Recon', slot: 'perk',
+    markOnHit: true
+  },
+  perkMoMoney: {
+    id: 'perkMoMoney', name: "Mo' Money", slot: 'perk',
+    scoreMul: 1.5
+  },
+  perkFMJ: {
+    id: 'perkFMJ', name: 'FMJ (perk)', slot: 'perk',
+    penetrationMul: 1.5
+  },
+  perkBurst: {
+    id: 'perkBurst', name: 'Burst', slot: 'perk',
+    burst: 3, fireIntervalMul: 0.6
   }
 }
 
-// Slots válidos para attachments (un attachment por slot).
-export const ATTACHMENT_SLOTS = ['sight', 'barrel', 'underbarrel', 'mag', 'stock']
+export const ATTACHMENT_SLOTS = ['sight', 'barrel', 'underbarrel', 'mag', 'stock', 'perk']
+
+export const FIELD_UPGRADES = {
+  trophySystem: {
+    id: 'trophySystem', name: 'Trophy System',
+    desc: 'Destruye hasta 3 granadas/proyectiles enemigos en 8m',
+    cooldown: 60, duration: 30, charges: 3, radius: 8
+  },
+  deadSilenceField: {
+    id: 'deadSilenceField', name: 'Dead Silence',
+    desc: 'Pasos silenciosos para todo el equipo durante 30s',
+    cooldown: 90, duration: 30, teamWide: true
+  },
+  emp: {
+    id: 'emp', name: 'EMP',
+    desc: 'Desactiva electrónicos enemigos (UAV, killstreaks) en 12s',
+    cooldown: 120, duration: 12, radius: 50
+  },
+  deployableCover: {
+    id: 'deployableCover', name: 'Deployable Cover',
+    desc: 'Despliega un escudo balístico portátil',
+    cooldown: 45, duration: 60, hp: 200
+  },
+  reconDrone: {
+    id: 'reconDrone', name: 'Recon Drone',
+    desc: 'Pilotea un drone que marca enemigos en 20m',
+    cooldown: 90, duration: 15, radius: 20
+  },
+  munitionsBox: {
+    id: 'munitionsBox', name: 'Munitions Box',
+    desc: 'Caja que reabastece munición y granadas al equipo',
+    cooldown: 60, duration: 30, radius: 5
+  },
+  reconTower: {
+    id: 'reconTower', name: 'Recon Tower',
+    desc: 'Torre que revela enemigos en el minimap durante 20s',
+    cooldown: 100, duration: 20, radius: 40
+  },
+  suppressingDrone: {
+    id: 'suppressingDrone', name: 'Suppressing Drone',
+    desc: 'Drone que suprime a enemigos cercanos (10m) durante 15s',
+    cooldown: 80, duration: 15, radius: 10
+  }
+}
+
+export const GRENADE_TYPES = {
+  tactical: {
+    frag: { id: 'frag', name: 'Frag', type: 'lethal', damage: 150, radius: 5, fuse: 3 },
+    semtex: { id: 'semtex', name: 'Semtex', type: 'lethal', damage: 140, radius: 4.5, fuse: 2.5, sticky: true },
+    thermite: { id: 'thermite', name: 'Thermite', type: 'lethal', damage: 30, radius: 3, fuse: 1, dotDuration: 5 },
+    molotov: { id: 'molotov', name: 'Molotov', type: 'lethal', damage: 25, radius: 4, fuse: 1, dotDuration: 8, fireSpread: true },
+    c4: { id: 'c4', name: 'C4', type: 'lethal', damage: 180, radius: 5, fuse: 0, remote: true },
+    claymore: { id: 'claymore', name: 'Claymore', type: 'lethal', damage: 200, radius: 5, fuse: 0, trigger: 'proximity' },
+    throwingKnife: { id: 'throwingKnife', name: 'Throwing Knife', type: 'lethal', damage: 130, radius: 0, fuse: 0, retrievable: true },
+    shuriken: { id: 'shuriken', name: 'Shuriken', type: 'lethal', damage: 80, radius: 0, fuse: 0, retrievable: true, chargeable: true },
+    flash: { id: 'flash', name: 'Flashbang', type: 'tactical', damage: 0, radius: 8, fuse: 1.5, effect: 'flash', duration: 3 },
+    stun: { id: 'stun', name: 'Stun Grenade', type: 'tactical', damage: 0, radius: 7, fuse: 1.5, effect: 'stun', duration: 4 },
+    gas: { id: 'gas', name: 'Gas Grenade', type: 'tactical', damage: 5, radius: 6, fuse: 1.5, effect: 'gas', duration: 8 },
+    smoke: { id: 'smoke', name: 'Smoke Grenade', type: 'tactical', damage: 0, radius: 6, fuse: 1.5, effect: 'smoke', duration: 15 },
+    decoy: { id: 'decoy', name: 'Decoy Grenade', type: 'tactical', damage: 0, radius: 3, fuse: 1.5, effect: 'decoy', duration: 10 },
+    snapshot: { id: 'snapshot', name: 'Snapshot Grenade', type: 'tactical', damage: 0, radius: 8, fuse: 1.5, effect: 'snapshot', duration: 2 },
+    stim: { id: 'stim', name: 'Stim', type: 'tactical', damage: 0, radius: 0, fuse: 0, effect: 'heal', healAmount: 50 }
+  }
+}
 
 // --- Loadout por defecto (Fase 1.4) ---
 // El loadout inicial del jugador cuando empieza una partida nueva sin
 // haber configurado nada. Se puede cambiar en el menú Create-a-class.
 export const DEFAULT_LOADOUT = {
   primary: 'm4',
-  primaryAttachments: {}, // { slot: attachmentId }
+  primaryAttachments: {},
   secondary: 'pistol',
-  tactical: 'frag',
-  lethal: 'flash',
+  secondaryAttachments: {},
+  tactical: 'flash',
+  lethal: 'frag',
   perks: {
     blue: 'sleightOfHand',
     red: 'stoppingPower',
     green: 'deadSilence'
   },
+  fieldUpgrade: 'trophySystem',
   killstreaks: ['uav', 'airstrike', 'heli', 'gunship']
 }
 
