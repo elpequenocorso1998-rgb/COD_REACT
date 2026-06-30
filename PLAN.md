@@ -1292,7 +1292,17 @@ global 4.0. Posible doble aplicación.
 
 **Verify**: test headshot damage = weapon.damage * weapon.headshotMultiplier.
 
-### Sub-fase 18.16 — Enforce 4 perks fiction `[ ]`
+### Sub-fase 18.16 — Enforce 4 perks fiction `[x]`
+
+**Tareas**:
+- `deadSilence`: `engine.js player.onFootstep` — si `hasPerk('deadSilence')` →
+  no audio. **Hecho.**
+- `ninja`: `engine.js` weapon swap (Shift+1-7 y tecla Y) — si
+  `hasPerk('ninja')` → no `playReload()`. **Hecho.**
+- `ghost`: relevante en MP (remote-players no revela al jugador con ghost si
+  UAV enemigo activo). En PvE no aplica (no hay UAV enemigo). **Documentado.**
+- `coldBlooded`: relevante en MP (atacante no ve hitmarker rojo al dañar a
+  jugador con coldBlooded). En PvE no aplica. **Documentado.**
 
 **Problema**: `ghost`, `coldBlooded`, `deadSilence`, `ninja` definidos en
 config pero sin efecto runtime.
@@ -1734,7 +1744,7 @@ no la del killer.
 - [x] 18.13 — Suppression effect en jugador
 - [x] 18.14 — Cook grenades
 - [x] 18.15 — Headshot multiplier por arma (revisar duplicación)
-- [ ] 18.16 — Enforce 4 perks fiction
+- [x] 18.16 — Enforce 4 perks fiction
 - [ ] 18.17 — LoS check para flashbang
 - [ ] 18.18 — 11 granadas faltantes
 - [ ] 18.19 — 10 perks nuevos

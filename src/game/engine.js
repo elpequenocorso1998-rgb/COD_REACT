@@ -315,6 +315,8 @@ export function createEngine() {
     player.onFootstep = (speed) => {
       // Fase 1.5: pasos del jugador con audio procedural.
       // Material: por defecto 'stone' (suelo de adoquines de Pamplona).
+      // Fase 18.16: deadSilence perk suprime el sonido de pasos.
+      if (hasPerk('deadSilence')) return
       if (audio && audio.playFootstep) audio.playFootstep(speed, 'stone')
     }
 
@@ -803,7 +805,8 @@ export function createEngine() {
       if (weaponId && e.shiftKey) {
         st.switchWeapon(weaponId)
         player.setWeapon(st.getCurrentWeapon())
-        audio.playReload() // sonido de cambio de arma
+        // Fase 18.16: ninja perk suprime el sonido de swap.
+        if (!hasPerk('ninja')) audio.playReload()
       }
     }
     // --- Fase 6: swap primary↔secondary con tecla Y ---
@@ -815,7 +818,8 @@ export function createEngine() {
       if (target && target !== st.currentWeapon) {
         st.switchWeapon(target)
         player.setWeapon(st.getCurrentWeapon())
-        audio.playReload()
+        // Fase 18.16: ninja perk suprime el sonido de swap.
+        if (!hasPerk('ninja')) audio.playReload()
       }
     }
     // --- Killstreaks: teclas 4-7 (sin Shift) ---
