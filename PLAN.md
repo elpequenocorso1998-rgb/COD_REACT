@@ -1706,7 +1706,7 @@ no funcionan.
 `getSettings().keybindings`. Helper `isAction(e, action)`.
 **Verify**: rebind fire a Mouse4, jugar, funciona.
 
-### Sub-fase 19.2 — Fix map loading: startGame reconstruye el mundo `[ ]`
+### Sub-fase 19.2 — Fix map loading: startGame reconstruye el mundo `[x]`
 **Problema**: `startGame(mapId)` solo hace `selectedMapId = mapId`. Nunca
 llama `createWorld()`. El mundo se construye una vez en `mount()`.
 **Tareas**: `loadedMapId` tracking, rebuild world+navmesh en startGame si
@@ -1793,7 +1793,7 @@ en ui/menus/. Mirror tests/ structure.
 ## Progreso Fase 19
 
 - [x] 19.1 — Wire keybinds al input handler
-- [ ] 19.2 — Fix map loading
+- [x] 19.2 — Fix map loading
 - [ ] 19.3 — Fix cook grenade leaks + spectator Q/E
 - [ ] 19.4 — Click to play overlay + pointer lock
 - [ ] 19.5 — Controles completos en el menú

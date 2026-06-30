@@ -92,6 +92,7 @@ export function createEngine() {
   let container = null
   let prevState = null
   let selectedMapId = 'pamplona'
+  let loadedMapId = null
   let selectedModeId = 'survival' // Fase 18.33: modo de juego activo
   // Fase 18.6: leer mapa seleccionado de localStorage al iniciar.
   try {
@@ -233,6 +234,7 @@ export function createEngine() {
 
     // --- SISTEMAS DEL JUEGO ---
     world = createWorld(scene, selectedMapId)
+    loadedMapId = selectedMapId
     // NavMesh (Fase 1.2): grid walkable generado desde world.colliders.
     // Se usa para pathfinding A* de la IA táctica.
     navmesh = new NavMesh(world, FLOOR_SIZE, 2)
@@ -262,152 +264,8 @@ export function createEngine() {
 
     sunMesh = world.sunMesh
 
-    // Conexión enemigos -> jugador/store/partículas/audio.
-    enemies.onReachPlayer = (enemy) => {
-      const playerPos = player.getPosition()
-      const dx = enemy.group.position.x - playerPos.x
-      const dz = enemy.group.position.z - playerPos.z
-      const worldAngle = Math.atan2(dx, dz)
-      const playerYaw = player.getYaw ? player.getYaw() : 0
-      const relAngle = worldAngle - playerYaw
-      const dmg = enemy.damage
-      store.getState().takeDamage(dmg, relAngle)
-      // Fase 18.12: aim punch al recibir daño del enemigo.
-      const punchScale = Math.min(0.04, dmg / 100 * 0.04)
-      player.applyAimPunch(-punchScale, Math.sin(relAngle) * punchScale * 0.5)
-      audio.playDamage()
-      // Marca muzzle report para el minimap (punto parpadeante).
-      enemies.markShot(enemy)
-    }
-    enemies.onKilled = (enemy, points) => {
-      const st = store.getState()
-      // Fase 4: pasamos si fue headshot para el daily de headshots.
-      // enemies.js llama a onKilled cuando hp <= 0 tras handleShot;
-      // no tenemos el flag de headshot directo aquí, pero el killmarker
-      // ya se registró en registerHit. Para el daily usamos un heuristic:
-      // si el último hitmarker fue headshot, contamos como headshot kill.
-      st.registerKill(points)
-      audio.playKill()
-      audio.playHitMarker('kill')
-      // Multikill callout si hay label nuevo.
-      const label = store.getState().multikillLabel
-      if (label) audio.playCallout(label)
-      // Level up sound si subió de nivel.
-      if (store.getState().levelUpFlash) audio.playLevelUp()
-      // Fase 5: suelta pickups en la posición del enemigo muerto.
-      if (pickups && enemy.group) {
-        pickups.onEnemyKilled(enemy.group.position)
-      }
-    }
-
-    // Enemigo disparador: aplica daño al jugador con dirección.
-    enemies.onShootPlayer = (enemy, damage) => {
-      const playerPos = player.getPosition()
-      const dx = enemy.group.position.x - playerPos.x
-      const dz = enemy.group.position.z - playerPos.z
-      const worldAngle = Math.atan2(dx, dz)
-      const playerYaw = player.getYaw ? player.getYaw() : 0
-      const relAngle = worldAngle - playerYaw
-      store.getState().takeDamage(damage, relAngle)
-      audio.playDamage()
-      // Marca muzzle report para el minimap.
-      enemies.markShot(enemy)
-    }
-
-    player.onFootstep = (speed) => {
-      // Fase 1.5: pasos del jugador con audio procedural.
-      // Material: por defecto 'stone' (suelo de adoquines de Pamplona).
-      // Fase 18.16: deadSilence perk suprime el sonido de pasos.
-      if (hasPerk('deadSilence')) return
-      if (audio && audio.playFootstep) audio.playFootstep(speed, 'stone')
-    }
-
-    // Fase 18.13: suppression del jugador cuando bullets enemigas pasan cerca.
-    enemies.onEnemyShoot = (origin, dir) => {
-      const ppos = player.getPosition()
-      const dx = ppos.x - origin.x
-      const dy = ppos.y - origin.y
-      const dz = ppos.z - origin.z
-      // Proyección del vector jugador-enemigo sobre la dir del disparo.
-      const along = dx * dir.x + dy * dir.y + dz * dir.z
-      if (along <= 0) return // jugador detrás del enemigo
-      // Distancia perpendicular (closest approach).
-      const projX = origin.x + dir.x * along
-      const projY = origin.y + dir.y * along
-      const projZ = origin.z + dir.z * along
-      const perpDist = Math.hypot(ppos.x - projX, ppos.y - projY, ppos.z - projZ)
-      // Si la bala pasa a menos de 2m del jugador, aplica suppression.
-      if (perpDist < 2.0) {
-        const intensity = (1 - perpDist / 2.0) * 0.3
-        store.getState().suppress(intensity)
-      }
-    }
-
-    player.onShoot = (originVec, dirVec, freeShot = false) => {
-      // freeShot=true: pellets adicionales de shotgun, no consumen munición
-      // ni reproducen sonido de disparo (solo hit-test).
-      if (!freeShot) {
-        // Comprobamos munición ANTES de cualquier efecto visual/sonoro:
-        // si no hay bala, no hay flash ni sonido de impacto en pared.
-        if (!store.getState().fire()) return false
-        audio.playShoot()
-      }
-      const weaponDef = store.getState().getCurrentWeapon()
-      const hitEnemy = enemies.handleShot(originVec, dirVec, (enemy, isHead, hitPoint, hitNormal, hitType) => {
-        const wasKill = enemy.hp <= 0
-        // Fase 1.3: hitType distingue head/body/wallbang/limb/stomach.
-        const markerType = wasKill ? 'kill' : (hitType || (isHead ? 'headshot' : 'body'))
-        const points = isHead ? 25 : (hitType === 'wallbang' ? 30 : 10)
-        if (!wasKill) {
-          store.getState().registerHit(points, markerType)
-          audio.playHitMarker(markerType)
-          audio.playHitFlesh()
-        } else {
-          // En kill registramos el hit como 'kill' pero el sonido de kill
-          // marker lo reproduce el callback onKilled (junto con playKill).
-          store.getState().registerHit(points, 'kill')
-        }
-        particles.spawnBlood(hitPoint, hitNormal)
-        // Splat de sangre en el suelo si el impacto fue bajo.
-        if (hitPoint.y < 1.5 && decals) decals.spawnBloodSplat(hitPoint)
-      }, weaponDef)
-      // Fase 9: si no hitteamos un bot, intentamos con jugadores remotos (MP).
-      let hitRemote = false
-      if (!hitEnemy && remotePlayers && netClientRef) {
-        hitRemote = remotePlayers.handleShot(originVec, dirVec, weaponDef.raycastFar, (remoteId, isHead, hitPoint) => {
-          // Reportamos la kill al servidor (trusted client de momento).
-          netClientRef.sendKill(remoteId, store.getState().currentWeapon, isHead)
-          store.getState().registerHit(isHead ? 25 : 10, isHead ? 'headshot' : 'body')
-          audio.playHitMarker(isHead ? 'headshot' : 'body')
-          audio.playHitFlesh()
-          particles.spawnBlood(hitPoint, new THREE.Vector3(0, 1, 0))
-        })
-      }
-      if (!hitEnemy && !hitRemote && !freeShot) {
-        audio.playHitWall()
-        // Decal de agujero de bala en la pared.
-        if (decals) {
-          // Raycast para encontrar el punto exacto y la normal de la pared.
-          spawnBulletDecal(originVec, dirVec, weaponDef.raycastFar)
-        }
-        // Fase 1.2: fuego de supresión. Si el disparo pasó cerca de un
-        // enemigo sin impactar, lo mandamos a TakeCover. Esto simula el
-        // "fuego de supresión" de CoD: el enemigo se agacha al sentir balas.
-        if (enemies.suppressNear) {
-          // Sampleamos varios puntos a lo largo del rayo y suprimimos
-          // cualquier enemigo dentro de 2m del trayecto.
-          const samples = 8
-          for (let s = 1; s <= samples; s++) {
-            const t = s / samples
-            const px = originVec.x + dirVec.x * weaponDef.raycastFar * t
-            const py = originVec.y + dirVec.y * weaponDef.raycastFar * t
-            const pz = originVec.z + dirVec.z * weaponDef.raycastFar * t
-            enemies.suppressNear({ x: px, y: py, z: pz }, 2.5)
-          }
-        }
-      }
-      return hitEnemy
-    }
+    // Fase 19.2: callbacks cableados via wireCallbacks() (reutilizable tras rebuild).
+    wireCallbacks()
 
     window.addEventListener('resize', onResize)
     window.addEventListener('keydown', onKeyDown)
@@ -940,22 +798,20 @@ export function createEngine() {
      API pública.
      ---------------------------------------------------------------------- */
   function startGame(mapId) {
-    // Fase 18.6: si se especifica un mapa distinto al actual, lo seteamos.
-    // El mundo se reconstruye en mount() al recargar; aquí solo lo persistimos.
-    if (mapId && mapId !== selectedMapId) {
+    // Fase 19.2: si se especifica un mapa distinto al cargado, reconstruir.
+    if (mapId && mapId !== loadedMapId) {
       setMap(mapId)
+      rebuildWorld()
     }
     // Fase 18.33: aplicar reglas del modo activo.
     const mode = getGameMode(selectedModeId)
     if (mode && mode.playerHP) {
-      // Hardcore: 30 HP en vez de 100.
       useGameStore.setState({ maxHealth: mode.playerHP })
     }
     audio.init()
     audio.setMuted(false)
     audio.startMusic()
     store.getState().reset()
-    // Fase 18.33: re-aplicar HP de modo tras reset (reset pone maxHealth=100).
     if (mode && mode.playerHP) {
       useGameStore.setState({ maxHealth: mode.playerHP, health: mode.playerHP })
     }
@@ -966,10 +822,159 @@ export function createEngine() {
     if (pickups) pickups.reset()
     if (fieldUpgrades) fieldUpgrades.reset()
     player.reset()
-    // Sincroniza el arma inicial del store con el player.
     player.setWeapon(store.getState().getCurrentWeapon())
     spawnWave(1)
     player.requestPointerLock()
+  }
+
+  // Fase 19.2: reconstruir mundo + sistemas dependientes cuando cambia el mapa.
+  function rebuildWorld() {
+    // Disponer sistemas viejos que dependen del mundo.
+    if (grenades) { grenades.dispose(); grenades = null }
+    if (pickups) { pickups.dispose(); pickups = null }
+    if (decals) { decals.dispose(); decals = null }
+    if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
+    if (streaks) { streaks.dispose(); streaks = null }
+    if (enemies) { enemies.dispose(); enemies = null }
+    if (player) { player.dispose(); player = null }
+    if (navmesh) { navmesh = null }
+    if (world) { world.dispose(); world = null }
+    // Limpiar scene graph (objetos del mapa viejo que no se dispusieron).
+    const toRemove = []
+    scene.traverse((obj) => {
+      if (obj.isMesh || obj.isLight) {
+        if (obj !== camera) toRemove.push(obj)
+      }
+    })
+    for (const obj of toRemove) {
+      scene.remove(obj)
+      if (obj.geometry) obj.geometry.dispose()
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+        mats.forEach((m) => m.dispose())
+      }
+    }
+    // Recrear mundo + sistemas.
+    world = createWorld(scene, selectedMapId)
+    loadedMapId = selectedMapId
+    navmesh = new NavMesh(world, FLOOR_SIZE, 2)
+    sunMesh = world.sunMesh
+    player = createPlayer(scene, camera, world, particles, renderer)
+    enemies = createEnemyManager(scene, world, particles, audio, navmesh)
+    grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player, store)
+    decals = createDecalSystem(scene, { maxDecals: 80 })
+    pickups = createPickupSystem(scene, store, particles, audio)
+    fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
+    streaks = createStreakManager(scene, enemies, particles, audio, player, camera, store)
+    // Re-wire callbacks.
+    wireCallbacks()
+  }
+
+  // Fase 19.2: re-cablear callbacks tras rebuild.
+  function wireCallbacks() {
+    enemies.onReachPlayer = (enemy) => {
+      const playerPos = player.getPosition()
+      const dx = enemy.group.position.x - playerPos.x
+      const dz = enemy.group.position.z - playerPos.z
+      const worldAngle = Math.atan2(dx, dz)
+      const playerYaw = player.getYaw ? player.getYaw() : 0
+      const relAngle = worldAngle - playerYaw
+      const dmg = enemy.damage
+      store.getState().takeDamage(dmg, relAngle)
+      const punchScale = Math.min(0.04, dmg / 100 * 0.04)
+      player.applyAimPunch(-punchScale, Math.sin(relAngle) * punchScale * 0.5)
+      audio.playDamage()
+      enemies.markShot(enemy)
+    }
+    enemies.onKilled = (enemy, points) => {
+      const st = store.getState()
+      st.registerKill(points)
+      audio.playKill()
+      audio.playHitMarker('kill')
+      const label = st.multikillLabel
+      if (label) audio.playCallout(label)
+      if (store.getState().levelUpFlash) audio.playLevelUp()
+      if (pickups) pickups.onEnemyKilled(enemy.group.position)
+    }
+    enemies.onShootPlayer = (enemy, damage) => {
+      const playerPos = player.getPosition()
+      const dx = enemy.group.position.x - playerPos.x
+      const dz = enemy.group.position.z - playerPos.z
+      const worldAngle = Math.atan2(dx, dz)
+      const playerYaw = player.getYaw ? player.getYaw() : 0
+      const relAngle = worldAngle - playerYaw
+      store.getState().takeDamage(damage, relAngle)
+      audio.playDamage()
+      enemies.markShot(enemy)
+    }
+    enemies.onEnemyShoot = (origin, dir) => {
+      const ppos = player.getPosition()
+      const dx = ppos.x - origin.x
+      const dy = ppos.y - origin.y
+      const dz = ppos.z - origin.z
+      const along = dx * dir.x + dy * dir.y + dz * dir.z
+      if (along <= 0) return
+      const projX = origin.x + dir.x * along
+      const projY = origin.y + dir.y * along
+      const projZ = origin.z + dir.z * along
+      const perpDist = Math.hypot(ppos.x - projX, ppos.y - projY, ppos.z - projZ)
+      if (perpDist < 2.0) {
+        const intensity = (1 - perpDist / 2.0) * 0.3
+        store.getState().suppress(intensity)
+      }
+    }
+    player.onFootstep = (speed) => {
+      if (hasPerk('deadSilence')) return
+      if (audio && audio.playFootstep) audio.playFootstep(speed, 'stone')
+    }
+    player.onShoot = (originVec, dirVec, freeShot = false) => {
+      if (!freeShot) {
+        if (!store.getState().fire()) return false
+        audio.playShoot()
+      }
+      const weaponDef = store.getState().getCurrentWeapon()
+      const hitEnemy = enemies.handleShot(originVec, dirVec, (enemy, isHead, hitPoint, hitNormal, hitType) => {
+        const wasKill = enemy.hp <= 0
+        const markerType = wasKill ? 'kill' : (hitType || (isHead ? 'headshot' : 'body'))
+        const points = isHead ? 25 : (hitType === 'wallbang' ? 30 : 10)
+        if (!wasKill) {
+          store.getState().registerHit(points, markerType)
+          audio.playHitMarker(markerType)
+          audio.playHitFlesh()
+        } else {
+          store.getState().registerHit(points, 'kill')
+        }
+        particles.spawnBlood(hitPoint, hitNormal)
+        if (hitPoint.y < 1.5 && decals) decals.spawnBloodSplat(hitPoint)
+      }, weaponDef)
+      let hitRemote = false
+      if (!hitEnemy && remotePlayers && netClientRef) {
+        hitRemote = remotePlayers.handleShot(originVec, dirVec, weaponDef.raycastFar, (remoteId, isHead, hitPoint) => {
+          netClientRef.sendKill(remoteId, store.getState().currentWeapon, isHead)
+          store.getState().registerHit(isHead ? 25 : 10, isHead ? 'headshot' : 'body')
+          audio.playHitMarker(isHead ? 'headshot' : 'body')
+          audio.playHitFlesh()
+          particles.spawnBlood(hitPoint, new THREE.Vector3(0, 1, 0))
+        })
+      }
+      if (!hitEnemy && !hitRemote && !freeShot) {
+        audio.playHitWall()
+        if (decals) {
+          spawnBulletDecal(originVec, dirVec, weaponDef.raycastFar)
+        }
+        if (enemies.suppressNear) {
+          const samples = 8
+          for (let s = 1; s <= samples; s++) {
+            const t = s / samples
+            const px = originVec.x + dirVec.x * weaponDef.raycastFar * t
+            const py = originVec.y + dirVec.y * weaponDef.raycastFar * t
+            const pz = originVec.z + dirVec.z * weaponDef.raycastFar * t
+            enemies.suppressNear({ x: px, y: py, z: pz }, 2.5)
+          }
+        }
+      }
+      return hitEnemy
+    }
   }
 
   // Fase 18.33: setear modo de juego.
