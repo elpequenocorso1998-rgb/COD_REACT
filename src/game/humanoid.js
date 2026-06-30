@@ -36,11 +36,21 @@ function initShared() {
   if (_matSkin) return
   const skinTex = makeSkinTexture(128)
   const uniformTex = makeUniformTexture(256)
-  uniformTex.repeat.set(1, 1)
+  uniformTex.map.repeat.set(1, 1)
+  if (uniformTex.normalMap) uniformTex.normalMap.repeat.set(1, 1)
 
-  _matSkin = new THREE.MeshStandardMaterial({ map: skinTex, color: 0xc9a07a, roughness: 0.7, metalness: 0.05 })
-  _matUniform = new THREE.MeshStandardMaterial({ map: uniformTex, color: 0x4a3320, roughness: 0.85, metalness: 0.1 })
-  _matPants = new THREE.MeshStandardMaterial({ map: uniformTex, color: 0x2a2a2a, roughness: 0.85, metalness: 0.1 })
+  _matSkin = new THREE.MeshStandardMaterial({
+    map: skinTex.map, normalMap: skinTex.normalMap,
+    color: 0xc9a07a, roughness: 0.7, metalness: 0.05
+  })
+  _matUniform = new THREE.MeshStandardMaterial({
+    map: uniformTex.map, normalMap: uniformTex.normalMap,
+    color: 0x4a3320, roughness: 0.85, metalness: 0.1
+  })
+  _matPants = new THREE.MeshStandardMaterial({
+    map: uniformTex.map, normalMap: uniformTex.normalMap,
+    color: 0x2a2a2a, roughness: 0.85, metalness: 0.1
+  })
   _matHair = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: 0.9, metalness: 0.05 })
   _matEye = new THREE.MeshBasicMaterial({ color: 0xff2020 })
   _matBoot = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.6, metalness: 0.3 })
@@ -91,7 +101,9 @@ export function disposeHumanoidShared() {
   for (const g of geos) g.dispose()
   // Liberamos las texturas de piel/uniforme (el resto de materiales no tienen map).
   _matSkin.map?.dispose()
+  _matSkin.normalMap?.dispose()
   _matUniform.map?.dispose()
+  _matUniform.normalMap?.dispose()
   _matSkin = null; _matUniform = null
   _matPants = null; _matHair = null; _matEye = null; _matBoot = null; _matBelt = null
   _matVest = null; _matHelmet = null; _matGloves = null; _matBrow = null; _matMouth = null

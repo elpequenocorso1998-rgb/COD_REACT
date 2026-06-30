@@ -15,8 +15,8 @@ import * as THREE from 'three'
 // de textures.js, que usan document.createElement('canvas').getContext('2d')
 // que jsdom no implementa. Mockeamos el módulo para devolver texturas fake.
 vi.mock('../src/game/textures.js', () => ({
-  makeSkinTexture: () => ({ dispose: () => {} }),
-  makeUniformTexture: () => ({ dispose: () => {}, repeat: { set: () => {} } })
+  makeSkinTexture: () => ({ map: { dispose: () => {} }, normalMap: { dispose: () => {} } }),
+  makeUniformTexture: () => ({ map: { dispose: () => {}, repeat: { set: () => {} } }, normalMap: { dispose: () => {}, repeat: { set: () => {} } } })
 }))
 
 import { buildHumanoid, animateWalk } from '../src/game/humanoid.js'

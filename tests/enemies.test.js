@@ -13,8 +13,8 @@ import * as THREE from 'three'
 
 // Stub de texturas (humanoid.js las usa y jsdom no implementa canvas).
 vi.mock('../src/game/textures.js', () => ({
-  makeSkinTexture: () => ({ dispose: () => {} }),
-  makeUniformTexture: () => ({ dispose: () => {}, repeat: { set: () => {} } })
+  makeSkinTexture: () => ({ map: { dispose: () => {} }, normalMap: { dispose: () => {} } }),
+  makeUniformTexture: () => ({ map: { dispose: () => {}, repeat: { set: () => {} } }, normalMap: { dispose: () => {}, repeat: { set: () => {} } } })
 }))
 
 import { createEnemyManager } from '../src/game/enemies.js'

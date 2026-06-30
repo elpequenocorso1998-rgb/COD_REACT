@@ -1732,7 +1732,7 @@ startGame. Retry pointer lock.
 **Tareas**: actualizar línea de controles con TODAS las teclas. Colapsable.
 **Verify**: ver todos los controles listados.
 
-### Sub-fase 19.6 — Normal + roughness maps en 6 texturas `[ ]`
+### Sub-fase 19.6 — Normal + roughness maps en 6 texturas `[x]`
 **Problema**: 6 de 8 texturas solo tienen color map. Paredes planas.
 **Tareas**: añadir normalMap + roughnessMap a makeSillarTexture,
 makeRoofTexture, makeWoodTexture, makeGunMetalTexture, makeUniformTexture,
@@ -1797,7 +1797,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.3 — Fix cook grenade leaks + spectator Q/E
 - [x] 19.4 — Click to play overlay + pointer lock
 - [x] 19.5 — Controles completos en el menú
-- [ ] 19.6 — Normal + roughness maps en 6 texturas
+- [x] 19.6 — Normal + roughness maps en 6 texturas
 - [ ] 19.7 — Cortar agujeros de ventanas
 - [ ] 19.8 — Más segmentos en cilindros/esferas
 - [ ] 19.9 — Sky shader real (Preetham)

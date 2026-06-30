@@ -601,7 +601,7 @@ export function createWorld(scene, mapId = 'pamplona') {
     })
     // Texturas Pamplona (no están en el traverse como objetos, hay que liberarlas a mano).
     if (tex) { tex.map.dispose(); tex.normalMap.dispose(); tex.roughnessMap.dispose() }
-    if (sillarTex) sillarTex.dispose()
+    if (sillarTex) { sillarTex.map.dispose(); sillarTex.normalMap.dispose(); sillarTex.roughnessMap.dispose() }
     if (roofTex) roofTex.dispose()
     if (woodTex) woodTex.dispose()
     if (crateTex) { crateTex.map.dispose(); crateTex.normalMap.dispose() }

@@ -77,7 +77,7 @@ function buildM4() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x2a2e30, metalness: 0.95, roughness: 0.28,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x2a2e30, metalness: 0.95, roughness: 0.28,
     envMapIntensity: 1.5
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -150,7 +150,7 @@ function buildAK47() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x1f1f1f, metalness: 0.9, roughness: 0.4,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x1f1f1f, metalness: 0.9, roughness: 0.4,
     envMapIntensity: 1.3
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -226,7 +226,7 @@ function buildMP5() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x1a1a1a, metalness: 0.92, roughness: 0.3,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x1a1a1a, metalness: 0.92, roughness: 0.3,
     envMapIntensity: 1.4
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -301,7 +301,7 @@ function buildSniper() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x2a2a2a, metalness: 0.85, roughness: 0.35,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x2a2a2a, metalness: 0.85, roughness: 0.35,
     envMapIntensity: 1.4
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -390,7 +390,7 @@ function buildShotgun() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x1a1a1a, metalness: 0.9, roughness: 0.35,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x1a1a1a, metalness: 0.9, roughness: 0.35,
     envMapIntensity: 1.4
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -460,7 +460,7 @@ function buildLMG() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x252525, metalness: 0.92, roughness: 0.3,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x252525, metalness: 0.92, roughness: 0.3,
     envMapIntensity: 1.4
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({
@@ -538,7 +538,7 @@ function buildPistol() {
 
   const gunTex = getGunTex()
   const metalMat = new THREE.MeshStandardMaterial({
-    map: gunTex, color: 0x2a2a2a, metalness: 0.92, roughness: 0.25,
+    map: gunTex.map, normalMap: gunTex.normalMap, roughnessMap: gunTex.roughnessMap, color: 0x2a2a2a, metalness: 0.92, roughness: 0.25,
     envMapIntensity: 1.5
   })
   const darkMetalMat = new THREE.MeshStandardMaterial({

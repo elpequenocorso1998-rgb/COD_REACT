@@ -5,9 +5,9 @@ import { FIELD_UPGRADES } from '../src/game/config.js'
 
 vi.mock('../src/game/textures.js', () => ({
   makeConcreteTextures: () => ({ map: {}, normalMap: {}, roughnessMap: {} }),
-  makeUniformTexture: () => ({}),
-  makeSkinTexture: () => ({}),
-  makeGunMetalTexture: () => ({})
+  makeUniformTexture: () => ({ map: {}, normalMap: {} }),
+  makeSkinTexture: () => ({ map: {}, normalMap: {} }),
+  makeGunMetalTexture: () => ({ map: {}, normalMap: {}, roughnessMap: {} })
 }))
 
 function makeFakeScene() {

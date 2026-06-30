@@ -25,6 +25,20 @@ export function makeSillarTexture(size = 512) {
   c.width = c.height = size
   const ctx = c.getContext('2d')
 
+  // Normal map canvas (RGB = surface relief).
+  const nc = document.createElement('canvas')
+  nc.width = nc.height = size
+  const nctx = nc.getContext('2d')
+  nctx.fillStyle = 'rgb(128,128,255)' // flat normal (Z-up)
+  nctx.fillRect(0, 0, size, size)
+
+  // Roughness map canvas (grayscale = roughness variation).
+  const rc = document.createElement('canvas')
+  rc.width = rc.height = size
+  const rctx = rc.getContext('2d')
+  rctx.fillStyle = '#888888' // medium roughness
+  rctx.fillRect(0, 0, size, size)
+
   // Base crema.
   ctx.fillStyle = '#d8c9a0'
   ctx.fillRect(0, 0, size, size)
@@ -46,8 +60,23 @@ export function makeSillarTexture(size = 512) {
         const py = r * bh + rng() * bh
         ctx.fillStyle = `rgba(120,100,70,${rng() * 0.2})`
         ctx.fillRect(px, py, 2, 2)
+        // Normal map: small bumps.
+        nctx.fillStyle = `rgb(${128 + Math.floor(rng() * 40 - 20)},${128 + Math.floor(rng() * 40 - 20)},255)`
+        nctx.fillRect(px, py, 3, 3)
+        // Roughness: variation.
+        const rv = 100 + Math.floor(rng() * 80)
+        rctx.fillStyle = `rgb(${rv},${rv},${rv})`
+        rctx.fillRect(px, py, 3, 3)
       }
-      // Sombras en las juntas.
+      // Juntas: normal map oscuro (hacia abajo = groove).
+      nctx.fillStyle = 'rgb(100,100,200)' // groove normal
+      nctx.fillRect(x, r * bh, bw, 2)
+      nctx.fillRect(x, r * bh, 2, bh)
+      // Roughness en juntas: más rugoso.
+      rctx.fillStyle = '#606060'
+      rctx.fillRect(x, r * bh, bw, 2)
+      rctx.fillRect(x, r * bh, 2, bh)
+      // Sombras en las juntas (color map).
       ctx.strokeStyle = 'rgba(80,60,40,0.5)'
       ctx.lineWidth = 1.5
       ctx.strokeRect(x + 1, r * bh + 1, bw - 2, bh - 2)
@@ -61,10 +90,20 @@ export function makeSillarTexture(size = 512) {
     g.addColorStop(1, 'rgba(80,60,40,0)')
     ctx.fillStyle = g
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+    // Roughness: manchas = más rugoso.
+    const rg = rctx.createRadialGradient(x, y, 0, x, y, r)
+    rg.addColorStop(0, '#404040')
+    rg.addColorStop(1, '#888888')
+    rctx.fillStyle = rg
+    rctx.beginPath(); rctx.arc(x, y, r, 0, Math.PI * 2); rctx.fill()
   }
   const tex = new THREE.CanvasTexture(c)
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  return tex
+  const normalTex = new THREE.CanvasTexture(nc)
+  normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping
+  const roughTex = new THREE.CanvasTexture(rc)
+  roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping
+  return { map: tex, normalMap: normalTex, roughnessMap: roughTex }
 }
 
 // Teja cerámica curva (terracota).
@@ -144,12 +183,17 @@ export function buildPamplonaHouse({
 
   // --- Cuerpo principal (sillar) ---
   const sillarMat = new THREE.MeshStandardMaterial({
-    map: sillarTex.clone(),
+    map: sillarTex.map.clone(),
+    normalMap: sillarTex.normalMap.clone(),
+    roughnessMap: sillarTex.roughnessMap.clone(),
     color: 0xd8c9a0,
     roughness: 0.92,
-    metalness: 0.05
+    metalness: 0.05,
+    normalScale: new THREE.Vector2(0.8, 0.8)
   })
   sillarMat.map.repeat.set(width / 3, height / 3)
+  sillarMat.normalMap.repeat.set(width / 3, height / 3)
+  sillarMat.roughnessMap.repeat.set(width / 3, height / 3)
 
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(width, height, depth),
@@ -309,7 +353,9 @@ export function buildBullring(sillarTex, roofTex) {
 
   // Muro circular exterior.
   const wallMat = new THREE.MeshStandardMaterial({
-    map: sillarTex.clone(),
+    map: sillarTex.map.clone(),
+    normalMap: sillarTex.normalMap.clone(),
+    roughnessMap: sillarTex.roughnessMap.clone(),
     color: 0xc8b890, roughness: 0.92, metalness: 0.05
   })
   wallMat.map.repeat.set(20, 3)
@@ -373,7 +419,9 @@ export function buildCityWall({ length, height = 6, sillarTex }) {
   const colliders = []
 
   const wallMat = new THREE.MeshStandardMaterial({
-    map: sillarTex.clone(),
+    map: sillarTex.map.clone(),
+    normalMap: sillarTex.normalMap.clone(),
+    roughnessMap: sillarTex.roughnessMap.clone(),
     color: 0xc8b890, roughness: 0.95, metalness: 0.05
   })
   wallMat.map.repeat.set(length / 3, height / 3)
@@ -470,7 +518,9 @@ export function buildFountain(sillarTex) {
   const group = new THREE.Group()
 
   const stoneMat = new THREE.MeshStandardMaterial({
-    map: sillarTex.clone(), color: 0xc8b890, roughness: 0.92
+    map: sillarTex.map.clone(),
+    normalMap: sillarTex.normalMap.clone(),
+    roughnessMap: sillarTex.roughnessMap.clone(), color: 0xc8b890, roughness: 0.92
   })
   stoneMat.map.repeat.set(2, 1)
 
@@ -585,7 +635,9 @@ export function buildPamplonaHouseInterior({
   const colliders = []
 
   const wallMat = new THREE.MeshStandardMaterial({
-    map: sillarTex.clone(),
+    map: sillarTex.map.clone(),
+    normalMap: sillarTex.normalMap.clone(),
+    roughnessMap: sillarTex.roughnessMap.clone(),
     color: 0xd8c9a0, roughness: 0.92, metalness: 0.05
   })
   wallMat.map.repeat.set(width / 3, height / 3)

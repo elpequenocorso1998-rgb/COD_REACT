@@ -224,6 +224,19 @@ export function makeGunMetalTexture(size = 256) {
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
+  // Normal map canvas.
+  const nc = document.createElement('canvas')
+  nc.width = nc.height = size
+  const nctx = nc.getContext('2d')
+  nctx.fillStyle = 'rgb(128,128,255)'
+  nctx.fillRect(0, 0, size, size)
+  // Roughness map canvas.
+  const rc = document.createElement('canvas')
+  rc.width = rc.height = size
+  const rctx = rc.getContext('2d')
+  rctx.fillStyle = '#707070'
+  rctx.fillRect(0, 0, size, size)
+
   ctx.fillStyle = '#1c1e22'
   ctx.fillRect(0, 0, size, size)
   // Rayado longitudinal
@@ -232,6 +245,14 @@ export function makeGunMetalTexture(size = 256) {
     ctx.strokeStyle = `rgba(${30 + rng() * 40},${30 + rng() * 40},${35 + rng() * 40},${0.3 + rng() * 0.4})`
     ctx.lineWidth = 0.5 + rng()
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y + (rng() - 0.5) * 2); ctx.stroke()
+    // Normal map: small grooves from machining.
+    nctx.strokeStyle = `rgb(${120 + rng() * 10},${120 + rng() * 10},255)`
+    nctx.lineWidth = 0.5
+    nctx.beginPath(); nctx.moveTo(0, y); nctx.lineTo(size, y); nctx.stroke()
+    // Roughness: variation along scratches.
+    rctx.strokeStyle = `rgb(${80 + rng() * 60},${80 + rng() * 60},${80 + rng() * 60})`
+    rctx.lineWidth = 0.5
+    rctx.beginPath(); rctx.moveTo(0, y); rctx.lineTo(size, y); rctx.stroke()
   }
   // Desgaste brillante
   for (let i = 0; i < 20; i++) {
@@ -241,9 +262,17 @@ export function makeGunMetalTexture(size = 256) {
     g.addColorStop(1, 'rgba(120,120,130,0)')
     ctx.fillStyle = g
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+    // Roughness: shiny spots = lower roughness.
+    const rg = rctx.createRadialGradient(x, y, 0, x, y, r)
+    rg.addColorStop(0, '#404040')
+    rg.addColorStop(1, '#707070')
+    rctx.fillStyle = rg
+    rctx.beginPath(); rctx.arc(x, y, r, 0, Math.PI * 2); rctx.fill()
   }
   const tex = new THREE.CanvasTexture(c)
-  return tex
+  const normalTex = new THREE.CanvasTexture(nc)
+  const roughTex = new THREE.CanvasTexture(rc)
+  return { map: tex, normalMap: normalTex, roughnessMap: roughTex }
 }
 
 /* ---------------------------------------------------------------------------
@@ -254,6 +283,12 @@ export function makeUniformTexture(size = 256) {
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
+  // Normal map (cloth weave pattern).
+  const nc = document.createElement('canvas')
+  nc.width = nc.height = size
+  const nctx = nc.getContext('2d')
+  nctx.fillStyle = 'rgb(128,128,255)'
+  nctx.fillRect(0, 0, size, size)
   // Base gris oscuro
   ctx.fillStyle = '#2a2d33'
   ctx.fillRect(0, 0, size, size)
@@ -265,16 +300,28 @@ export function makeUniformTexture(size = 256) {
     ctx.beginPath()
     ctx.ellipse(x, y, r, r * (0.5 + rng() * 0.5), rng() * Math.PI, 0, Math.PI * 2)
     ctx.fill()
+    // Normal: camo edges have slight bump.
+    nctx.strokeStyle = 'rgb(135,135,255)'
+    nctx.lineWidth = 1
+    nctx.beginPath()
+    nctx.ellipse(x, y, r, r * (0.5 + rng() * 0.5), rng() * Math.PI, 0, Math.PI * 2)
+    nctx.stroke()
   }
-  // Ruido fino
+  // Ruido fino + normal weave
   for (let i = 0; i < 1500; i++) {
     const v = 20 + rng() * 30
     ctx.fillStyle = `rgba(${v},${v},${v},${rng() * 0.2})`
-    ctx.fillRect(rng() * size, rng() * size, 2, 2)
+    const px = rng() * size, py = rng() * size
+    ctx.fillRect(px, py, 2, 2)
+    // Cloth weave pattern in normal map.
+    nctx.fillStyle = `rgb(${125 + Math.floor(rng() * 6 - 3)},${125 + Math.floor(rng() * 6 - 3)},255)`
+    nctx.fillRect(px, py, 2, 2)
   }
   const tex = new THREE.CanvasTexture(c)
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  return tex
+  const normalTex = new THREE.CanvasTexture(nc)
+  normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping
+  return { map: tex, normalMap: normalTex }
 }
 
 /* ---------------------------------------------------------------------------
@@ -285,6 +332,12 @@ export function makeSkinTexture(size = 128) {
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')
+  // Normal map (pores).
+  const nc = document.createElement('canvas')
+  nc.width = nc.height = size
+  const nctx = nc.getContext('2d')
+  nctx.fillStyle = 'rgb(128,128,255)'
+  nctx.fillRect(0, 0, size, size)
   ctx.fillStyle = '#c9a07a'
   ctx.fillRect(0, 0, size, size)
   // Pecas/manchas
@@ -292,11 +345,18 @@ export function makeSkinTexture(size = 128) {
     const x = rng() * size, y = rng() * size, r = 1 + rng() * 3
     ctx.fillStyle = `rgba(${100 + rng() * 50},${60 + rng() * 30},${40 + rng() * 20},${0.2 + rng() * 0.3})`
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+    // Normal: freckle bump.
+    nctx.fillStyle = 'rgb(132,132,255)'
+    nctx.beginPath(); nctx.arc(x, y, r, 0, Math.PI * 2); nctx.fill()
   }
   // Poros
   for (let i = 0; i < 2000; i++) {
+    const px = rng() * size, py = rng() * size
     ctx.fillStyle = `rgba(80,50,30,${rng() * 0.15})`
-    ctx.fillRect(rng() * size, rng() * size, 1, 1)
+    ctx.fillRect(px, py, 1, 1)
+    // Normal: pore = tiny indent.
+    nctx.fillStyle = `rgb(${126 + Math.floor(rng() * 4 - 2)},${126 + Math.floor(rng() * 4 - 2)},255)`
+    nctx.fillRect(px, py, 1, 1)
   }
-  return new THREE.CanvasTexture(c)
+  return { map: new THREE.CanvasTexture(c), normalMap: new THREE.CanvasTexture(nc) }
 }
