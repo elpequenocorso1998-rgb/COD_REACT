@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useGameStore, GAME_STATES } from './game/store.js'
 import { createEngine } from './game/engine.js'
 import { WEAPONS, PERKS, ATTACHMENTS, ATTACHMENT_SLOTS } from './game/config.js'
-import { getLoadout, saveLoadout } from './game/loadout.js'
+import { getLoadout, saveLoadout, getCustomClasses, setActiveClassIndex, getActiveClassIndex, duplicateClass, resetClass, getMaxClasses } from './game/loadout.js'
 import { getSettings, saveSettings } from './game/settings.js'
 import { t, setLang, getLang } from './i18n.js'
 import { createNetClient } from './net/client.js'
@@ -912,12 +912,38 @@ function MatchOverScreen({ onQuit }) {
    Se persiste en localStorage via loadout.js.
    ========================================================================= */
 function CreateAClassScreen({ onClose }) {
+  const [activeIdx, setActiveIdx] = useState(() => getActiveClassIndex())
+  const [classes, setClasses] = useState(() => getCustomClasses())
   const [loadout, setLoadoutState] = useState(() => getLoadout())
+
+  const selectClass = (idx) => {
+    setActiveClassIndex(idx)
+    setActiveIdx(idx)
+    setClasses(getCustomClasses())
+    setLoadoutState(getLoadout())
+  }
+
+  const duplicate = (fromIdx) => {
+    let toIdx = -1
+    for (let i = 0; i < getMaxClasses(); i++) {
+      if (classes[i] == null) { toIdx = i; break }
+    }
+    if (toIdx === -1) return
+    duplicateClass(fromIdx, toIdx)
+    setClasses(getCustomClasses())
+  }
+
+  const reset = (idx) => {
+    resetClass(idx)
+    setClasses(getCustomClasses())
+    if (idx === activeIdx) setLoadoutState(getLoadout())
+  }
 
   const update = (patch) => {
     const next = { ...loadout, ...patch }
     setLoadoutState(next)
     saveLoadout(next)
+    setClasses(getCustomClasses())
   }
 
   const updatePrimaryAttachments = (slot, attId) => {
@@ -927,6 +953,7 @@ function CreateAClassScreen({ onClose }) {
     else next.primaryAttachments[slot] = attId
     setLoadoutState(next)
     saveLoadout(next)
+    setClasses(getCustomClasses())
   }
 
   const updatePerk = (slot, perkId) => {
@@ -936,6 +963,7 @@ function CreateAClassScreen({ onClose }) {
     }
     setLoadoutState(next)
     saveLoadout(next)
+    setClasses(getCustomClasses())
   }
 
   const weaponIds = Object.keys(WEAPONS)
@@ -949,6 +977,25 @@ function CreateAClassScreen({ onClose }) {
   return (
     <div className="menu loadout-screen">
       <h1>{t('loadout.title')}</h1>
+      {/* Fase 18.3: selector de 10 custom classes */}
+      <div className="class-slots">
+        {Array.from({ length: getMaxClasses() }, (_, i) => (
+          <div key={i} className={`class-slot ${i === activeIdx ? 'active' : ''} ${classes[i] ? 'filled' : 'empty'}`}>
+            <button className="class-slot-btn" onClick={() => selectClass(i)}>
+              {i + 1}
+            </button>
+            {classes[i] && i !== activeIdx && (
+              <>
+                <button className="class-slot-action" title="Duplicate" onClick={() => duplicate(i)}>⧉</button>
+                <button className="class-slot-action" title="Reset" onClick={() => reset(i)}>↺</button>
+              </>
+            )}
+            {i === activeIdx && (
+              <button className="class-slot-action" title="Reset" onClick={() => reset(i)}>↺</button>
+            )}
+          </div>
+        ))}
+      </div>
       <div className="loadout-content">
         {/* Primary weapon */}
         <div className="loadout-section">

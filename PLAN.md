@@ -1100,7 +1100,7 @@ instanciado. `SettingsScreen` no expone keybinds.
 
 **Verify**: rebind fire a mouse4, jugar, funciona.
 
-### Sub-fase 18.3 — 10 slots de loadout `[ ]`
+### Sub-fase 18.3 — 10 slots de loadout `[x]`
 
 **Problema**: `loadout.js:17,47-60` soporta `MAX_CLASSES=10` con
 `getCustomClasses`/`setActiveClass`, pero `CreateAClassScreen` solo usa
@@ -1721,7 +1721,7 @@ no la del killer.
 - [x] 18.0 — Setup (lint fix + PLAN.md)
 - [x] 18.1 — Killfeed en HUD
 - [x] 18.2 — Accessibility manager + keybind UI
-- [ ] 18.3 — 10 slots de loadout
+- [x] 18.3 — 10 slots de loadout
 - [ ] 18.4 — Field upgrades activation system
 - [ ] 18.5 — Spectator mode on MP death
 - [ ] 18.6 — 4 mapas existentes activos
