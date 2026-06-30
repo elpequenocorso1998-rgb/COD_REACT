@@ -19,14 +19,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 9432,
     strictPort: true,
-    allowedHosts: ['pmpldl03', '172.30.181.100', 'localhost'],
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(',').map(h => h.trim()).filter(Boolean) ?? true,
     hmr: { overlay: false }
   },
   preview: {
     host: '0.0.0.0',
     port: 9432,
     strictPort: true,
-    allowedHosts: ['pmpldl03', '172.30.181.100', 'localhost']
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(',').map(h => h.trim()).filter(Boolean) ?? true
   },
   build: {
     chunkSizeWarningLimit: 1500

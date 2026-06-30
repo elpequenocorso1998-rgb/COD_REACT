@@ -5,6 +5,14 @@
   "type": "module",
   "license": "MIT",
   "description": "Juego FPS tipo Call of Duty para navegador, hecho en React + Three.js",
+  "author": "",
+  "keywords": ["fps", "cod", "call-of-duty", "threejs", "react", "webgl", "game", "browser"],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "homepage": "",
+  "bugs": "",
   "engines": {
     "node": ">=20"
   },

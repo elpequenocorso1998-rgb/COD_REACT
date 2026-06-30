@@ -1778,7 +1778,7 @@ screenshots, Mermaid diagram.
 CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .prettierrc, husky.
 **Verify**: push a PR → CI corre.
 
-### Sub-fase 19.14 — Repo cleanup `[ ]`
+### Sub-fase 19.14 — Repo cleanup `[x]`
 **Problema**: opencode.json trackeado con API key, hostnames privados.
 **Tareas**: .gitignore, git rm opencode.json, allowedHosts env-driven,
 package.json fields, limpiar duplicates.
@@ -1805,5 +1805,5 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.11 — Partículas ambientales
 - [ ] 19.12 — README overhaul
 - [ ] 19.13 — CI/CD + community files
-- [ ] 19.14 — Repo cleanup
+- [x] 19.14 — Repo cleanup
 - [ ] 19.15 — Reorganizar src/game/ + split App.jsx

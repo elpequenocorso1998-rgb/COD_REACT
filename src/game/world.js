@@ -156,9 +156,6 @@ export function createWorld(scene, mapId = 'pamplona') {
   extendedFloor.position.y = -0.02
   extendedFloor.receiveShadow = false
   scene.add(extendedFloor)
-  floor.rotation.x = -Math.PI / 2
-  floor.receiveShadow = true
-  scene.add(floor)
 
   // Texturas compartidas de Pamplona.
   sillarTex = makeSillarTexture(512)
