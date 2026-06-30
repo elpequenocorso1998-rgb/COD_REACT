@@ -893,6 +893,25 @@ export const GRENADE_TYPES = {
   }
 }
 
+// --- Killstreaks catálogo (Fase 18.28) ---
+// cost = kills necesarias, category = assault (resetea en death) | support (no resetea)
+export const STREAKS = {
+  uav: { id: 'uav', name: 'UAV', cost: 3, category: 'assault' },
+  cuav: { id: 'cuav', name: 'Counter UAV', cost: 4, category: 'assault' },
+  personalRadar: { id: 'personalRadar', name: 'Personal Radar', cost: 4, category: 'assault' },
+  airstrike: { id: 'airstrike', name: 'Airstrike', cost: 5, category: 'assault' },
+  carePackage: { id: 'carePackage', name: 'Care Package', cost: 5, category: 'assault' },
+  hunterKiller: { id: 'hunterKiller', name: 'Hunter Killer', cost: 5, category: 'assault' },
+  heli: { id: 'heli', name: 'Attack Heli', cost: 7, category: 'assault' },
+  predator: { id: 'predator', name: 'Predator Missile', cost: 7, category: 'assault' },
+  sentryGun: { id: 'sentryGun', name: 'Sentry Gun', cost: 8, category: 'assault' },
+  emp: { id: 'emp', name: 'EMP', cost: 9, category: 'assault' },
+  gunship: { id: 'gunship', name: 'Gunship', cost: 11, category: 'assault' },
+  ac130: { id: 'ac130', name: 'AC130', cost: 12, category: 'assault' },
+  juggernaut: { id: 'juggernaut', name: 'Juggernaut', cost: 12, category: 'assault' },
+  tacticalNuke: { id: 'tacticalNuke', name: 'Tactical Nuke', cost: 25, category: 'assault' }
+}
+
 // --- Loadout por defecto (Fase 1.4) ---
 // El loadout inicial del jugador cuando empieza una partida nueva sin
 // haber configurado nada. Se puede cambiar en el menú Create-a-class.

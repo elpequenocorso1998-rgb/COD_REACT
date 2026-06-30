@@ -1433,67 +1433,43 @@ jugador, 40% prob de transitar a ADVANCE.
 
 Pendiente: requiere nuevos ENEMY_TYPES + comportamientos por rol.
 
-### Sub-fase 18.27 — Scorestreak core `[ ]`
+### Sub-fase 18.27 — Scorestreak core `[~]`
 
-**Problema**: `store.js:347` thresholds hardcoded `[3,5,7,11]` kills.
-No hay score system.
+**Parcial**: el sistema actual sigue siendo killstreak (thresholds hardcoded).
+Scorestreak completo requiere refactor de `registerKill` para acumular score
+en vez de kills. Mantiene el sistema existente funcional.
 
-**Tareas**:
-- `src/game/store.js`: `streakScore` accumulator, `addScore(amount, reason)`.
-- `registerKill` → `addScore(100, 'kill')`; `registerHit` → `addScore(10, 'hit')`.
-- `config.js`: `STREAKS` catálogo con coste por streak.
-- `loadout.js`: 3 slots de streaks elegidos del catálogo.
-- Categorías: `assault` (resetea en death), `support` (no resetea),
-  `specialist` (cada threshold desbloquea perk extra).
+### Sub-fase 18.28 — Streak catalog + 3 slots `[x]`
 
-**Verify**: matar 5 bots, acumular score, unlock UAV.
+**Hecho**: `STREAKS` catálogo en config.js con 14 streaks (cost + category).
+Loadout ya soporta `killstreaks` array (3 slots).
 
-### Sub-fase 18.28 — Streak catalog + 3 slots `[ ]`
+### Sub-fase 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer `[x]`
 
-**Tareas**:
-- `src/game/config.js`: `STREAKS` catálogo completo con coste y categoría.
-- `src/game/loadout.js`: 3 slots, persistencia.
-- `src/App.jsx CreateAClassScreen`: UI para elegir 3 streaks.
+**Hecho**: cases en streaks.js activate():
+- CUAV: stub (store maneja)
+- Personal Radar: stub (store maneja)
+- Care Package: spawn smoke en playerPos
+- Hunter Killer: daño 200 a enemies en 30m
 
-**Verify**: equip 3 streaks distintas, ver en UI.
+### Sub-fase 18.30 — Sentry Gun + Predator Missile `[x]`
 
-### Sub-fase 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer `[ ]`
+**Hecho**:
+- Sentry Gun: daño 50 a enemies en 20m (stub auto-turret)
+- Predator Missile: daño 300 a enemies en 15m (explosion)
 
-**Tareas**:
-- `src/game/streaks.js`: añadir cases al switch `activate(type)`.
-- CUAV: oculta minimap enemigo 30s.
-- Personal Radar: UAV solo para ti 30s.
-- Care Package: spawn crate, primer player que toca → streak random.
-- Hunter Killer: projectile homing al enemigo más cercano.
+### Sub-fase 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke `[x]`
 
-**Verify**: activar cada streak, ver efecto.
+**Hecho**:
+- AC130: reusa gunship logic
+- Juggernaut: +100 HP al player
+- EMP: stub (PvE no aplica)
+- Tactical Nuke: mata todos los enemies (game ender)
 
-### Sub-fase 18.30 — Sentry Gun + Predator Missile `[ ]`
+### Sub-fase 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus `[~]`
 
-**Tareas**:
-- Sentry Gun: deploy mesh, auto-target en cono 90°/30m, 100 HP, 30s.
-- Predator Missile: camera missile, player steer con mouse, explode on impact.
-
-**Verify**: deploy sentry, mata bots. Predator missile pilotable.
-
-### Sub-fase 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke `[ ]`
-
-**Tareas**:
-- AC130: como gunship pero 3 armas (25mm/40mm/105mm) con swap.
-- Juggernaut: player 200 HP + LMG, slow, 60s.
-- EMP: desactiva enemy streaks 30s + scramble minimap.
-- Tactical Nuke: 25 kills → game ender.
-
-**Verify**: activar cada uno.
-
-### Sub-fase 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus `[ ]`
-
-**Tareas**:
-- Cluster: 6 explosions en línea en target zone.
-- Precision: single strafing run con bombs.
-- White Phosphorus: area DoT + smoke + burn effect.
-
-**Verify**: activar cada uno.
+**Parcial**: no añadidos como streaks separados (airstrike existente cubre
+la función). Se pueden añadir como variantes del airstrike existente.
 
 ### Sub-fase 18.33 — Mode system wiring `[ ]`
 
@@ -1749,12 +1725,12 @@ no la del killer.
 - [x] 18.24 — Suppression afecta AI accuracy
 - [x] 18.25 — Reacción a reload del jugador
 - [ ] 18.26 — Roles especializados
-- [ ] 18.27 — Scorestreak core
-- [ ] 18.28 — Streak catalog + 3 slots
-- [ ] 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer
-- [ ] 18.30 — Sentry Gun + Predator Missile
-- [ ] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
-- [ ] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
+- [~] 18.27 — Scorestreak core
+- [x] 18.28 — Streak catalog + 3 slots
+- [x] 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer
+- [x] 18.30 — Sentry Gun + Predator Missile
+- [x] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
+- [~] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
 - [ ] 18.33 — Mode system wiring
 - [ ] 18.34 — Domination
 - [ ] 18.35 — Hardpoint

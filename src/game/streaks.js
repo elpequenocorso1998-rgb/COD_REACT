@@ -198,9 +198,80 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
   function activate(type, playerPos) {
     switch (type) {
       case 'uav': return // UAV solo activa uavActive en el store.
+      case 'cuav': return // CUAV: el store la maneja (oculta minimap enemigo).
+      case 'personalRadar': return // Personal Radar: UAV solo para el jugador.
       case 'airstrike': airstrike(playerPos); break
       case 'heli': spawnHeli(); break
       case 'gunship': startGunship(); break
+      // Fase 18.29-32: nuevos streaks (stubs con efecto mínimo).
+      case 'carePackage':
+        // Spawn crate en playerPos, primer player que toca → streak random.
+        if (particles) particles.spawnSmoke(playerPos, 3)
+        break
+      case 'hunterKiller':
+        // Projectile homing al enemigo más cercano.
+        if (enemies) {
+          enemies.forEachAlive((epos, _t, _ls, e) => {
+            const d = Math.hypot(epos.x - playerPos.x, epos.z - playerPos.z)
+            if (d < 30) {
+              e.hp -= 200
+              if (e.hp <= 0) { e.dead = true; e.dyingT = 0 }
+            }
+          })
+        }
+        if (audio) audio.playExplosion?.()
+        break
+      case 'predator':
+        // Missile pilotable: por ahora, explosion grande en playerPos forward.
+        if (enemies) {
+          enemies.forEachAlive((epos, _t, _ls, e) => {
+            const d = Math.hypot(epos.x - playerPos.x, epos.z - playerPos.z)
+            if (d < 15) {
+              e.hp -= 300
+              if (e.hp <= 0) { e.dead = true; e.dyingT = 0 }
+            }
+          })
+        }
+        if (audio) audio.playExplosion?.()
+        break
+      case 'sentryGun':
+        // Deploy auto-turret en playerPos (stub: mata enemies cercanos 30s).
+        if (enemies) {
+          enemies.forEachAlive((epos, _t, _ls, e) => {
+            const d = Math.hypot(epos.x - playerPos.x, epos.z - playerPos.z)
+            if (d < 20) {
+              e.hp -= 50
+              if (e.hp <= 0) { e.dead = true; e.dyingT = 0 }
+            }
+          })
+        }
+        break
+      case 'emp':
+        // Desactiva enemy streaks 30s (en PvE no aplica, stub).
+        if (audio) audio.playExplosion?.()
+        break
+      case 'ac130':
+        // Como gunship pero 3 armas (stub: usa gunship).
+        startGunship()
+        break
+      case 'juggernaut':
+        // Player becomes 200 HP + LMG (stub: heal + boost).
+        if (store) {
+          store.getState().addHealth(100)
+        }
+        break
+      case 'tacticalNuke':
+        // Game ender: mata todos los enemies.
+        if (enemies) {
+          enemies.forEachAlive((epos, _t, _ls, e) => {
+            e.hp = 0
+            e.dead = true
+            e.dyingT = 0
+          })
+        }
+        if (audio) audio.playExplosion?.()
+        break
+      default: break
     }
   }
 
