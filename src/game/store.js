@@ -30,7 +30,8 @@ export const GAME_STATES = {
   PAUSED: 'paused',
   GAMEOVER: 'gameover',
   LOBBY: 'lobby',     // Fase 2: lobby multijugador
-  MATCH_OVER: 'match_over' // Fase 2: fin de partida MP
+  MATCH_OVER: 'match_over', // Fase 2: fin de partida MP
+  SPECTATING: 'spectating'  // Fase 18.5: spectate en MP death
 }
 
 // Contador monótono para IDs de hitmarkers/killmarkers/damageDirections.
@@ -128,6 +129,11 @@ export const useGameStore = create((set, get) => {
     fieldUpgradeCharge: 0,          // 0..100, gana 25 por kill, 10 por hit
     fieldUpgradeCooldown: 0,        // segundos restantes de cooldown
     activeFieldUpgrade: null,       // id del field upgrade del loadout actual
+
+    // --- Spectator (Fase 18.5) ---
+    spectateTargetId: null,         // clientId del jugador seguido
+    spectateMode: 'follow_third',   // 'free' | 'follow_first' | 'follow_third'
+    respawnAt: 0,                   // timestamp en el que el jugador respawnea
 
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
@@ -313,6 +319,28 @@ export const useGameStore = create((set, get) => {
     consumeFieldUpgradeCharge: () => set({ fieldUpgradeCharge: 0 }),
     setFieldUpgradeCooldown: (seconds) => set({ fieldUpgradeCooldown: Math.max(0, seconds) }),
 
+    // Fase 18.5: spectate mode en MP death.
+    startSpectating: (targetId = null) => set({
+      gameState: GAME_STATES.SPECTATING,
+      spectateTargetId: targetId,
+      spectateMode: 'follow_third',
+      respawnAt: (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 3000
+    }),
+    setSpectateTarget: (targetId) => set({ spectateTargetId: targetId }),
+    cycleSpectateTarget: (remotePlayers, currentClientId) => {
+      const allies = remotePlayers.filter((p) => p.id !== currentClientId && p.health > 0)
+      if (allies.length === 0) return
+      const cur = get().spectateTargetId
+      const idx = allies.findIndex((p) => p.id === cur)
+      const next = allies[(idx + 1) % allies.length]
+      set({ spectateTargetId: next.id })
+    },
+    cycleSpectateMode: () => set((s) => {
+      const modes = ['follow_first', 'follow_third', 'free']
+      const idx = modes.indexOf(s.spectateMode)
+      return { spectateMode: modes[(idx + 1) % modes.length] }
+    }),
+
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {
       const until = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + durationMs
@@ -460,35 +488,50 @@ export const useGameStore = create((set, get) => {
 
       if (fromDirection !== null) {
         const id = nextId()
+        const isMp = get().mpConnected
+        const deathState = newHealth <= 0
+          ? (isMp ? GAME_STATES.SPECTATING : GAME_STATES.GAMEOVER)
+          : get().gameState
         set((s) => ({
           health: newHealth,
           damageFlash: true,
           lastDamageAt: now,
           damageDirections: [...s.damageDirections, { id, angle: fromDirection }],
           // Muerte limpia: firing/reloading a false, killStreak reseteado.
-          gameState: newHealth <= 0 ? GAME_STATES.GAMEOVER : s.gameState,
+          // Fase 18.5: en MP va a SPECTATING (respawn tras 3s); en PvE a GAMEOVER.
+          gameState: newHealth <= 0 ? deathState : s.gameState,
           firing: newHealth <= 0 ? false : s.firing,
           reloading: newHealth <= 0 ? false : s.reloading,
           deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
           killStreak: newHealth <= 0 ? 0 : s.killStreak,
           multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
-          multikillLabel: newHealth <= 0 ? null : s.multikillLabel
+          multikillLabel: newHealth <= 0 ? null : s.multikillLabel,
+          respawnAt: newHealth <= 0 && isMp
+            ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 3000
+            : s.respawnAt
         }))
         trackTimeout(() => {
           set((s) => ({ damageDirections: s.damageDirections.filter((d) => d.id !== id) }))
         }, 1200)
       } else {
+        const isMp2 = get().mpConnected
+        const deathState2 = newHealth <= 0
+          ? (isMp2 ? GAME_STATES.SPECTATING : GAME_STATES.GAMEOVER)
+          : get().gameState
         set((s) => ({
           health: newHealth,
           damageFlash: true,
           lastDamageAt: now,
-          gameState: newHealth <= 0 ? GAME_STATES.GAMEOVER : s.gameState,
+          gameState: newHealth <= 0 ? deathState2 : s.gameState,
           firing: newHealth <= 0 ? false : s.firing,
           reloading: newHealth <= 0 ? false : s.reloading,
           deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
           killStreak: newHealth <= 0 ? 0 : s.killStreak,
           multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
-          multikillLabel: newHealth <= 0 ? null : s.multikillLabel
+          multikillLabel: newHealth <= 0 ? null : s.multikillLabel,
+          respawnAt: newHealth <= 0 && isMp2
+            ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 3000
+            : s.respawnAt
         }))
       }
       if (newHealth <= 0) {

@@ -190,7 +190,32 @@ export default function App() {
       {gameState === GAME_STATES.GAMEOVER && (
         <GameOverMenu onRestart={() => engineRef.current?.startGame()} />
       )}
+      {gameState === GAME_STATES.SPECTATING && (
+        <SpectateOverlay />
+      )}
     </ErrorBoundary>
+  )
+}
+
+/* =========================================================================
+   Fase 18.5: Spectate overlay (MP death, respawn tras 3s).
+   ========================================================================= */
+function SpectateOverlay() {
+  const { spectateTargetId, respawnAt } = useGameStore(useShallow((s) => ({
+    spectateTargetId: s.spectateTargetId,
+    respawnAt: s.respawnAt
+  })))
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  const remaining = Math.max(0, Math.ceil((respawnAt - now) / 1000))
+  return (
+    <div className="spectate-overlay">
+      <div className="spectate-info">
+        <div className="spectate-label">SPECTATING</div>
+        {spectateTargetId && <div className="spectate-target">Player #{spectateTargetId}</div>}
+        <div className="spectate-controls">[Q]/[E] cycle · [R] view mode</div>
+        <div className="spectate-respawn">Respawn in {remaining}s</div>
+      </div>
+    </div>
   )
 }
 

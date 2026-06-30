@@ -1001,6 +1001,53 @@ body.colorblind-tritanopia .game-canvas { filter: url(#cb-tritanopia); }
   50% { opacity: 0.4; }
 }
 
+/* Fase 18.5: Spectate overlay */
+.spectate-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 50;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%);
+}
+.spectate-info {
+  text-align: center;
+  color: #cdd6e0;
+}
+.spectate-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: #ffd24d;
+  text-shadow: 0 2px 4px #000;
+  margin-bottom: 8px;
+}
+.spectate-target {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 18px;
+  color: #6aa0ff;
+  margin-bottom: 16px;
+}
+.spectate-controls {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  color: #6f7a87;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+.spectate-respawn {
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 210, 77, 0.3);
+}
+
 /* =========================================================================
    Fase 2 — Multijugador
    ========================================================================= */

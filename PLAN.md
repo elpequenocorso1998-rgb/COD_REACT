@@ -1139,7 +1139,7 @@ suppressingDrone) — ningún sistema los consume.
 
 **Verify**: equip trophy, matar 4 bots, activar, ver entity. Lint+test+build.
 
-### Sub-fase 18.5 — Spectator mode on MP death `[ ]`
+### Sub-fase 18.5 — Spectator mode on MP death `[x]`
 
 **Problema**: `competitive/spectator.js` (298 líneas) completo pero sin
 cablear. En MP death → GameOver, no spectate.
@@ -1723,7 +1723,7 @@ no la del killer.
 - [x] 18.2 — Accessibility manager + keybind UI
 - [x] 18.3 — 10 slots de loadout
 - [x] 18.4 — Field upgrades activation system
-- [ ] 18.5 — Spectator mode on MP death
+- [x] 18.5 — Spectator mode on MP death
 - [ ] 18.6 — 4 mapas existentes activos
 - [ ] 18.7 — Profiler toggle
 - [ ] 18.8 — Wire netcode.js en server.js

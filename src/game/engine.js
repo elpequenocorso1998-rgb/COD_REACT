@@ -20,6 +20,7 @@ import { createPickupSystem } from './pickups.js'
 import { createFieldUpgradeSystem } from './field-upgrades.js'
 import { NavMesh } from './navmesh.js'
 import { createRemotePlayerManager } from './remote-players.js'
+import { createSpectator } from './competitive/spectator.js'
 import { useGameStore, GAME_STATES } from './store.js'
 import {
   FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE,
@@ -64,6 +65,7 @@ export function createEngine() {
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals, pickups
   let fieldUpgrades = null
   let fieldUpgradeCooldownTimer = null
+  let spectator = null
   let navmesh = null
   let envMap = null
   let remotePlayers = null
@@ -240,6 +242,8 @@ export function createEngine() {
     pickups = createPickupSystem(scene, store, particles, audio)
     // Fase 18.4: field upgrades system.
     fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
+    // Fase 18.5: spectator mode (para MP death).
+    spectator = createSpectator(camera, scene)
     // Fase 18.2: accessibility manager (keybinds, colorblind, subtitles).
     accessibility = createAccessibilityManager()
     accessibility.applyColorblindMatrix(accessibility.getColorblind())
@@ -493,6 +497,11 @@ export function createEngine() {
         audio.setMuted(true)
         player.exitPointerLock()
       }
+      // Fase 18.5: en SPECTATING liberamos pointer para que el jugador pueda
+      // ciclar targets con Q/E, pero seguimos renderizando el mundo.
+      if (state === GAME_STATES.SPECTATING) {
+        player.exitPointerLock()
+      }
       prevState = state
     }
 
@@ -674,6 +683,48 @@ export function createEngine() {
       killcamActive = false
     }
 
+    // Fase 18.5: Spectator mode en MP death. La cámara sigue al target.
+    // Tras respawnAt (3s), respawnea automáticamente (TDM).
+    if (state === GAME_STATES.SPECTATING && spectator) {
+      const st = store.getState()
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      // Respawn automático tras 3s.
+      if (now >= st.respawnAt) {
+        // En MP, el server autoriza el respawn; aquí solo volvemos a PLAYING
+        // con salud llena (placeholder hasta que el server confirme).
+        const maxHp = 100
+        st.setState(GAME_STATES.PLAYING)
+        useGameStore.setState({
+          health: maxHp,
+          maxHealth: maxHp,
+          damageFlash: false,
+          damageDirections: [],
+          firing: false,
+          reloading: false
+        })
+      } else if (remotePlayers && st.spectateTargetId) {
+        // Cámara sigue al target remoto.
+        const target = remotePlayers.getPlayer(st.spectateTargetId)
+        if (target && target.getPosition) {
+          const pos = target.getPosition()
+          const yaw = target.getYaw ? target.getYaw() : 0
+          // 3rd person: cámara detrás y arriba del target.
+          const offset = st.spectateMode === 'follow_first'
+            ? { x: 0, y: 1.7, z: 0 }
+            : { x: -Math.sin(yaw) * 5, y: 3, z: -Math.cos(yaw) * 5 }
+          camera.position.set(
+            pos.x + offset.x,
+            (pos.y || 0) + offset.y,
+            pos.z + offset.z
+          )
+          camera.rotation.order = 'YXZ'
+          camera.rotation.y = yaw
+          camera.rotation.x = st.spectateMode === 'follow_first' ? 0 : -0.3
+          camera.rotation.z = 0
+        }
+      }
+    }
+
     // Render: en PAUSA no renderizamos (ahorra GPU, la imagen queda congelada).
     if (state !== GAME_STATES.PAUSED) {
       composer.render(dt)
@@ -756,6 +807,17 @@ export function createEngine() {
         }
       }
     }
+    // --- Fase 18.5: Spectator controls (Q/E cycle, R toggle mode) ---
+    if (st.gameState === GAME_STATES.SPECTATING) {
+      if (e.code === 'KeyQ') {
+        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId)
+      } else if (e.code === 'KeyE') {
+        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId)
+      } else if (e.code === 'KeyR') {
+        st.cycleSpectateMode()
+      }
+    }
+
     // --- Scoreboard: Tab hold ---
     if (e.code === 'Tab') {
       e.preventDefault()
@@ -966,6 +1028,7 @@ export function createEngine() {
     if (pickups) pickups.dispose()
     if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
     if (fieldUpgradeCooldownTimer) { clearTimeout(fieldUpgradeCooldownTimer); fieldUpgradeCooldownTimer = null }
+    if (spectator) { spectator.dispose(); spectator = null }
     if (accessibility) { accessibility.dispose(); accessibility = null }
     if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()
