@@ -70,6 +70,7 @@ export function createEngine() {
   let spectator = null
   let profiler = null
   let profilerOverlay = null
+  let gameStartedAt = 0 // Fase 19.4: timestamp del último startGame
   let navmesh = null
   let envMap = null
   let remotePlayers = null
@@ -342,9 +343,11 @@ export function createEngine() {
 
   function onPointerLockChangeFn() {
     const st = store.getState()
-    // Si el usuario sale del pointer lock por cualquier medio que no sea
-    // Esc (alt-tab, click en devtools, etc.) durante PLAYING, pausamos.
-    if (st.gameState === GAME_STATES.PLAYING && document.pointerLockElement == null) {
+    const locked = document.pointerLockElement != null
+    st.setPointerLocked(locked)
+    // Fase 19.4: grace period de 1s tras startGame para evitar auto-pause.
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    if (!locked && st.gameState === GAME_STATES.PLAYING && (now - gameStartedAt) > 1000) {
       st.setState(GAME_STATES.PAUSED)
       if (audio) audio.setMuted(true)
     }
@@ -834,6 +837,7 @@ export function createEngine() {
     player.reset()
     player.setWeapon(store.getState().getCurrentWeapon())
     spawnWave(1)
+    gameStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now())
     player.requestPointerLock()
   }
 

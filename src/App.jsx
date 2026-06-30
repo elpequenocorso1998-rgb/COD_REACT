@@ -187,6 +187,7 @@ export default function App() {
         />
       )}
       {gameState === GAME_STATES.PLAYING && <HUD />}
+      {gameState === GAME_STATES.PLAYING && <ClickToPlayOverlay />}
       {gameState === GAME_STATES.PAUSED && (
         <PauseMenu
           onResume={() => engineRef.current?.resumeGame()}
@@ -200,6 +201,25 @@ export default function App() {
         <SpectateOverlay />
       )}
     </ErrorBoundary>
+  )
+}
+
+/* =========================================================================
+   Fase 19.4: Click to play overlay — aparece cuando el pointer no está locked.
+   ========================================================================= */
+function ClickToPlayOverlay() {
+  const pointerLocked = useGameStore((s) => s.pointerLocked)
+  if (pointerLocked) return null
+  const handleClick = () => {
+    const canvas = document.querySelector('.game-canvas')
+    if (canvas && canvas.requestPointerLock) {
+      canvas.requestPointerLock()
+    }
+  }
+  return (
+    <div className="click-to-play" onClick={handleClick}>
+      <div className="click-to-play-text">Click to play</div>
+    </div>
   )
 }
 

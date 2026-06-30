@@ -144,6 +144,9 @@ export const useGameStore = create((set, get) => {
     // --- Cook grenade progress (Fase 19.3) ---
     cookProgress: 0,                // 0..1, progreso del cook (1 = explota)
 
+    // --- Pointer lock state (Fase 19.4) ---
+    pointerLocked: false,          // true si el pointer está locked al canvas
+
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
 
@@ -365,6 +368,9 @@ export const useGameStore = create((set, get) => {
 
     // Fase 19.3: cook grenade progress (0..1).
     setCookProgress: (progress) => set({ cookProgress: progress }),
+
+    // Fase 19.4: pointer lock state.
+    setPointerLocked: (locked) => set({ pointerLocked: locked }),
 
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {

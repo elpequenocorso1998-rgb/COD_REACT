@@ -1720,7 +1720,7 @@ en spectator hacen lo mismo.
 con direction. HUD cook progress ring.
 **Verify**: cook grenade, morir, respawn, cook funciona.
 
-### Sub-fase 19.4 — Click to play overlay + pointer lock UX `[ ]`
+### Sub-fase 19.4 — Click to play overlay + pointer lock UX `[x]`
 **Problema**: `requestPointerLock` desde React onClick falla silenciosamente.
 Auto-pause inmediato.
 **Tareas**: overlay "Click to play" sobre canvas. Grace period 1s tras
@@ -1795,7 +1795,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.1 — Wire keybinds al input handler
 - [x] 19.2 — Fix map loading
 - [x] 19.3 — Fix cook grenade leaks + spectator Q/E
-- [ ] 19.4 — Click to play overlay + pointer lock
+- [x] 19.4 — Click to play overlay + pointer lock
 - [ ] 19.5 — Controles completos en el menú
 - [ ] 19.6 — Normal + roughness maps en 6 texturas
 - [ ] 19.7 — Cortar agujeros de ventanas

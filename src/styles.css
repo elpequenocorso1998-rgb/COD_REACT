@@ -298,6 +298,27 @@ canvas { display: block; }
   pointer-events: none;
 }
 
+/* Fase 19.4: Click to play overlay */
+.click-to-play {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.click-to-play-text {
+  font-family: 'Oswald', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #ffd24d;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  animation: pulse 1.5s infinite;
+}
+
 /* Fase 18.4: Field upgrade indicator */
 .field-upgrade-indicator {
   margin-top: 8px;
