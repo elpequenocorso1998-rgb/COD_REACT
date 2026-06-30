@@ -316,23 +316,23 @@ export function createWorld(scene, mapId = 'pamplona') {
   lampLights = []
   lampPositions.forEach(([x, z]) => {
     const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.12, 5, 8), poleMat
+      new THREE.CylinderGeometry(0.08, 0.12, 5, 16), poleMat
     )
     pole.position.set(x, 2.5, z); pole.castShadow = true; scene.add(pole)
     const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.2, 0.25, 0.3, 8), poleMat
+      new THREE.CylinderGeometry(0.2, 0.25, 0.3, 16), poleMat
     )
     base.position.set(x, 0.15, z); scene.add(base)
     // Brazo: dirección según lado de la plaza para que apunte al centro.
     const sign = x < 0 ? 1 : -1
     const arm = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 0.6, 6), poleMat
+      new THREE.CylinderGeometry(0.04, 0.04, 0.6, 12), poleMat
     )
     arm.position.set(x + sign * 0.3, 4.8, z)
     arm.rotation.z = sign * Math.PI / 4
     scene.add(arm)
     const cage = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.18, 0.4, 8), poleMat
+      new THREE.CylinderGeometry(0.15, 0.18, 0.4, 16), poleMat
     )
     cage.position.set(x + sign * 0.5, 4.6, z); scene.add(cage)
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), lampMat)
@@ -354,7 +354,7 @@ export function createWorld(scene, mapId = 'pamplona') {
   const leavesMat = new THREE.MeshStandardMaterial({
     color: 0x2a4a2a, roughness: 0.8, metalness: 0.05
   })
-  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 8)
+  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 16)
   const leafGeo = new THREE.SphereGeometry(1, 10, 10) // unidad, escala por-instancia
   const TREE_COUNT = 18
   const LEAVES_PER_TREE = 4

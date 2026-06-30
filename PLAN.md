@@ -1744,7 +1744,7 @@ makeSkinTexture.
 **Tareas**: usar Shape + ExtrudeGeometry con holes. Eliminar cajas-ventana.
 **Verify**: ver a través de las ventanas.
 
-### Sub-fase 19.8 — Más segmentos en cilindros/esferas `[ ]`
+### Sub-fase 19.8 — Más segmentos en cilindros/esferas `[x]`
 **Problema**: Cilindros 8-12 lados, esferas 16 segmentos → facetado.
 **Tareas**: cilindros 12→32, esfera cabeza 16→32, cápsulas brazos 4→8.
 **Verify**: cañones lisos, cabeza redonda.
@@ -1799,7 +1799,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.5 — Controles completos en el menú
 - [x] 19.6 — Normal + roughness maps en 6 texturas
 - [ ] 19.7 — Cortar agujeros de ventanas
-- [ ] 19.8 — Más segmentos en cilindros/esferas
+- [x] 19.8 — Más segmentos en cilindros/esferas
 - [ ] 19.9 — Sky shader real (Preetham)
 - [ ] 19.10 — Rebuild 4 mapas extra detallados
 - [ ] 19.11 — Partículas ambientales

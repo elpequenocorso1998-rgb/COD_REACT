@@ -64,23 +64,23 @@ function initShared() {
   _matBrow = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: 0.9 })
   _matMouth = new THREE.MeshStandardMaterial({ color: 0x4a1a1a })
 
-  _geoHead = new THREE.SphereGeometry(0.14, 16, 16)
+  _geoHead = new THREE.SphereGeometry(0.14, 32, 32)
   _geoNeck = new THREE.CylinderGeometry(0.06, 0.07, 0.1, 8)
-  _geoTorso = new THREE.CapsuleGeometry(0.18, 0.32, 6, 12)
-  _geoHip = new THREE.CapsuleGeometry(0.16, 0.08, 6, 10)
-  _geoUpperArm = new THREE.CapsuleGeometry(0.05, 0.24, 4, 8)
-  _geoLowerArm = new THREE.CapsuleGeometry(0.045, 0.22, 4, 8)
+  _geoTorso = new THREE.CapsuleGeometry(0.18, 0.32, 8, 16)
+  _geoHip = new THREE.CapsuleGeometry(0.16, 0.08, 8, 16)
+  _geoUpperArm = new THREE.CapsuleGeometry(0.05, 0.24, 8, 16)
+  _geoLowerArm = new THREE.CapsuleGeometry(0.045, 0.22, 8, 16)
   _geoHand = new THREE.SphereGeometry(0.055, 8, 8)
-  _geoThigh = new THREE.CapsuleGeometry(0.08, 0.3, 4, 8)
-  _geoShin = new THREE.CapsuleGeometry(0.07, 0.28, 4, 8)
+  _geoThigh = new THREE.CapsuleGeometry(0.08, 0.3, 8, 16)
+  _geoShin = new THREE.CapsuleGeometry(0.07, 0.28, 8, 16)
   _geoFoot = new THREE.BoxGeometry(0.1, 0.06, 0.22)
-  _geoHair = new THREE.SphereGeometry(0.15, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6)
+  _geoHair = new THREE.SphereGeometry(0.15, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6)
   _geoNose = new THREE.ConeGeometry(0.025, 0.06, 6)
   _geoMouth = new THREE.BoxGeometry(0.06, 0.01, 0.01)
   // Chaleco: torso más ancho.
-  _geoVest = new THREE.CapsuleGeometry(0.2, 0.28, 6, 12)
+  _geoVest = new THREE.CapsuleGeometry(0.2, 0.28, 8, 16)
   // Casco: media esfera más grande que la cabeza.
-  _geoHelmet = new THREE.SphereGeometry(0.16, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.7)
+  _geoHelmet = new THREE.SphereGeometry(0.16, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.7)
   // Pantorrilla con botas.
   _geoCalf = new THREE.CylinderGeometry(0.075, 0.06, 0.15, 8)
   // Orejas (antes se creaba una geometría por enemigo: leak acumulativo).

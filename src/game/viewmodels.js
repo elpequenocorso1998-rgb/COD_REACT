@@ -93,10 +93,10 @@ function buildM4() {
   const body = new THREE.Mesh(track(new THREE.BoxGeometry(0.1, 0.13, 0.7)), metalMat)
   body.position.set(0, 0, -0.45); rifleGroup.add(body)
 
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.025, 0.5, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.025, 0.5, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -0.85); rifleGroup.add(barrel)
 
-  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 12)), darkMetalMat)
+  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 32)), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2; muzzleTip.position.set(0, 0.02, -1.12); rifleGroup.add(muzzleTip)
 
   const mag = new THREE.Mesh(track(new THREE.BoxGeometry(0.08, 0.22, 0.12)), polymerMat)
@@ -110,7 +110,7 @@ function buildM4() {
 
   const stock = new THREE.Mesh(track(new THREE.BoxGeometry(0.08, 0.11, 0.28)), polymerMat)
   stock.position.set(0, 0, -0.05); rifleGroup.add(stock)
-  const stockTube = new THREE.Mesh(track(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 8)), darkMetalMat)
+  const stockTube = new THREE.Mesh(track(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 16)), darkMetalMat)
   stockTube.rotation.x = Math.PI / 2; stockTube.position.set(0, 0.02, 0.12); rifleGroup.add(stockTube)
 
   const rail = new THREE.Mesh(track(new THREE.BoxGeometry(0.04, 0.02, 0.5)), darkMetalMat)
@@ -168,10 +168,10 @@ function buildAK47() {
   body.position.set(0, 0, -0.4); rifleGroup.add(body)
 
   // Cañón inclinado ligeramente hacia abajo (rasgo del AK).
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.024, 0.45, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.024, 0.45, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2 - 0.04; barrel.position.set(0, -0.01, -0.8); rifleGroup.add(barrel)
 
-  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.03, 0.07, 12)), darkMetalMat)
+  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.03, 0.07, 32)), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2 - 0.04; muzzleTip.position.set(0, -0.015, -1.05); rifleGroup.add(muzzleTip)
 
   // Cargador curvo característico (banana mag): dos cajas rotadas.
@@ -244,7 +244,7 @@ function buildMP5() {
   body.position.set(0, 0, -0.3); rifleGroup.add(body)
 
   // Cañón corto + silenciador característico.
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.02, 0.022, 0.25, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.02, 0.022, 0.25, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -0.55); rifleGroup.add(barrel)
   const suppressor = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 16)), darkMetalMat)
   suppressor.rotation.x = Math.PI / 2; suppressor.position.set(0, 0.02, -0.7); rifleGroup.add(suppressor)
@@ -260,9 +260,9 @@ function buildMP5() {
   trigger.position.set(0, -0.03, -0.16); trigger.rotation.x = Math.PI / 2; rifleGroup.add(trigger)
 
   // Stock retráctil (dos varillas).
-  const stockRod1 = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 6)), darkMetalMat)
+  const stockRod1 = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 12)), darkMetalMat)
   stockRod1.rotation.x = Math.PI / 2; stockRod1.position.set(-0.03, 0.02, 0.1); rifleGroup.add(stockRod1)
-  const stockRod2 = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 6)), darkMetalMat)
+  const stockRod2 = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 12)), darkMetalMat)
   stockRod2.rotation.x = Math.PI / 2; stockRod2.position.set(0.03, 0.02, 0.1); rifleGroup.add(stockRod2)
   const stockButt = new THREE.Mesh(track(new THREE.BoxGeometry(0.08, 0.06, 0.02)), polymerMat)
   stockButt.position.set(0, 0.02, 0.22); rifleGroup.add(stockButt)
@@ -324,10 +324,10 @@ function buildSniper() {
   body.position.set(0, 0, -0.55); rifleGroup.add(body)
 
   // Cañón muy largo.
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.025, 0.7, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.025, 0.7, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -1.1); rifleGroup.add(barrel)
 
-  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.1, 12)), darkMetalMat)
+  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.1, 32)), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2; muzzleTip.position.set(0, 0.02, -1.5); rifleGroup.add(muzzleTip)
 
   // Cargador interno corto (box mag pequeño).
@@ -357,9 +357,9 @@ function buildSniper() {
   scopeRear.rotation.x = Math.PI / 2; scopeRear.position.set(0, 0.13, -0.32); rifleGroup.add(scopeRear)
 
   // Bipod (plegado).
-  const bipodL = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6)), darkMetalMat)
+  const bipodL = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 12)), darkMetalMat)
   bipodL.position.set(-0.04, -0.08, -0.95); bipodL.rotation.z = 0.4; rifleGroup.add(bipodL)
-  const bipodR = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6)), darkMetalMat)
+  const bipodR = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 12)), darkMetalMat)
   bipodR.position.set(0.04, -0.08, -0.95); bipodR.rotation.z = -0.4; rifleGroup.add(bipodR)
 
   const sightDot = scopeLens
@@ -410,10 +410,10 @@ function buildShotgun() {
   // Cañón grueso + tubo de munición debajo.
   const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.032, 0.55, 16)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.04, -0.75); rifleGroup.add(barrel)
-  const magTube = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.022, 0.5, 12)), darkMetalMat)
+  const magTube = new THREE.Mesh(track(new THREE.CylinderGeometry(0.022, 0.022, 0.5, 32)), darkMetalMat)
   magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.04, -0.75); rifleGroup.add(magTube)
 
-  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 12)), darkMetalMat)
+  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 32)), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2; muzzleTip.position.set(0, 0.04, -1.05); rifleGroup.add(muzzleTip)
 
   // Pump (corredera) bajo el cañón.
@@ -478,12 +478,12 @@ function buildLMG() {
   body.position.set(0, 0, -0.45); rifleGroup.add(body)
 
   // Cañón grueso con heat shield.
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.025, 0.028, 0.6, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.025, 0.028, 0.6, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -0.95); rifleGroup.add(barrel)
   const heatShield = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 12, 1, true)), darkMetalMat)
   heatShield.rotation.x = Math.PI / 2; heatShield.position.set(0, 0.02, -0.9); rifleGroup.add(heatShield)
 
-  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 12)), darkMetalMat)
+  const muzzleTip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 32)), darkMetalMat)
   muzzleTip.rotation.x = Math.PI / 2; muzzleTip.position.set(0, 0.02, -1.3); rifleGroup.add(muzzleTip)
 
   // Caja de munición (belt box) debajo, grande.
@@ -505,9 +505,9 @@ function buildLMG() {
   handle.position.set(0, 0.09, -0.4); handle.rotation.x = -Math.PI / 2; rifleGroup.add(handle)
 
   // Bípode desplegado al frente.
-  const bipodL = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6)), darkMetalMat)
+  const bipodL = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 12)), darkMetalMat)
   bipodL.position.set(-0.06, -0.12, -1.1); bipodL.rotation.z = 0.5; rifleGroup.add(bipodL)
-  const bipodR = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 6)), darkMetalMat)
+  const bipodR = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 12)), darkMetalMat)
   bipodR.position.set(0.06, -0.12, -1.1); bipodR.rotation.z = -0.5; rifleGroup.add(bipodR)
 
   // Mira: carrying handle actúa como sight reference.
@@ -560,7 +560,7 @@ function buildPistol() {
   frame.position.set(0, -0.01, -0.2); rifleGroup.add(frame)
 
   // Cañón corto asomando del slide.
-  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.018, 0.02, 0.06, 12)), darkMetalMat)
+  const barrel = new THREE.Mesh(track(new THREE.CylinderGeometry(0.018, 0.02, 0.06, 32)), darkMetalMat)
   barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.04, -0.38); rifleGroup.add(barrel)
 
   // Grip (empuñadura) inclinado.
