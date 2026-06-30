@@ -1725,15 +1725,15 @@ no la del killer.
 - [x] 18.4 — Field upgrades activation system
 - [x] 18.5 — Spectator mode on MP death
 - [x] 18.6 — 4 mapas existentes activos
-- [ ] 18.7 — Profiler toggle
+- [x] 18.7 — Profiler toggle
 - [ ] 18.8 — Wire netcode.js en server.js
-- [ ] 18.9 — Bipod requiresCrouch fix
+- [x] 18.9 — Bipod requiresCrouch fix
 - [ ] 18.10 — Recoil patterns por arma
 - [ ] 18.11 — Damage dropoff por rango
 - [ ] 18.12 — Aim punch al recibir daño
 - [ ] 18.13 — Suppression effect en jugador
 - [ ] 18.14 — Cook grenades
-- [ ] 18.15 — Headshot multiplier por arma
+- [x] 18.15 — Headshot multiplier por arma (revisar duplicación)
 - [ ] 18.16 — Enforce 4 perks fiction
 - [ ] 18.17 — LoS check para flashbang
 - [ ] 18.18 — 11 granadas faltantes
