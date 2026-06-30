@@ -1153,7 +1153,7 @@ cablear. En MP death → GameOver, no spectate.
 
 **Verify**: morir en MP, espectar a teammates, respawn.
 
-### Sub-fase 18.6 — 4 mapas existentes activos `[ ]`
+### Sub-fase 18.6 — 4 mapas existentes activos `[x]`
 
 **Problema**: `maps/desert.js, urban.js, snow.js, industrial.js` existen pero
 `world.js:116` solo construye Pamplona.
@@ -1724,7 +1724,7 @@ no la del killer.
 - [x] 18.3 — 10 slots de loadout
 - [x] 18.4 — Field upgrades activation system
 - [x] 18.5 — Spectator mode on MP death
-- [ ] 18.6 — 4 mapas existentes activos
+- [x] 18.6 — 4 mapas existentes activos
 - [ ] 18.7 — Profiler toggle
 - [ ] 18.8 — Wire netcode.js en server.js
 - [ ] 18.9 — Bipod requiresCrouch fix

@@ -777,6 +777,35 @@ body.colorblind-tritanopia .game-canvas { filter: url(#cb-tritanopia); }
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 6px;
 }
+
+/* Fase 18.6: Map selector */
+.map-selector {
+  margin: 16px 0;
+  max-width: 700px;
+}
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.map-grid .loadout-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+}
+.map-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.map-biome {
+  font-size: 10px;
+  color: #6f7a87;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
 .loadout-item {
   background: linear-gradient(180deg, #1a2433, #0e1620);
   color: #cdd6e0;

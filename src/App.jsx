@@ -9,6 +9,7 @@ import { t, setLang, getLang } from './i18n.js'
 import { createNetClient } from './net/client.js'
 import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
 import { DEFAULT_KEYBINDINGS } from './game/accessibility/index.js'
+import { MAPS, MAP_IDS } from './game/maps/index.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -123,7 +124,7 @@ export default function App() {
           botón "Jugar" podía clickarse antes de que el engine montara. */}
       {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && !mpOpen && !barracksOpen && (
         <MainMenu
-          onStart={() => engineRef.current?.startGame()}
+          onStart={(mapId) => engineRef.current?.startGame(mapId)}
           onOpenLoadout={() => setLoadoutOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenMultiplayer={() => setMpOpen(true)}
@@ -531,15 +532,39 @@ function Scoreboard({ kills, deaths, score, wave, mpConnected, mpRemotePlayers, 
    Menús: principal, pausa y game over.
    ========================================================================= */
 function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, onOpenBarracks }) {
+  const [selectedMap, setSelectedMap] = useState(() => {
+    try { return localStorage.getItem('mw_selected_map') || 'pamplona' } catch { return 'pamplona' }
+  })
+  const handleStart = () => {
+    try { localStorage.setItem('mw_selected_map', selectedMap) } catch {}
+    onStart(selectedMap)
+  }
   return (
     <div className="menu">
       <h1>{t('menu.title')}</h1>
       <h2>{t('menu.subtitle')}</h2>
-      <button onClick={onStart}>{t('menu.play')}</button>
+      <button onClick={handleStart}>{t('menu.play')}</button>
       <button onClick={onOpenMultiplayer}>Multiplayer</button>
       <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
       <button onClick={onOpenBarracks}>Barracks</button>
       <button onClick={onOpenSettings}>{t('menu.settings')}</button>
+      {/* Fase 18.6: selector de mapa */}
+      <div className="map-selector">
+        <div className="loadout-section-title">Mapa (PvE)</div>
+        <div className="map-grid">
+          {MAP_IDS.map((id) => (
+            <button
+              key={id}
+              className={`loadout-item ${selectedMap === id ? 'selected' : ''}`}
+              onClick={() => setSelectedMap(id)}
+              title={MAPS[id].desc}
+            >
+              <div className="map-name">{MAPS[id].name}</div>
+              <div className="map-biome">{MAPS[id].biome}</div>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="stats">
         Sobrevive a oleadas infinitas de enemigos.<br />
         Apunta con el ratón, dispara con click izq., recarga con R.
@@ -552,6 +577,7 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, o
         <strong>Granadas:</strong> G frag · X flash · C humo<br />
         <strong>Movimiento moderno:</strong> F mantle · V respirar (sniper)<br />
         <strong>Killstreaks:</strong> 4 UAV · 5 Airstrike · 6 Heli · 7 Gunship<br />
+        <strong>Field Upgrade:</strong> T activar (cargo con kills/hits)<br />
         <strong>UI:</strong> TAB scoreboard · ESC pausa
       </div>
     </div>
@@ -895,9 +921,16 @@ function MultiplayerScreen({ onClose, onConnect }) {
   const [name, setName] = useState(() => {
     try { return localStorage.getItem('mw_player_name') || '' } catch { return '' }
   })
+  // Fase 18.6: selector de mapa.
+  const [selectedMap, setSelectedMap] = useState(() => {
+    try { return localStorage.getItem('mw_selected_map') || 'pamplona' } catch { return 'pamplona' }
+  })
 
   const handleConnect = () => {
-    try { localStorage.setItem('mw_player_name', name) } catch {}
+    try {
+      localStorage.setItem('mw_player_name', name)
+      localStorage.setItem('mw_selected_map', selectedMap)
+    } catch {}
     onConnect(url, name)
   }
 
@@ -926,6 +959,23 @@ function MultiplayerScreen({ onClose, onConnect }) {
           className="mp-url-input"
         />
         <button onClick={handleConnect}>Conectar</button>
+      </div>
+      {/* Fase 18.6: selector de mapa */}
+      <div className="map-selector">
+        <div className="loadout-section-title">Mapa</div>
+        <div className="map-grid">
+          {MAP_IDS.map((id) => (
+            <button
+              key={id}
+              className={`loadout-item ${selectedMap === id ? 'selected' : ''}`}
+              onClick={() => setSelectedMap(id)}
+              title={MAPS[id].desc}
+            >
+              <div className="map-name">{MAPS[id].name}</div>
+              <div className="map-biome">{MAPS[id].biome}</div>
+            </button>
+          ))}
+        </div>
       </div>
       <button onClick={onClose}>{t('menu.back')}</button>
     </div>

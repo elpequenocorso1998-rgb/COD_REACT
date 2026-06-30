@@ -88,6 +88,11 @@ export function createEngine() {
   let container = null
   let prevState = null
   let selectedMapId = 'pamplona'
+  // Fase 18.6: leer mapa seleccionado de localStorage al iniciar.
+  try {
+    const stored = localStorage.getItem('mw_selected_map')
+    if (stored) selectedMapId = stored
+  } catch (e) { /* noop */ }
   // Fase 6: settings del jugador (showFps, etc.) + contador de FPS.
   const _settings = getSettings()
   let _fpsAccum = 0
@@ -871,7 +876,12 @@ export function createEngine() {
   /* ----------------------------------------------------------------------
      API pública.
      ---------------------------------------------------------------------- */
-  function startGame() {
+  function startGame(mapId) {
+    // Fase 18.6: si se especifica un mapa distinto al actual, lo seteamos.
+    // El mundo se reconstruye en mount() al recargar; aquí solo lo persistimos.
+    if (mapId && mapId !== selectedMapId) {
+      setMap(mapId)
+    }
     audio.init()
     audio.setMuted(false)
     audio.startMusic()
@@ -881,6 +891,7 @@ export function createEngine() {
     if (grenades) grenades.reset()
     if (decals) decals.reset()
     if (pickups) pickups.reset()
+    if (fieldUpgrades) fieldUpgrades.reset()
     player.reset()
     // Sincroniza el arma inicial del store con el player.
     player.setWeapon(store.getState().getCurrentWeapon())
