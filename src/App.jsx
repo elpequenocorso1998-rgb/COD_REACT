@@ -235,7 +235,8 @@ function HUD() {
     grenadeCounts, flashbanged,
     fps,
     mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit, mpKillfeed,
-    fieldUpgradeCharge, fieldUpgradeCooldown, activeFieldUpgrade
+    fieldUpgradeCharge, fieldUpgradeCooldown, activeFieldUpgrade,
+    suppression
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -255,7 +256,8 @@ function HUD() {
     mpKillfeed: s.mpKillfeed,
     fieldUpgradeCharge: s.fieldUpgradeCharge,
     fieldUpgradeCooldown: s.fieldUpgradeCooldown,
-    activeFieldUpgrade: s.activeFieldUpgrade
+    activeFieldUpgrade: s.activeFieldUpgrade,
+    suppression: s.suppression
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -441,6 +443,15 @@ function HUD() {
       {/* Fase 4: overlay blanco de flashbang */}
       {flashbanged > 0 && (
         <div className="flashbang-overlay" aria-hidden="true" />
+      )}
+
+      {/* Fase 18.13: suppression vignette (bullets pasando cerca) */}
+      {suppression > 0.1 && (
+        <div
+          className="suppression-overlay"
+          aria-hidden="true"
+          style={{ opacity: Math.min(0.7, suppression) }}
+        />
       )}
 
       {/* --- Scoreboard overlay (Tab hold) --- */}

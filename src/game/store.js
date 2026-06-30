@@ -135,6 +135,9 @@ export const useGameStore = create((set, get) => {
     spectateMode: 'follow_third',   // 'free' | 'follow_first' | 'follow_third'
     respawnAt: 0,                   // timestamp en el que el jugador respawnea
 
+    // --- Suppression (Fase 18.13) ---
+    suppression: 0,                 // 0..1, decae con dt; sube cuando bullets pasan cerca
+
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
 
@@ -340,6 +343,14 @@ export const useGameStore = create((set, get) => {
       const idx = modes.indexOf(s.spectateMode)
       return { spectateMode: modes[(idx + 1) % modes.length] }
     }),
+
+    // Fase 18.13: suppression del jugador (sube cuando bullets pasan cerca).
+    suppress: (amount) => set((s) => ({
+      suppression: Math.min(1, s.suppression + amount)
+    })),
+    decaySuppression: (dt) => set((s) => ({
+      suppression: Math.max(0, s.suppression - dt * 0.5)
+    })),
 
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {
@@ -636,6 +647,8 @@ export const useGameStore = create((set, get) => {
         fieldUpgradeCharge: 0,
         fieldUpgradeCooldown: 0,
         activeFieldUpgrade: loadout.fieldUpgrade || null,
+        // Fase 18.13: suppression reset.
+        suppression: 0,
         scoreboardOpen: false,
         // Progresión se mantiene (es persistente entre partidas).
         playerLevel: prog.level,

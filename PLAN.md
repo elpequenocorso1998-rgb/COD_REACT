@@ -1252,7 +1252,7 @@ camera kick.
 
 **Verify**: recibir daño, cámara se sacude en dirección del atacante.
 
-### Sub-fase 18.13 — Suppression effect en jugador `[ ]`
+### Sub-fase 18.13 — Suppression effect en jugador `[x]`
 
 **Problema**: `engine.js:340-354` suppression solo afecta enemies. No hay
 efecto inverso en el jugador cuando bullets pasan cerca.
@@ -1266,7 +1266,7 @@ efecto inverso en el jugador cuando bullets pasan cerca.
 
 **Verify**: bot dispara cerca, ver vignette + sway aumentado.
 
-### Sub-fase 18.14 — Cook grenades `[ ]`
+### Sub-fase 18.14 — Cook grenades `[x]`
 
 **Problema**: `grenades.js:54-59` fuse empieza al throw. No cook.
 
@@ -1731,8 +1731,8 @@ no la del killer.
 - [x] 18.10 — Recoil patterns por arma
 - [x] 18.11 — Damage dropoff por rango
 - [x] 18.12 — Aim punch al recibir daño
-- [ ] 18.13 — Suppression effect en jugador
-- [ ] 18.14 — Cook grenades
+- [x] 18.13 — Suppression effect en jugador
+- [x] 18.14 — Cook grenades
 - [x] 18.15 — Headshot multiplier por arma (revisar duplicación)
 - [ ] 18.16 — Enforce 4 perks fiction
 - [ ] 18.17 — LoS check para flashbang

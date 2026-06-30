@@ -22,6 +22,7 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
   const enemies = []
   let onKilledCb = null
   let onReachPlayerCb = null
+  let onEnemyShootCb = null
   const aiController = createAIController(navmesh)
   // Vectores reutilizados (sin allocations por frame).
   const _sep = new THREE.Vector3()
@@ -347,6 +348,9 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     // Sonido de disparo enemigo con audio 3D posicional.
     if (audio) audio.playEnemyShoot?.(_shootOrigin, playerPos)
 
+    // Fase 18.13: callback para suppression del jugador.
+    if (onEnemyShootCb) onEnemyShootCb(_shootOrigin, _shootDir)
+
     // Si acierta, aplicamos daño via callback (engine registra takeDamage).
     if (hit && onShootPlayerCb) {
       onShootPlayerCb(e, e.damage)
@@ -557,7 +561,8 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     get allCleared() { return enemies.length === 0 },
     set onKilled(fn) { onKilledCb = fn },
     set onReachPlayer(fn) { onReachPlayerCb = fn },
-    set onShootPlayer(fn) { onShootPlayerCb = fn }
+    set onShootPlayer(fn) { onShootPlayerCb = fn },
+    set onEnemyShoot(fn) { onEnemyShootCb = fn }
   }
 }
 

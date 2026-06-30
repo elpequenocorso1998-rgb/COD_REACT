@@ -272,6 +272,23 @@ canvas { display: block; }
 }
 .grenade-count { white-space: nowrap; }
 
+/* Fase 18.13: Suppression overlay (vignette cuando bullets pasan cerca) */
+.suppression-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    rgba(20, 30, 50, 0.6) 70%,
+    rgba(10, 15, 30, 0.85) 100%
+  );
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  transition: opacity 0.2s;
+}
+
 /* Fase 18.4: Field upgrade indicator */
 .field-upgrade-indicator {
   margin-top: 8px;

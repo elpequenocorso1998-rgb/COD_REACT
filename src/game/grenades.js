@@ -60,7 +60,92 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
     if (audio) audio.playReload?.() // reusamos click metálico como sonido de lanzamiento
   }
 
+  // Fase 18.14: cook grenade — empieza el fuse sin lanzar.
+  let cookingGrenade = null // { type, originPos, fuseStartedAt }
+
+  function startCook(type, originPos) {
+    if (cookingGrenade) return
+    cookingGrenade = {
+      type,
+      originPos: originPos.clone(),
+      fuseStartedAt: (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    }
+    if (audio) audio.playReload?.()
+  }
+
+  function releaseCooked(direction) {
+    if (!cookingGrenade) return null
+    const { type, originPos, fuseStartedAt } = cookingGrenade
+    cookingGrenade = null
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    const elapsed = (now - fuseStartedAt) / 1000
+    const remainingFuse = Math.max(0.1, FUSE_TIME - elapsed)
+    // Si la fuse ya expiró mientras se cocinaba, explota en mano.
+    if (remainingFuse <= 0.1) {
+      explodeInHand(type, originPos)
+      return { explodedInHand: true }
+    }
+    // Lanzar con fuse reducida.
+    let geo, mat
+    switch (type) {
+      case 'frag': geo = fragGeo; mat = fragMat; break
+      case 'flash': geo = flashGeo; mat = flashMat; break
+      case 'smoke': geo = smokeGeo; mat = smokeMat; break
+      case 'knife': geo = knifeGeo; mat = knifeMat; break
+      default: return null
+    }
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.position.copy(originPos)
+    scene.add(mesh)
+    _vel.copy(direction).multiplyScalar(type === 'knife' ? 30 : 15)
+    _vel.y += type === 'knife' ? 2 : 5
+    projectiles.push({
+      mesh,
+      type,
+      vel: _vel.clone(),
+      fuse: remainingFuse,
+      active: true,
+      bounced: false
+    })
+    return { explodedInHand: false }
+  }
+
+  function cancelCook() {
+    cookingGrenade = null
+  }
+
+  function isCooking() {
+    return cookingGrenade !== null
+  }
+
+  function getCookProgress() {
+    if (!cookingGrenade) return 0
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    const elapsed = (now - cookingGrenade.fuseStartedAt) / 1000
+    return Math.min(1, elapsed / FUSE_TIME)
+  }
+
+  function explodeInHand(type, _originPos) {
+    // Aplica daño al jugador si es frag; flash si es flash.
+    if (type === 'frag' && store) {
+      store.getState().takeDamage(FRAG_DAMAGE * 0.5, 0)
+    } else if (type === 'flash' && store) {
+      store.getState().flashPlayer(2000)
+    }
+    if (audio) audio.playExplosion?.()
+  }
+
   function update(dt, _playerPos) {
+    // Fase 18.14: si hay granada cocinándose y la fuse expira, explota en mano.
+    if (cookingGrenade) {
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      const elapsed = (now - cookingGrenade.fuseStartedAt) / 1000
+      if (elapsed >= FUSE_TIME) {
+        const cg = cookingGrenade
+        cookingGrenade = null
+        explodeInHand(cg.type, cg.originPos)
+      }
+    }
     for (let i = projectiles.length - 1; i >= 0; i--) {
       const p = projectiles[i]
       if (!p.active) continue
@@ -209,6 +294,7 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
       p.active = false
     }
     projectiles.length = 0
+    cookingGrenade = null
   }
 
   function dispose() {
@@ -219,5 +305,8 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
     knifeGeo.dispose(); knifeMat.dispose()
   }
 
-  return { throwGrenade, update, reset, dispose }
+  return {
+    throwGrenade, update, reset, dispose,
+    startCook, releaseCooked, cancelCook, isCooking, getCookProgress
+  }
 }

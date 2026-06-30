@@ -318,6 +318,27 @@ export function createEngine() {
       if (audio && audio.playFootstep) audio.playFootstep(speed, 'stone')
     }
 
+    // Fase 18.13: suppression del jugador cuando bullets enemigas pasan cerca.
+    enemies.onEnemyShoot = (origin, dir) => {
+      const ppos = player.getPosition()
+      const dx = ppos.x - origin.x
+      const dy = ppos.y - origin.y
+      const dz = ppos.z - origin.z
+      // Proyección del vector jugador-enemigo sobre la dir del disparo.
+      const along = dx * dir.x + dy * dir.y + dz * dir.z
+      if (along <= 0) return // jugador detrás del enemigo
+      // Distancia perpendicular (closest approach).
+      const projX = origin.x + dir.x * along
+      const projY = origin.y + dir.y * along
+      const projZ = origin.z + dir.z * along
+      const perpDist = Math.hypot(ppos.x - projX, ppos.y - projY, ppos.z - projZ)
+      // Si la bala pasa a menos de 2m del jugador, aplica suppression.
+      if (perpDist < 2.0) {
+        const intensity = (1 - perpDist / 2.0) * 0.3
+        store.getState().suppress(intensity)
+      }
+    }
+
     player.onShoot = (originVec, dirVec, freeShot = false) => {
       // freeShot=true: pellets adicionales de shotgun, no consumen munición
       // ni reproducen sonido de disparo (solo hit-test).
@@ -616,6 +637,8 @@ export function createEngine() {
       if (pickups) pickups.update(dt, player.getPosition())
       // Fase 18.4: field upgrades activos (trophy, recon, munitions, etc).
       if (fieldUpgrades) fieldUpgrades.update(dt)
+      // Fase 18.13: decay de suppression.
+      if (st.suppression > 0) st.decaySuppression(dt)
       // Fase 6: aim assist suave (si está activo en settings y en ADS).
       // Snap suave hacia el enemigo más cercano al centro de la pantalla.
       if (_settings.aimAssist > 0 && player.isAiming && enemies) {
@@ -851,6 +874,7 @@ export function createEngine() {
     // Fase 4: las granadas ahora tienen count finito en el store.
     // Fase 6: el tipo de G y X viene del loadout (lethal/tactical),
     // no hardcodeado. Antes loadout.tactical/lethal eran config muerta.
+    // Fase 18.14: cook grenades — G/X empiezan fuse en keydown, liberan en keyup.
     if (st.gameState === GAME_STATES.PLAYING && grenades) {
       const now = performance.now()
       if (now - lastGrenadeAt >= GRENADE_COOLDOWN) {
@@ -865,7 +889,12 @@ export function createEngine() {
             lastGrenadeAt = now
             _grenadeOrigin.copy(player.getPosition())
             _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
-            grenades.throwGrenade(grenadeType, _grenadeOrigin, _grenadeDir)
+            // Knife/smoke no se cocinan (inmediatos).
+            if (grenadeType === 'knife' || grenadeType === 'smoke') {
+              grenades.throwGrenade(grenadeType, _grenadeOrigin, _grenadeDir)
+            } else {
+              grenades.startCook(grenadeType, _grenadeOrigin)
+            }
           }
         }
       }
@@ -874,6 +903,14 @@ export function createEngine() {
 
   function onKeyUp(e) {
     const st = store.getState()
+    // Fase 18.14: liberar granada cocida al soltar tecla.
+    if (st.gameState === GAME_STATES.PLAYING && grenades && grenades.isCooking()) {
+      if (e.code === 'KeyG' || e.code === 'KeyX') {
+        _grenadeOrigin.copy(player.getPosition())
+        _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
+        grenades.releaseCooked(_grenadeDir)
+      }
+    }
     // Scoreboard se cierra al soltar Tab.
     if (e.code === 'Tab') st.toggleScoreboard(false)
   }
