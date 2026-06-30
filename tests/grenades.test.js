@@ -28,7 +28,7 @@ vi.mock('three', () => {
     },
     Ray: class {
       constructor() { this.origin = { x:0,y:0,z:0, set(v){this.origin.x=v.x;this.origin.y=v.y;this.origin.z=v.z;return this}, distanceTo(v){return Math.hypot(this.x-v.x,this.y-v.y,this.z-v.z)} }; this.direction = { x:0,y:0,z:0, subVectors(a,b){this.x=a.x-b.x;this.y=a.y-b.y;this.z=a.z-b.z;return this}, normalize(){return this} } }
-      intersectBox(box, target) { return null }
+      intersectBox(_box, _target) { return null }
     }
   }
 })

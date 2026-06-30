@@ -27,7 +27,7 @@ import {
   FLOOR_SIZE
 } from './constants.js'
 import { GRENADES, PLAYER, FIELD_UPGRADES } from './config.js'
-import { getLoadout } from './loadout.js'
+import { getLoadout, hasPerk } from './loadout.js'
 import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
 import { createAccessibilityManager } from './accessibility/index.js'
