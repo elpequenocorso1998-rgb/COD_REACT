@@ -10,6 +10,7 @@ import { createNetClient } from './net/client.js'
 import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
 import { DEFAULT_KEYBINDINGS } from './game/accessibility/index.js'
 import { MAPS, MAP_IDS } from './game/maps/index.js'
+import { GAME_MODES } from './game/modes/index.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -124,7 +125,10 @@ export default function App() {
           botón "Jugar" podía clickarse antes de que el engine montara. */}
       {!loading && gameState === GAME_STATES.MENU && !loadoutOpen && !settingsOpen && !mpOpen && !barracksOpen && (
         <MainMenu
-          onStart={(mapId) => engineRef.current?.startGame(mapId)}
+          onStart={(mapId, modeId) => {
+            if (modeId) engineRef.current?.setMode(modeId)
+            engineRef.current?.startGame(mapId)
+          }}
           onOpenLoadout={() => setLoadoutOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenMultiplayer={() => setMpOpen(true)}
@@ -546,10 +550,17 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, o
   const [selectedMap, setSelectedMap] = useState(() => {
     try { return localStorage.getItem('mw_selected_map') || 'pamplona' } catch { return 'pamplona' }
   })
+  const [selectedMode, setSelectedMode] = useState(() => {
+    try { return localStorage.getItem('mw_selected_mode') || 'survival' } catch { return 'survival' }
+  })
   const handleStart = () => {
-    try { localStorage.setItem('mw_selected_map', selectedMap) } catch {}
-    onStart(selectedMap)
+    try {
+      localStorage.setItem('mw_selected_map', selectedMap)
+      localStorage.setItem('mw_selected_mode', selectedMode)
+    } catch {}
+    onStart(selectedMap, selectedMode)
   }
+  const pveModes = Object.values(GAME_MODES).filter((m) => m.type === 'pve')
   return (
     <div className="menu">
       <h1>{t('menu.title')}</h1>
@@ -559,6 +570,23 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, o
       <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
       <button onClick={onOpenBarracks}>Barracks</button>
       <button onClick={onOpenSettings}>{t('menu.settings')}</button>
+      {/* Fase 18.33: selector de modo de juego */}
+      <div className="map-selector">
+        <div className="loadout-section-title">Modo</div>
+        <div className="map-grid">
+          {pveModes.map((m) => (
+            <button
+              key={m.id}
+              className={`loadout-item ${selectedMode === m.id ? 'selected' : ''}`}
+              onClick={() => setSelectedMode(m.id)}
+              title={m.desc}
+            >
+              <div className="map-name">{m.name}</div>
+              <div className="map-biome">{m.type}</div>
+            </button>
+          ))}
+        </div>
+      </div>
       {/* Fase 18.6: selector de mapa */}
       <div className="map-selector">
         <div className="loadout-section-title">Mapa (PvE)</div>

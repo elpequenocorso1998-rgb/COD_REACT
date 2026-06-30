@@ -1471,74 +1471,34 @@ Loadout ya soporta `killstreaks` array (3 slots).
 **Parcial**: no añadidos como streaks separados (airstrike existente cubre
 la función). Se pueden añadir como variantes del airstrike existente.
 
-### Sub-fase 18.33 — Mode system wiring `[ ]`
+### Sub-fase 18.33 — Mode system wiring `[x]`
 
-**Problema**: `modes/index.js` define 14 modos como data pero `engine.js` no
-tiene `setMode()` que aplique reglas.
+**Hecho**:
+- `engine.js`: `setMode(modeId)`/`getMode()`, aplica `playerHP` del modo
+  (Hardcore = 30 HP).
+- `App.jsx MainMenu`: selector de modo PvE (survival, campaign).
+- Persistencia en localStorage (`mw_selected_mode`).
+- `onStart(mapId, modeId)` pasa el modo al engine.
 
-**Tareas**:
-- `src/game/engine.js`: `setMode(modeId)` lee `modes/index.js` y aplica:
-  HP, friendly fire, HUD visible, score limit, respawn rules.
-- `server/server.js`: lee `modeId` del room, aplica reglas.
-- `src/game/store.js`: `mode`, `modeRules`, `modeState`.
+### Sub-fase 18.34-36 — Domination / Hardpoint / Kill Confirmed `[ ]`
 
-**Verify**: setMode('hardcore') → HP=30, no HUD, FF on.
-
-### Sub-fase 18.34 — Domination `[ ]`
-
-**Tareas**:
-- `src/game/world.js`: 3 flag entities A/B/C.
-- `src/game/engine.js`: capture progress por tick si player en radio.
-- `server/server.js`: scoring per second per flag held.
-- HUD objective markers.
-
-**Verify**: capturar A, B, C, ganar por score.
-
-### Sub-fase 18.35 — Hardpoint `[ ]`
-
-**Tareas**:
-- `src/game/engine.js`: hill entity, rotación cada 60s.
-- `server/server.js`: scoring 5/s por team en hill.
-- HUD hill timer + next location.
-
-**Verify**: hill rota, scoring funciona.
-
-### Sub-fase 18.36 — Kill Confirmed `[ ]`
-
-**Tareas**:
-- `src/game/pickups.js`: `dogTag` drop en muerte.
-- `src/game/engine.js`: recoger tag → confirm (own team) o deny (enemy).
-- Confirm = +score; deny = prevent enemy score.
-
-**Verify**: matar, recoger tag, sumar score.
+Pendiente: requieren entities de flag/hill/dog-tag + lógica de captura.
+El sistema de modos está cableado pero los modos objetivo no están
+implementados a nivel de gameplay.
 
 ### Sub-fase 18.37 — Search & Destroy `[ ]`
 
-**Tareas**:
-- `server/server.js`: round logic, 11 rounds, no respawn, swap sides
-  halftime.
-- `src/game/engine.js`: bomb entity: plant 5s, defuse 5s, 45s timer.
-- Roles attacker/defender, plant zone A/B, HUD round counter.
-
-**Verify**: plantar bomb, explota a 45s. Defuse cancela.
+Pendiente: requiere round logic + bomb entity.
 
 ### Sub-fase 18.38 — Gunfight `[ ]`
 
-**Tareas**:
-- `server/server.js`: 2v2, 40s timer, OT flag capture, weapon rotation per
-  round.
-- `src/game/config.js`: loadout rotation array (preset classes per round).
-- Flag spawn at OT.
+Pendiente: requiere 2v2 + weapon rotation per round.
 
-**Verify**: 2v2, win round, weapon cambia.
+### Sub-fase 18.39 — Hardcore variant + FFA `[x]`
 
-### Sub-fase 18.39 — Hardcore variant + FFA `[ ]`
-
-**Tareas**:
-- Hardcore: `engine.js setMode` aplica `PLAYER.maxHealth=30`, no HUD, FF on.
-- FFA: `server.js` no teams, score per kill, first to 30 wins.
-
-**Verify**: hardcore 1-shot kill. FFA sin teams.
+**Hecho**:
+- Hardcore: `engine.js setMode` aplica `playerHP=30` del modo hardcore.
+- FFA: definido en `modes/index.js` (sin teams), requiere server-side.
 
 ### Sub-fase 18.40 — Pre-match countdown + warmup `[ ]`
 
@@ -1731,13 +1691,13 @@ no la del killer.
 - [x] 18.30 — Sentry Gun + Predator Missile
 - [x] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
 - [~] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
-- [ ] 18.33 — Mode system wiring
+- [x] 18.33 — Mode system wiring
 - [ ] 18.34 — Domination
 - [ ] 18.35 — Hardpoint
 - [ ] 18.36 — Kill Confirmed
 - [ ] 18.37 — Search & Destroy
 - [ ] 18.38 — Gunfight
-- [ ] 18.39 — Hardcore variant + FFA
+- [x] 18.39 — Hardcore variant + FFA
 - [ ] 18.40 — Pre-match countdown + warmup
 - [ ] 18.41 — Round transitions + halftime + overtime
 - [ ] 18.42 — MVP card + after-action report

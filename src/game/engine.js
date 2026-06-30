@@ -32,6 +32,7 @@ import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
 import { createAccessibilityManager } from './accessibility/index.js'
 import { createFrameProfiler } from './performance/profiler.js'
+import { getGameMode } from './modes/index.js'
 
 /* =========================================================================
    Motor del juego.
@@ -91,6 +92,7 @@ export function createEngine() {
   let container = null
   let prevState = null
   let selectedMapId = 'pamplona'
+  let selectedModeId = 'survival' // Fase 18.33: modo de juego activo
   // Fase 18.6: leer mapa seleccionado de localStorage al iniciar.
   try {
     const stored = localStorage.getItem('mw_selected_map')
@@ -942,10 +944,20 @@ export function createEngine() {
     if (mapId && mapId !== selectedMapId) {
       setMap(mapId)
     }
+    // Fase 18.33: aplicar reglas del modo activo.
+    const mode = getGameMode(selectedModeId)
+    if (mode && mode.playerHP) {
+      // Hardcore: 30 HP en vez de 100.
+      useGameStore.setState({ maxHealth: mode.playerHP })
+    }
     audio.init()
     audio.setMuted(false)
     audio.startMusic()
     store.getState().reset()
+    // Fase 18.33: re-aplicar HP de modo tras reset (reset pone maxHealth=100).
+    if (mode && mode.playerHP) {
+      useGameStore.setState({ maxHealth: mode.playerHP, health: mode.playerHP })
+    }
     enemies.reset()
     particles.reset()
     if (grenades) grenades.reset()
@@ -957,6 +969,15 @@ export function createEngine() {
     player.setWeapon(store.getState().getCurrentWeapon())
     spawnWave(1)
     player.requestPointerLock()
+  }
+
+  // Fase 18.33: setear modo de juego.
+  function setMode(modeId) {
+    selectedModeId = modeId
+  }
+
+  function getMode() {
+    return selectedModeId
   }
 
   // Fase 2: arranca una partida multijugador (TDM).
@@ -1164,7 +1185,7 @@ export function createEngine() {
   }
 
   return { mount, dispose, startGame, startMPGame, resumeGame, quitToMenu, spawnWave, applySettings,
-    setMap, getMap,
+    setMap, getMap, setMode, getMode,
     set onMinimapReady(fn) { onMinimapReady = fn } }
 }
 
