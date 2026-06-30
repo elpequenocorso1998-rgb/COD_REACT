@@ -1713,7 +1713,7 @@ llama `createWorld()`. El mundo se construye una vez en `mount()`.
 mapId cambió, `setWorld()` en player/enemies.
 **Verify**: seleccionar desert, Play, ver mapa desierto.
 
-### Sub-fase 19.3 — Fix cook grenade leaks + spectator Q/E `[ ]`
+### Sub-fase 19.3 — Fix cook grenade leaks + spectator Q/E `[x]`
 **Problema**: `cancelCook()` nunca se llama. Cooking + muerte = leak. Q y E
 en spectator hacen lo mismo.
 **Tareas**: cancelCook en death/pause/alt-tab/dispose. cycleSpectateTarget
@@ -1794,7 +1794,7 @@ en ui/menus/. Mirror tests/ structure.
 
 - [x] 19.1 — Wire keybinds al input handler
 - [x] 19.2 — Fix map loading
-- [ ] 19.3 — Fix cook grenade leaks + spectator Q/E
+- [x] 19.3 — Fix cook grenade leaks + spectator Q/E
 - [ ] 19.4 — Click to play overlay + pointer lock
 - [ ] 19.5 — Controles completos en el menú
 - [ ] 19.6 — Normal + roughness maps en 6 texturas

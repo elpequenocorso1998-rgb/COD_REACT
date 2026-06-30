@@ -141,6 +141,9 @@ export const useGameStore = create((set, get) => {
     // --- Spawn protection (Fase 18.46) ---
     spawnProtectionUntil: 0,        // timestamp hasta el que el jugador es invulnerable
 
+    // --- Cook grenade progress (Fase 19.3) ---
+    cookProgress: 0,                // 0..1, progreso del cook (1 = explota)
+
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
 
@@ -359,6 +362,9 @@ export const useGameStore = create((set, get) => {
     grantSpawnProtection: (seconds = 3) => set({
       spawnProtectionUntil: (typeof performance !== 'undefined' ? performance.now() : Date.now()) + seconds * 1000
     }),
+
+    // Fase 19.3: cook grenade progress (0..1).
+    setCookProgress: (progress) => set({ cookProgress: progress }),
 
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {

@@ -289,6 +289,15 @@ canvas { display: block; }
   transition: opacity 0.2s;
 }
 
+/* Fase 19.3: Cook grenade progress ring */
+.cook-progress {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  pointer-events: none;
+}
+
 /* Fase 18.4: Field upgrade indicator */
 .field-upgrade-indicator {
   margin-top: 8px;

@@ -241,7 +241,7 @@ function HUD() {
     fps,
     mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit, mpKillfeed,
     fieldUpgradeCharge, fieldUpgradeCooldown, activeFieldUpgrade,
-    suppression
+    suppression, cookProgress
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -262,7 +262,8 @@ function HUD() {
     fieldUpgradeCharge: s.fieldUpgradeCharge,
     fieldUpgradeCooldown: s.fieldUpgradeCooldown,
     activeFieldUpgrade: s.activeFieldUpgrade,
-    suppression: s.suppression
+    suppression: s.suppression,
+    cookProgress: s.cookProgress
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -457,6 +458,22 @@ function HUD() {
           aria-hidden="true"
           style={{ opacity: Math.min(0.7, suppression) }}
         />
+      )}
+
+      {/* Fase 19.3: cook grenade progress ring (centro, sobre crosshair) */}
+      {cookProgress > 0 && (
+        <div className="cook-progress" aria-hidden="true">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="4" />
+            <circle
+              cx="30" cy="30" r="26" fill="none"
+              stroke={cookProgress > 0.8 ? '#ff4040' : '#ffd24d'}
+              strokeWidth="4"
+              strokeDasharray={`${cookProgress * 163.36} 163.36`}
+              transform="rotate(-90 30 30)"
+            />
+          </svg>
+        </div>
       )}
 
       {/* --- Scoreboard overlay (Tab hold) --- */}

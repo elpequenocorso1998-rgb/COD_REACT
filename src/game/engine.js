@@ -335,6 +335,8 @@ export function createEngine() {
       st.setState(GAME_STATES.PAUSED)
       if (audio) audio.setMuted(true)
       if (player) player.exitPointerLock()
+      // Fase 19.3: cancelar cook grenade al alt-tab.
+      if (grenades) grenades.cancelCook()
     }
   }
 
@@ -394,11 +396,14 @@ export function createEngine() {
       if (state === GAME_STATES.GAMEOVER || state === GAME_STATES.MENU || state === GAME_STATES.PAUSED) {
         audio.setMuted(true)
         player.exitPointerLock()
+        // Fase 19.3: cancelar cook grenade al pausar/morir.
+        if (grenades) grenades.cancelCook()
       }
       // Fase 18.5: en SPECTATING liberamos pointer para que el jugador pueda
       // ciclar targets con Q/E, pero seguimos renderizando el mundo.
       if (state === GAME_STATES.SPECTATING) {
         player.exitPointerLock()
+        if (grenades) grenades.cancelCook()
       }
       prevState = state
     }
@@ -494,7 +499,12 @@ export function createEngine() {
       // Killstreaks activos (heli orbitando, etc).
       if (streaks) streaks.update(dt, player.getPosition())
       // Granadas en vuelo.
-      if (grenades) grenades.update(dt, player.getPosition())
+      if (grenades) {
+        grenades.update(dt, player.getPosition())
+        // Fase 19.3: actualizar cook progress en el store para el HUD.
+        const progress = grenades.isCooking() ? grenades.getCookProgress() : 0
+        if (progress !== st.cookProgress) st.setCookProgress(progress)
+      }
       // Fase 5: pickups (detección de proximidad).
       if (pickups) pickups.update(dt, player.getPosition())
       // Fase 18.4: field upgrades activos (trophy, recon, munitions, etc).
@@ -1155,7 +1165,7 @@ export function createEngine() {
     if (audio) audio.dispose()
     if (minimap) minimap.dispose()
     if (streaks) streaks.dispose()
-    if (grenades) grenades.dispose()
+    if (grenades) { grenades.cancelCook(); grenades.dispose() }
     if (decals) decals.dispose()
     if (pickups) pickups.dispose()
     if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
