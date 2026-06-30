@@ -16,7 +16,7 @@ import {
   buildFountain
 } from './pamplona.js'
 import { mulberry32 } from './math.js'
-import { createSkyMaterial } from './shaders/sky.js'
+import { createSkyMesh } from './shaders/sky.js'
 import { SpatialGrid } from './spatial-grid.js'
 import { getMapConfig } from './maps/index.js'
 import {
@@ -470,9 +470,9 @@ export function createWorld(scene, mapId = 'pamplona') {
   // aquí y en environment.js).
   // ---------------------------------------------------------------------
 
-  const skyGeo = new THREE.SphereGeometry(500, 32, 16)
-  const skyMat = createSkyMaterial()
-  scene.add(new THREE.Mesh(skyGeo, skyMat))
+  // Fase 19.9: Sky Preetham (atmospheric scattering real).
+  const skyMesh = createSkyMesh()
+  scene.add(skyMesh)
 
   // Sol: disco emisivo + glow. Posición unificada con la luz direccional.
   const sunMesh = new THREE.Mesh(

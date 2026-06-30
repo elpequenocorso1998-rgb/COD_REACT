@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { createSkyMaterial } from './shaders/sky.js'
+import { createSkyMesh } from './shaders/sky.js'
 import { SUN_DIR, SUN_MESH_COLOR, SUN_GLOW_COLOR, SUN_COLOR, SUN_INTENSITY } from './constants.js'
 
 /* =========================================================================
@@ -19,11 +19,9 @@ export function createEnvironment(scene, renderer) {
   // --- 1. Creamos una escena miniatura con el cielo y el sol ---
   const skyScene = new THREE.Scene()
 
-  // Cielo con el mismo shader que el mundo (compartido en shaders/sky.js).
-  const skyMat = createSkyMaterial()
-  // Fase 7: guardamos las geometrías para disposal correcto (antes leak).
-  const skyGeo = new THREE.SphereGeometry(100, 32, 16)
-  skyScene.add(new THREE.Mesh(skyGeo, skyMat))
+  // Cielo con el mismo shader que el mundo (Preetham scattering).
+  const skyMesh = createSkyMesh()
+  skyScene.add(skyMesh)
 
   // Sol emisivo dentro de la escena del env map.
   // Misma dirección que la luz direccional y el mesh del mundo (SUN_DIR).
@@ -67,8 +65,7 @@ export function createEnvironment(scene, renderer) {
   // Fase 7: disposal completo de geometrías (antes solo materials).
   pmrem.dispose()
   cubeCam.renderTarget.dispose()
-  skyMat.dispose()
-  skyGeo.dispose()
+  skyMesh.material.dispose()
   sun.material.dispose()
   sunGeo.dispose()
   sunGlow.material.dispose()

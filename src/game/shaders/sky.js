@@ -1,48 +1,50 @@
 /* =========================================================================
-   Shader de cielo compartido (gradiente esférico).
+   Shader de cielo — Preetham atmospheric scattering (Three.js Sky).
    --------------------------------------------------------------------------
-   Antes el vertex/fragment shader estaba duplicado en world.js (lineas
-   376-397) y environment.js (lineas 24-45). Aquí se exporta una sola vez
-   con los uniforms listos para clonar.
+   Reemplaza el gradiente 3-color por scattering atmosférico real con
+   disco solar, turbidity, rayleigh y mie. Más realista que un gradiente.
    ========================================================================= */
 
-export const SKY_VERTEX = `
-  varying vec3 vWorldPosition;
-  void main() {
-    vec4 wp = modelMatrix * vec4(position, 1.0);
-    vWorldPosition = wp.xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-export const SKY_FRAGMENT = `
-  uniform vec3 top;
-  uniform vec3 middle;
-  uniform vec3 bottom;
-  varying vec3 vWorldPosition;
-  void main() {
-    float h = normalize(vWorldPosition).y;
-    float t = clamp(h, -1.0, 1.0);
-    vec3 col;
-    if (t > 0.0) col = mix(middle, top, pow(t, 0.6));
-    else col = mix(middle, bottom, pow(-t, 0.5));
-    gl_FragColor = vec4(col, 1.0);
-  }
-`
-
-// Helper: construye el material de cielo con los colores pasados.
 import * as THREE from 'three'
-import { SKY_TOP, SKY_MIDDLE, SKY_BOTTOM } from '../constants.js'
+import { Sky } from 'three/examples/jsm/objects/Sky.js'
+import { SKY_TOP, SKY_MIDDLE, SKY_BOTTOM, SUN_DIR } from '../constants.js'
 
 export function createSkyMaterial() {
-  return new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    uniforms: {
-      top: { value: new THREE.Color(SKY_TOP) },
-      middle: { value: new THREE.Color(SKY_MIDDLE) },
-      bottom: { value: new THREE.Color(SKY_BOTTOM) }
-    },
-    vertexShader: SKY_VERTEX,
-    fragmentShader: SKY_FRAGMENT
-  })
+  // Fallback: si Sky no está disponible, usar el gradiente antiguo.
+  const sky = new Sky()
+  sky.scale.setScalar(500)
+
+  const uniforms = sky.material.uniforms
+  uniforms.turbidity.value = 8
+  uniforms.rayleigh.value = 2
+  uniforms.mieCoefficient.value = 0.005
+  uniforms.mieDirectionalG.value = 0.8
+
+  // Posición del sol (normalizada).
+  const sunPhi = THREE.MathUtils.degToRad(90 - SUN_DIR[1] * 50)
+  const sunTheta = THREE.MathUtils.degToRad(180)
+  const sunX = Math.sin(sunPhi) * Math.cos(sunTheta)
+  const sunY = Math.cos(sunPhi)
+  const sunZ = Math.sin(sunPhi) * Math.sin(sunTheta)
+  uniforms.sunPosition.value.set(sunX, sunY, sunZ)
+
+  return sky.material
+}
+
+// Helper para construir el mesh de cielo completo (con sky dome).
+export function createSkyMesh() {
+  const sky = new Sky()
+  sky.scale.setScalar(500)
+  const uniforms = sky.material.uniforms
+  uniforms.turbidity.value = 8
+  uniforms.rayleigh.value = 2
+  uniforms.mieCoefficient.value = 0.005
+  uniforms.mieDirectionalG.value = 0.8
+  const sunPhi = THREE.MathUtils.degToRad(90 - 30)
+  const sunTheta = THREE.MathUtils.degToRad(180)
+  const sunX = Math.sin(sunPhi) * Math.cos(sunTheta)
+  const sunY = Math.cos(sunPhi)
+  const sunZ = Math.sin(sunPhi) * Math.sin(sunTheta)
+  uniforms.sunPosition.value.set(sunX, sunY, sunZ)
+  return sky
 }

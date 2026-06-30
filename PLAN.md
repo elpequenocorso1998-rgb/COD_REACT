@@ -1749,7 +1749,7 @@ makeSkinTexture.
 **Tareas**: cilindros 12→32, esfera cabeza 16→32, cápsulas brazos 4→8.
 **Verify**: cañones lisos, cabeza redonda.
 
-### Sub-fase 19.9 — Sky shader real (Preetham) `[ ]`
+### Sub-fase 19.9 — Sky shader real (Preetham) `[x]`
 **Problema**: Sky = gradiente 3-color. No hay disco solar ni scattering.
 **Tareas**: reemplazar con three/examples Sky.js. Configurar turbidity,
 rayleigh, mieCoefficient.
@@ -1800,7 +1800,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.6 — Normal + roughness maps en 6 texturas
 - [ ] 19.7 — Cortar agujeros de ventanas
 - [x] 19.8 — Más segmentos en cilindros/esferas
-- [ ] 19.9 — Sky shader real (Preetham)
+- [x] 19.9 — Sky shader real (Preetham)
 - [ ] 19.10 — Rebuild 4 mapas extra detallados
 - [ ] 19.11 — Partículas ambientales
 - [ ] 19.12 — README overhaul
