@@ -1766,7 +1766,7 @@ ruedas, pinos cónicos, tanques con tuberías.
 **Tareas**: spawnAmbientDust, spawnDistantSmoke, columnas de humo en horizonte.
 **Verify**: polvo flotando en haces de sol.
 
-### Sub-fase 19.12 — README overhaul `[ ]`
+### Sub-fase 19.12 — README overhaul `[x]`
 **Problema**: README stale, sin badges, sin screenshots.
 **Tareas**: facts corregidos, badges, roadmap table, features grid, TOC,
 screenshots, Mermaid diagram.
@@ -1803,7 +1803,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.9 — Sky shader real (Preetham)
 - [ ] 19.10 — Rebuild 4 mapas extra detallados
 - [x] 19.11 — Partículas ambientales
-- [ ] 19.12 — README overhaul
+- [x] 19.12 — README overhaul
 - [x] 19.13 — CI/CD + community files
 - [x] 19.14 — Repo cleanup
 - [ ] 19.15 — Reorganizar src/game/ + split App.jsx
