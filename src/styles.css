@@ -1205,6 +1205,23 @@ body.colorblind-tritanopia .game-canvas { filter: url(#cb-tritanopia); }
   padding: 8px 10px;
   border-radius: 3px;
 }
+.prestige-btn {
+  margin-top: 12px;
+  background: linear-gradient(180deg, #4a2a4a, #2a1a2a);
+  color: #ffd24d;
+  border: 1px solid #ffd24d;
+  padding: 12px 24px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.prestige-btn:hover {
+  background: linear-gradient(180deg, #5a3a5a, #3a2a3a);
+}
 .stat-label {
   font-size: 11px;
   color: #8aa0b3;

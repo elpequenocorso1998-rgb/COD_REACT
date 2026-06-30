@@ -11,6 +11,7 @@ import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
 import { DEFAULT_KEYBINDINGS } from './game/accessibility/index.js'
 import { MAPS, MAP_IDS } from './game/maps/index.js'
 import { GAME_MODES } from './game/modes/index.js'
+import { getPrestige, canPrestige, prestige as doPrestige } from './game/backend/live-service.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -850,7 +851,21 @@ function SettingsScreen({ onClose, onApply }) {
 function BarracksScreen({ onClose }) {
   const [summary] = useState(() => getMetaSummary())
   const [selectedWeapon, setSelectedWeapon] = useState('m4')
+  const [prestigeInfo, setPrestigeInfo] = useState(() => getPrestige())
+  const [prestigeMsg, setPrestigeMsg] = useState(null)
   const weaponStats = getWeaponStats(selectedWeapon)
+
+  const handlePrestige = () => {
+    const result = doPrestige()
+    if (result.ok) {
+      setPrestigeInfo(getPrestige())
+      setPrestigeMsg(`Prestige ${result.newLevel} unlocked! XP reset.`)
+    } else {
+      setPrestigeMsg(`Cannot prestige: ${result.reason}`)
+    }
+  }
+
+  const canPlayerPrestige = canPrestige(summary.playerLevel)
 
   return (
     <div className="menu barracks-screen">
@@ -881,6 +896,37 @@ function BarracksScreen({ onClose }) {
               <span className="stat-value">{summary.highestWave}</span>
             </div>
           </div>
+        </div>
+
+        {/* Fase 18.49: Prestige */}
+        <div className="barracks-section">
+          <div className="loadout-section-title">Prestige — Level {prestigeInfo.level}/10</div>
+          <div className="barracks-stats">
+            <div className="barracks-stat">
+              <span className="stat-label">Prestige Level</span>
+              <span className="stat-value">{prestigeInfo.level}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">Tokens</span>
+              <span className="stat-value">{prestigeInfo.tokens}</span>
+            </div>
+            <div className="barracks-stat">
+              <span className="stat-label">Icon</span>
+              <span className="stat-value">{prestigeInfo.icon || '—'}</span>
+            </div>
+          </div>
+          {canPlayerPrestige ? (
+            <button className="prestige-btn" onClick={handlePrestige}>
+              PRESTIGE (reset XP for token)
+            </button>
+          ) : (
+            <div className="stats">
+              {prestigeInfo.level >= 10
+                ? 'Max prestige reached.'
+                : 'Reach level 55 to prestige.'}
+            </div>
+          )}
+          {prestigeMsg && <div className="stats">{prestigeMsg}</div>}
         </div>
 
         {/* Battle Pass */}

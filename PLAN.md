@@ -1551,7 +1551,14 @@ Pendiente: requiere buffer de cámaras remotas.
 
 **Verify**: comprar bundle, ver inventario.
 
-### Sub-fase 18.49 — Prestige UI + flow `[ ]`
+### Sub-fase 18.49 — Prestige UI + flow `[x]`
+
+**Hecho**:
+- `App.jsx BarracksScreen`: sección Prestige con level, tokens, icon.
+- Botón "PRESTIGE" visible si `canPrestige(playerLevel)` (level >= 55).
+- `handlePrestige()` llama `doPrestige()` de live-service.js.
+- Mensaje de feedback tras prestigiar.
+- CSS para prestige button (gradiente púrpura/dorado).
 
 **Tareas**:
 - `src/App.jsx BarracksScreen`: botón "Prestige" si level >= 55, confirm
@@ -1672,7 +1679,7 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.46 — Spawn protection + multiple spawn points
 - [ ] 18.47 — Gunsmith depth
 - [ ] 18.48 — Store/MTX UI
-- [ ] 18.49 — Prestige UI + flow
+- [x] 18.49 — Prestige UI + flow
 - [ ] 18.50 — Ranked Play UI
 - [ ] 18.51 — Social/party
 - [ ] 18.52 — Main menu polish
