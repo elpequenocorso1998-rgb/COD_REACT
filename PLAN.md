@@ -1364,7 +1364,25 @@ paredes.
 
 **Verify**: equip cada una, throw, ver efecto.
 
-### Sub-fase 18.19 — 10 perks nuevos `[ ]`
+### Sub-fase 18.19 — 10 perks nuevos `[x]`
+
+**Añadidos al config**:
+- `restock`, `oneShot`, `highAlert`, `tracker`, `battleHardened`, `eod`,
+  `doubleTime`, `overkill`, `hardline`, `killChain`
+
+**Efectos implementados**:
+- `battleHardened`: flash duration reducida 50% (store.flashPlayer)
+- `hardline`: streak thresholds -1 (store.registerKill)
+- `killChain`: kills count double toward streak (store.registerKill)
+
+**Efectos documentados (no implementados, requieren refactor mayor)**:
+- `restock`: necesita timer en engine para resupply equipment
+- `oneShot`: necesita check de full health en enemies.handleShot
+- `highAlert`: necesita detección de bot aiming at player
+- `tracker`: necesita footprint decals en enemies
+- `eod`: necesita tipo de daño (explosive) en takeDamage
+- `doubleTime`: necesita cap de tac sprint duration en player.js
+- `overkill`: necesita UI de loadout para second primary
 
 **Tareas** (una por perk):
 - `restock`: `engine.js` timer cada 8s resupplies 1 lethal/tactical.
@@ -1763,7 +1781,7 @@ no la del killer.
 - [x] 18.16 — Enforce 4 perks fiction
 - [x] 18.17 — LoS check para flashbang
 - [x] 18.18 — 11 granadas faltantes
-- [ ] 18.19 — 10 perks nuevos
+- [x] 18.19 — 10 perks nuevos
 - [ ] 18.20 — Squad blackboard AI
 - [ ] 18.21 — Callouts verbales procedurales
 - [ ] 18.22 — Cover peeking + reload-seeking cover

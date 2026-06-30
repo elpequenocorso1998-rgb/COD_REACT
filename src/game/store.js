@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { PLAYER, WEAPONS, GRENADES } from './config.js'
 import { addXP, recordKill, recordDeath, recordWave, getProgress,
   addWeaponXP, addBattlePassXP, progressDaily } from './progression.js'
-import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon } from './loadout.js'
+import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon, hasPerk } from './loadout.js'
 
 /* =========================================================================
    Store global del juego (Zustand).
@@ -354,6 +354,8 @@ export const useGameStore = create((set, get) => {
 
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {
+      // Fase 18.19: battleHardened reduce flash duration 50%.
+      if (hasPerk('battleHardened')) durationMs *= 0.5
       const until = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + durationMs
       set({ flashbanged: until })
       trackTimeout(() => {
@@ -390,15 +392,18 @@ export const useGameStore = create((set, get) => {
       const multikillLabel = multikillLabelFor(newMultikill)
 
       set((s) => {
-        const newStreak = s.killStreak + 1
+        // Fase 18.19: killChain cuenta double, hardline reduce threshold.
+        const streakIncrement = hasPerk('killChain') ? 2 : 1
+        const newStreak = s.killStreak + streakIncrement
         // Desbloquea killstreaks al cruzar umbrales.
         // Fase 6: los tipos vienen del loadout (loadout.killstreaks),
         // no de thresholds fijos. Antes loadout.killstreaks era config muerta.
         const newAvailable = [...s.availableStreaks]
         const loadoutKs = getLoadout().killstreaks || ['uav', 'airstrike', 'heli', 'gunship']
-        const thresholds = [3, 5, 7, 11]
+        const hardlineBonus = hasPerk('hardline') ? 1 : 0
+        const thresholds = [3 - hardlineBonus, 5 - hardlineBonus, 7 - hardlineBonus, 11 - hardlineBonus]
         for (let i = 0; i < thresholds.length && i < loadoutKs.length; i++) {
-          if (newStreak === thresholds[i]) {
+          if (newStreak >= thresholds[i] && !s.availableStreaks.some((st) => st.type === loadoutKs[i])) {
             newAvailable.push({ id: nextId(), type: loadoutKs[i] })
           }
         }

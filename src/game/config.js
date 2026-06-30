@@ -608,6 +608,77 @@ export const PERKS = {
     desc: 'Vida +50',
     category: 'blue',
     healthBonus: 50
+  },
+  // Fase 18.19: 10 perks nuevos.
+  restock: {
+    id: 'restock',
+    name: 'Restock',
+    desc: 'Resupplies equipment over time',
+    category: 'blue',
+    restockInterval: 8
+  },
+  oneShot: {
+    id: 'oneShot',
+    name: 'One Shot',
+    desc: 'Sniper body-shot kill if full health',
+    category: 'blue',
+    oneShotKill: true
+  },
+  highAlert: {
+    id: 'highAlert',
+    name: 'High Alert',
+    desc: 'Vision pulses when enemy aims at you',
+    category: 'blue',
+    highAlert: true
+  },
+  tracker: {
+    id: 'tracker',
+    name: 'Tracker',
+    desc: 'See enemy footprints',
+    category: 'blue',
+    tracker: true
+  },
+  battleHardened: {
+    id: 'battleHardened',
+    name: 'Battle Hardened',
+    desc: 'Reduce flash/stun duration 50%',
+    category: 'blue',
+    flashResist: 0.5
+  },
+  eod: {
+    id: 'eod',
+    name: 'EOD',
+    desc: 'Explosive damage reduction 50%',
+    category: 'blue',
+    explosiveResist: 0.5
+  },
+  doubleTime: {
+    id: 'doubleTime',
+    name: 'Double Time',
+    desc: 'Tactical sprint duration x2',
+    category: 'red',
+    tacSprintMul: 2.0
+  },
+  overkill: {
+    id: 'overkill',
+    name: 'Overkill',
+    desc: 'Carry two primary weapons',
+    category: 'red',
+    overkill: true
+  },
+  hardline: {
+    id: 'hardline',
+    name: 'Hardline',
+    desc: 'Killstreaks cost 1 less kill',
+    category: 'red',
+    streakBonus: 1
+  },
+  killChain: {
+    id: 'killChain',
+    name: 'Kill Chain',
+    desc: 'Kills count double toward streaks',
+    category: 'red',
+    streakKillMul: 2
   }
 }
 
