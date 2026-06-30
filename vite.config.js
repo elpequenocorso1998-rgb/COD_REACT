@@ -19,12 +19,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 9432,
     strictPort: true,
+    allowedHosts: ['pmpldl03', '172.30.181.100', 'localhost'],
     hmr: { overlay: false }
   },
   preview: {
     host: '0.0.0.0',
     port: 9432,
-    strictPort: true
+    strictPort: true,
+    allowedHosts: ['pmpldl03', '172.30.181.100', 'localhost']
   },
   build: {
     chunkSizeWarningLimit: 1500

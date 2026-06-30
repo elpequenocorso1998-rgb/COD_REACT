@@ -36,6 +36,16 @@ export function buildSnow(colliders) {
   snow.receiveShadow = true
   group.add(snow)
 
+  // Suelo extendido para cubrir el horizonte.
+  const extSnowMat = new THREE.MeshStandardMaterial({ color: 0xd8e0e8, roughness: 0.9 })
+  const extSnow = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_SIZE * 6, FLOOR_SIZE * 6),
+    extSnowMat
+  )
+  extSnow.rotation.x = -Math.PI / 2
+  extSnow.position.y = -0.02
+  group.add(extSnow)
+
   const metalMat = new THREE.MeshStandardMaterial({
     color: 0x4a5a6a, roughness: 0.5, metalness: 0.7
   })

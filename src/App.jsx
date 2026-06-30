@@ -563,62 +563,58 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, o
   }
   const pveModes = Object.values(GAME_MODES).filter((m) => m.type === 'pve')
   return (
-    <div className="menu">
-      <h1>{t('menu.title')}</h1>
-      <h2>{t('menu.subtitle')}</h2>
-      <button onClick={handleStart}>{t('menu.play')}</button>
-      <button onClick={onOpenMultiplayer}>Multiplayer</button>
-      <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
-      <button onClick={onOpenBarracks}>Barracks</button>
-      <button onClick={onOpenSettings}>{t('menu.settings')}</button>
-      {/* Fase 18.33: selector de modo de juego */}
-      <div className="map-selector">
-        <div className="loadout-section-title">Modo</div>
-        <div className="map-grid">
-          {pveModes.map((m) => (
-            <button
-              key={m.id}
-              className={`loadout-item ${selectedMode === m.id ? 'selected' : ''}`}
-              onClick={() => setSelectedMode(m.id)}
-              title={m.desc}
-            >
-              <div className="map-name">{m.name}</div>
-              <div className="map-biome">{m.type}</div>
-            </button>
-          ))}
+    <div className="menu menu-main">
+      <div className="menu-header">
+        <h1>{t('menu.title')}</h1>
+        <h2>{t('menu.subtitle')}</h2>
+      </div>
+      <div className="menu-body">
+        <div className="menu-col menu-col-actions">
+          <button className="menu-btn-primary" onClick={handleStart}>{t('menu.play')}</button>
+          <button onClick={onOpenMultiplayer}>Multiplayer</button>
+          <button onClick={onOpenLoadout}>{t('menu.loadout')}</button>
+          <button onClick={onOpenBarracks}>Barracks</button>
+          <button onClick={onOpenSettings}>{t('menu.settings')}</button>
+        </div>
+        <div className="menu-col menu-col-selectors">
+          {/* Fase 18.33: selector de modo de juego */}
+          <div className="menu-selector">
+            <div className="loadout-section-title">Modo</div>
+            <div className="map-grid">
+              {pveModes.map((m) => (
+                <button
+                  key={m.id}
+                  className={`loadout-item ${selectedMode === m.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedMode(m.id)}
+                  title={m.desc}
+                >
+                  <div className="map-name">{m.name}</div>
+                  <div className="map-biome">{m.type}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Fase 18.6: selector de mapa */}
+          <div className="menu-selector">
+            <div className="loadout-section-title">Mapa</div>
+            <div className="map-grid">
+              {MAP_IDS.map((id) => (
+                <button
+                  key={id}
+                  className={`loadout-item ${selectedMap === id ? 'selected' : ''}`}
+                  onClick={() => setSelectedMap(id)}
+                  title={MAPS[id].desc}
+                >
+                  <div className="map-name">{MAPS[id].name}</div>
+                  <div className="map-biome">{MAPS[id].biome}</div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-      {/* Fase 18.6: selector de mapa */}
-      <div className="map-selector">
-        <div className="loadout-section-title">Mapa (PvE)</div>
-        <div className="map-grid">
-          {MAP_IDS.map((id) => (
-            <button
-              key={id}
-              className={`loadout-item ${selectedMap === id ? 'selected' : ''}`}
-              onClick={() => setSelectedMap(id)}
-              title={MAPS[id].desc}
-            >
-              <div className="map-name">{MAPS[id].name}</div>
-              <div className="map-biome">{MAPS[id].biome}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="stats">
-        Sobrevive a oleadas infinitas de enemigos.<br />
-        Apunta con el ratón, dispara con click izq., recarga con R.
-      </div>
-      <div className="controls">
-        <strong>Movimiento:</strong> WASD · SHIFT correr · SHIFT×2 sprint táctico · CTRL agacharse/slide · Z prone · SPACE saltar<br />
-        <strong>Lean:</strong> Q izquierda · E derecha<br />
-        <strong>Combate:</strong> Click izq. disparar · Click der. apuntar (ADS) · R recarga<br />
-        <strong>Armas:</strong> Shift+1-7 cambiar (M4/AK/MP5/Sniper/Shotgun/LMG/Pistol)<br />
-        <strong>Granadas:</strong> G frag · X flash · C humo<br />
-        <strong>Movimiento moderno:</strong> F mantle · V respirar (sniper)<br />
-        <strong>Killstreaks:</strong> 4 UAV · 5 Airstrike · 6 Heli · 7 Gunship<br />
-        <strong>Field Upgrade:</strong> T activar (cargo con kills/hits)<br />
-        <strong>UI:</strong> TAB scoreboard · ESC pausa
+      <div className="menu-controls">
+        <strong>WASD</strong> mover · <strong>SHIFT</strong> correr · <strong>CTRL</strong> slide · <strong>Z</strong> prone · <strong>SPACE</strong> saltar · <strong>F</strong> mantle · <strong>Q/E</strong> lean · <strong>Click izq.</strong> disparar · <strong>Click der.</strong> ADS · <strong>R</strong> recarga · <strong>G/X/C</strong> granadas · <strong>T</strong> field upgrade · <strong>4-7</strong> killstreaks · <strong>TAB</strong> scoreboard · <strong>ESC</strong> pausa
       </div>
     </div>
   )

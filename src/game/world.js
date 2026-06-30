@@ -141,6 +141,25 @@ export function createWorld(scene, mapId = 'pamplona') {
   floor.receiveShadow = true
   scene.add(floor)
 
+  // Suelo extendido más allá del área jugable para que el horizonte
+  // siempre se vea cubierto (sin corte visible contra el cielo).
+  const extendedFloorMat = new THREE.MeshStandardMaterial({
+    color: 0x3a3020,
+    roughness: 0.95,
+    metalness: 0.05
+  })
+  const extendedFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_SIZE * 6, FLOOR_SIZE * 6),
+    extendedFloorMat
+  )
+  extendedFloor.rotation.x = -Math.PI / 2
+  extendedFloor.position.y = -0.02
+  extendedFloor.receiveShadow = false
+  scene.add(extendedFloor)
+  floor.rotation.x = -Math.PI / 2
+  floor.receiveShadow = true
+  scene.add(floor)
+
   // Texturas compartidas de Pamplona.
   sillarTex = makeSillarTexture(512)
   roofTex = makeRoofTexture(256)

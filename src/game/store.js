@@ -333,13 +333,13 @@ export const useGameStore = create((set, get) => {
       respawnAt: (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 3000
     }),
     setSpectateTarget: (targetId) => set({ spectateTargetId: targetId }),
-    cycleSpectateTarget: (remotePlayers, currentClientId) => {
+    cycleSpectateTarget: (remotePlayers, currentClientId, direction = 1) => {
       const allies = remotePlayers.filter((p) => p.id !== currentClientId && p.health > 0)
       if (allies.length === 0) return
       const cur = get().spectateTargetId
       const idx = allies.findIndex((p) => p.id === cur)
-      const next = allies[(idx + 1) % allies.length]
-      set({ spectateTargetId: next.id })
+      const nextIdx = (idx + direction + allies.length) % allies.length
+      set({ spectateTargetId: allies[nextIdx].id })
     },
     cycleSpectateMode: () => set((s) => {
       const modes = ['follow_first', 'follow_third', 'free']

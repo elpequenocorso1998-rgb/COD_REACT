@@ -445,6 +445,80 @@ body.colorblind-tritanopia .game-canvas { filter: url(#cb-tritanopia); }
   z-index: 1;
 }
 
+/* --- Layout en cuadrícula del menú principal --- */
+.menu-main {
+  justify-content: flex-start;
+  padding: 32px 40px 60px;
+  overflow-y: auto;
+}
+.menu-header {
+  text-align: center;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+.menu-main h1 {
+  font-size: 56px;
+  letter-spacing: 6px;
+  margin: 0;
+}
+.menu-main h2 {
+  font-size: 16px;
+  letter-spacing: 5px;
+  margin: 4px 0 0;
+}
+.menu-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  width: 100%;
+  max-width: 1000px;
+  position: relative;
+  z-index: 1;
+}
+.menu-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.menu-col-actions button {
+  margin: 0;
+  padding: 14px 24px;
+  font-size: 16px;
+  letter-spacing: 4px;
+  text-align: left;
+}
+.menu-col-actions .menu-btn-primary {
+  background: linear-gradient(180deg, #ffd24d, #c89530);
+  color: #1a1a1a;
+  border-color: #ffd24d;
+  font-weight: 700;
+}
+.menu-col-actions .menu-btn-primary:hover {
+  background: linear-gradient(180deg, #ffe070, #d8a040);
+  box-shadow: 0 0 30px rgba(255, 210, 77, 0.7);
+}
+.menu-col-selectors {
+  gap: 20px;
+}
+.menu-selector .loadout-section-title {
+  margin-bottom: 8px;
+}
+.menu-selector .map-grid {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+}
+.menu-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 40px; right: 40px;
+  font-size: 11px;
+  color: #5a6878;
+  letter-spacing: 1px;
+  text-align: center;
+  line-height: 1.8;
+  z-index: 1;
+}
+
 .loading {
   position: fixed; inset: 0;
   display: flex;

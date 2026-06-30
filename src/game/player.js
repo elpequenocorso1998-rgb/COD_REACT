@@ -159,91 +159,96 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   // ---------------------------------------------------------------------
   // INPUT.
   // ---------------------------------------------------------------------
+  // Fase 19.1: helper que compara el evento con el keybinding guardado.
+  // Soporta teclado (e.code) y mouse (e.button → "MouseN").
+  function isAction(e, action) {
+    const bindings = getSettings().keybindings || {}
+    const bound = bindings[action]
+    if (!bound) return false
+    if (bound.startsWith('Mouse')) {
+      const btn = parseInt(bound.slice(5), 10)
+      return e.button === btn
+    }
+    return e.code === bound
+  }
+
   const onKeyDown = (e) => {
-    switch (e.code) {
-      case 'KeyW': case 'ArrowUp':    moveForward = true; break
-      case 'KeyS': case 'ArrowDown':  moveBackward = true; break
-      case 'KeyA': case 'ArrowLeft':  moveLeft = true; break
-      case 'KeyD': case 'ArrowRight': moveRight = true; break
-      case 'ShiftLeft': case 'ShiftRight':
-        sprinting = true
-        // Shift doble = tactical sprint (más rápido, arma baja).
-        if (!tacticalSprint && (Date.now() - _lastShiftAt) < 300) {
-          tacticalSprint = true
-        }
-        _lastShiftAt = Date.now()
-        break
-      case 'ControlLeft': case 'ControlRight':
-        // Slide: crouch mientras sprintas = slide.
-        if (sprinting && !isSliding && !isCrouching) {
-          isSliding = true
-          slideTimer = 0.6 // 600ms de slide
-          // Impulso hacia adelante.
-          _dir.set(0, 0, -1).applyQuaternion(camera.quaternion)
-          velocity.x = _dir.x * MOVEMENT.sprint * 1.8
-          velocity.z = _dir.z * MOVEMENT.sprint * 1.8
-        }
-        isCrouching = true
-        break
-      case 'KeyZ':
-        // Prone toggle (cuerpo a tierra).
-        isProne = !isProne
-        if (isProne) { isCrouching = false; isSliding = false }
-        break
-      case 'KeyQ':
-        // Lean left.
-        leanTarget = -1
-        break
-      case 'KeyE':
-        // Lean right.
-        leanTarget = 1
-        break
-      case 'Space':
-        if (canJump && !isProne) {
-          velocity.y = MOVEMENT.jump
-          canJump = false
-          // Fase 1.5: slide-jump (mantener momentum del slide al saltar).
-          // Si estábamos en slide, conservamos parte del impulso.
-          // (No hacemos nada especial: la velocity.x/z ya es alta del slide.)
-        }
-        // Jump cancela slide.
-        if (isSliding) { isSliding = false; slideTimer = 0 }
-        // Fase 1.5: intentar mantle si estamos en el aire cerca de un borde.
-        if (!canJump) tryMantle()
-        break
-      case 'KeyF':
-        // Fase 1.5: mantle manual (trepado de obstáculos).
-        tryMantle()
-        break
-      case 'KeyV':
-        // Fase 1.5: mantener respiración (sniper). Reduce sway al apuntar.
-        isHoldingBreath = true
-        breathRegenDelay = STAMINA.breathRegenDelay
-        break
+    if (isAction(e, 'forward')) { moveForward = true; return }
+    if (isAction(e, 'backward')) { moveBackward = true; return }
+    if (isAction(e, 'left')) { moveLeft = true; return }
+    if (isAction(e, 'right')) { moveRight = true; return }
+    if (isAction(e, 'sprint')) {
+      sprinting = true
+      // Shift doble = tactical sprint (más rápido, arma baja).
+      if (!tacticalSprint && (Date.now() - _lastShiftAt) < 300) {
+        tacticalSprint = true
+      }
+      _lastShiftAt = Date.now()
+      return
+    }
+    if (isAction(e, 'crouch')) {
+      // Slide: crouch mientras sprintas = slide.
+      if (sprinting && !isSliding && !isCrouching) {
+        isSliding = true
+        slideTimer = 0.6 // 600ms de slide
+        // Impulso hacia adelante.
+        _dir.set(0, 0, -1).applyQuaternion(camera.quaternion)
+        velocity.x = _dir.x * MOVEMENT.sprint * 1.8
+        velocity.z = _dir.z * MOVEMENT.sprint * 1.8
+      }
+      isCrouching = true
+      return
+    }
+    if (isAction(e, 'prone')) {
+      // Prone toggle (cuerpo a tierra).
+      isProne = !isProne
+      if (isProne) { isCrouching = false; isSliding = false }
+      return
+    }
+    if (isAction(e, 'leanLeft')) { leanTarget = -1; return }
+    if (isAction(e, 'leanRight')) { leanTarget = 1; return }
+    if (isAction(e, 'jump')) {
+      if (canJump && !isProne) {
+        velocity.y = MOVEMENT.jump
+        canJump = false
+        // Fase 1.5: slide-jump (mantener momentum del slide al saltar).
+      }
+      // Jump cancela slide.
+      if (isSliding) { isSliding = false; slideTimer = 0 }
+      // Fase 1.5: intentar mantle si estamos en el aire cerca de un borde.
+      if (!canJump) tryMantle()
+      return
+    }
+    if (isAction(e, 'mantle')) {
+      // Fase 1.5: mantle manual (trepado de obstáculos).
+      tryMantle()
+      return
+    }
+    if (isAction(e, 'holdBreath')) {
+      // Fase 1.5: mantener respiración (sniper). Reduce sway al apuntar.
+      isHoldingBreath = true
+      breathRegenDelay = STAMINA.breathRegenDelay
+      return
     }
   }
   let _lastShiftAt = 0
   const onKeyUp = (e) => {
-    switch (e.code) {
-      case 'KeyW': case 'ArrowUp':    moveForward = false; break
-      case 'KeyS': case 'ArrowDown':  moveBackward = false; break
-      case 'KeyA': case 'ArrowLeft':  moveLeft = false; break
-      case 'KeyD': case 'ArrowRight': moveRight = false; break
-      case 'ShiftLeft': case 'ShiftRight':
-        sprinting = false
-        tacticalSprint = false
-        break
-      case 'ControlLeft': case 'ControlRight': isCrouching = false; break
-      case 'KeyQ':
-      case 'KeyE':
-        // Al soltar Q o E, vuelve al centro.
-        leanTarget = 0
-        break
-      case 'KeyV':
-        // Fase 1.5: soltar respiración.
-        isHoldingBreath = false
-        breathRegenDelay = STAMINA.breathRegenDelay
-        break
+    if (isAction(e, 'forward')) { moveForward = false; return }
+    if (isAction(e, 'backward')) { moveBackward = false; return }
+    if (isAction(e, 'left')) { moveLeft = false; return }
+    if (isAction(e, 'right')) { moveRight = false; return }
+    if (isAction(e, 'sprint')) { sprinting = false; tacticalSprint = false; return }
+    if (isAction(e, 'crouch')) { isCrouching = false; return }
+    if (isAction(e, 'leanLeft') || isAction(e, 'leanRight')) {
+      // Al soltar Q o E, vuelve al centro.
+      leanTarget = 0
+      return
+    }
+    if (isAction(e, 'holdBreath')) {
+      // Fase 1.5: soltar respiración.
+      isHoldingBreath = false
+      breathRegenDelay = STAMINA.breathRegenDelay
+      return
     }
   }
 
@@ -269,8 +274,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     // engine via _onGunshipClick), no el arma del player. Sin esto, cada
     // click gastaba munición del arma Y disparaba el cañón.
     if (gunshipActive) return
-    if (e.button === 0) {
-      // Botón izquierdo: disparar.
+    if (isAction(e, 'fire')) {
+      // Botón configurado para disparar.
       // Semi-auto (sniper, shotgun, pistol): un click = un disparo.
       // Auto (ar, smg, lmg): mantén para auto-fire.
       if (currentWeaponDef && !currentWeaponDef.automatic) {
@@ -279,14 +284,17 @@ export function createPlayer(scene, camera, world, particles, renderer) {
         isFiring = true
         fireAccumulator = currentWeaponDef ? currentWeaponDef.fireInterval : 0.1
       }
-    } else if (e.button === 2) {
-      // Botón derecho: ADS (aim down sights).
+      return
+    }
+    if (isAction(e, 'ads')) {
+      // Botón configurado: ADS (aim down sights).
       isAiming = true
+      return
     }
   }
   const onMouseUp = (e) => {
-    if (e.button === 0) isFiring = false
-    else if (e.button === 2) isAiming = false
+    if (isAction(e, 'fire')) isFiring = false
+    else if (isAction(e, 'ads')) isAiming = false
   }
 
   // Prevenir menú contextual al click derecho (interfiere con ADS).

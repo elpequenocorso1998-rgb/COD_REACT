@@ -37,6 +37,16 @@ export function buildDesert(colliders) {
   sand.receiveShadow = true
   group.add(sand)
 
+  // Suelo extendido para cubrir el horizonte.
+  const extSandMat = new THREE.MeshStandardMaterial({ color: 0xb09870, roughness: 0.95 })
+  const extSand = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_SIZE * 6, FLOOR_SIZE * 6),
+    extSandMat
+  )
+  extSand.rotation.x = -Math.PI / 2
+  extSand.position.y = -0.02
+  group.add(extSand)
+
   const hangarMat = new THREE.MeshStandardMaterial({
     color: 0x8a7a5a, roughness: 0.85, metalness: 0.2
   })

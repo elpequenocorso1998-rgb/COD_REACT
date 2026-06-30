@@ -1686,3 +1686,124 @@ Pendiente: requiere buffer de cámaras remotas.
 - [ ] 18.53 — Firing Range mode
 - [ ] 18.54 — Ping system / ping wheel
 - [ ] 18.55 — Objective markers HUD
+
+---
+
+## FASE 19 — Bug fixes críticos + visuales realistas + repo AAA
+
+**Contexto**: tras auditar el código se detectaron bugs P0 (controles rotos,
+mapas no cargan), problemas visuales P1 (parece Minecraft) y gaps de
+organización P2 (README stale, sin CI). Esta fase arregla todo.
+
+**Restricciones**: procedural-only (sin assets externos), commit por sub-fase,
+lint+test+build tras cada una.
+
+### Sub-fase 19.1 — Wire keybinds al input handler `[x]`
+**Problema**: `DEFAULT_KEYBINDINGS` existe y se guarda en Settings, pero
+`player.js` y `engine.js` usan `e.code === 'KeyW'` hardcodeados. Rebinds
+no funcionan.
+**Tareas**: refactor onKey* en player.js y engine.js para leer
+`getSettings().keybindings`. Helper `isAction(e, action)`.
+**Verify**: rebind fire a Mouse4, jugar, funciona.
+
+### Sub-fase 19.2 — Fix map loading: startGame reconstruye el mundo `[ ]`
+**Problema**: `startGame(mapId)` solo hace `selectedMapId = mapId`. Nunca
+llama `createWorld()`. El mundo se construye una vez en `mount()`.
+**Tareas**: `loadedMapId` tracking, rebuild world+navmesh en startGame si
+mapId cambió, `setWorld()` en player/enemies.
+**Verify**: seleccionar desert, Play, ver mapa desierto.
+
+### Sub-fase 19.3 — Fix cook grenade leaks + spectator Q/E `[ ]`
+**Problema**: `cancelCook()` nunca se llama. Cooking + muerte = leak. Q y E
+en spectator hacen lo mismo.
+**Tareas**: cancelCook en death/pause/alt-tab/dispose. cycleSpectateTarget
+con direction. HUD cook progress ring.
+**Verify**: cook grenade, morir, respawn, cook funciona.
+
+### Sub-fase 19.4 — Click to play overlay + pointer lock UX `[ ]`
+**Problema**: `requestPointerLock` desde React onClick falla silenciosamente.
+Auto-pause inmediato.
+**Tareas**: overlay "Click to play" sobre canvas. Grace period 1s tras
+startGame. Retry pointer lock.
+**Verify**: click Play, ver overlay, click, pointer lock funciona.
+
+### Sub-fase 19.5 — Controles completos en el menú `[ ]`
+**Problema**: El menú no lista V, Y, Shift+1-7, B, F8, tactical sprint.
+**Tareas**: actualizar línea de controles con TODAS las teclas. Colapsable.
+**Verify**: ver todos los controles listados.
+
+### Sub-fase 19.6 — Normal + roughness maps en 6 texturas `[ ]`
+**Problema**: 6 de 8 texturas solo tienen color map. Paredes planas.
+**Tareas**: añadir normalMap + roughnessMap a makeSillarTexture,
+makeRoofTexture, makeWoodTexture, makeGunMetalTexture, makeUniformTexture,
+makeSkinTexture.
+**Verify**: paredes con relieve visible bajo luz lateral.
+
+### Sub-fase 19.7 — Cortar agujeros de ventanas reales `[ ]`
+**Problema**: Ventanas = cajas pegadas delante de la pared. No hay agujeros.
+**Tareas**: usar Shape + ExtrudeGeometry con holes. Eliminar cajas-ventana.
+**Verify**: ver a través de las ventanas.
+
+### Sub-fase 19.8 — Más segmentos en cilindros/esferas `[ ]`
+**Problema**: Cilindros 8-12 lados, esferas 16 segmentos → facetado.
+**Tareas**: cilindros 12→32, esfera cabeza 16→32, cápsulas brazos 4→8.
+**Verify**: cañones lisos, cabeza redonda.
+
+### Sub-fase 19.9 — Sky shader real (Preetham) `[ ]`
+**Problema**: Sky = gradiente 3-color. No hay disco solar ni scattering.
+**Tareas**: reemplazar con three/examples Sky.js. Configurar turbidity,
+rayleigh, mieCoefficient.
+**Verify**: cielo realista con disco solar.
+
+### Sub-fase 19.10 — Rebuild 4 mapas extra con geometría detallada `[ ]`
+**Problema**: desert/urban/snow/industrial = solo addBox() con colores sólidos.
+**Tareas**: reutilizar buildPamplonaHouse con paletas. Hangares, coches con
+ruedas, pinos cónicos, tanques con tuberías.
+**Verify**: cada mapa se ve distinto y detallado.
+
+### Sub-fase 19.11 — Partículas ambientales `[ ]`
+**Problema**: No hay atmósfera (polvo, humo, pájaros).
+**Tareas**: spawnAmbientDust, spawnDistantSmoke, columnas de humo en horizonte.
+**Verify**: polvo flotando en haces de sol.
+
+### Sub-fase 19.12 — README overhaul `[ ]`
+**Problema**: README stale, sin badges, sin screenshots.
+**Tareas**: facts corregidos, badges, roadmap table, features grid, TOC,
+screenshots, Mermaid diagram.
+**Verify**: README se ve profesional en GitHub.
+
+### Sub-fase 19.13 — CI/CD + community files `[ ]`
+**Problema**: Sin CI, sin CONTRIBUTING, sin CHANGELOG.
+**Tareas**: .github/workflows/ci.yml, dependabot, PR/issue templates,
+CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .prettierrc, husky.
+**Verify**: push a PR → CI corre.
+
+### Sub-fase 19.14 — Repo cleanup `[ ]`
+**Problema**: opencode.json trackeado con API key, hostnames privados.
+**Tareas**: .gitignore, git rm opencode.json, allowedHosts env-driven,
+package.json fields, limpiar duplicates.
+**Verify**: git status limpio.
+
+### Sub-fase 19.15 — Reorganizar src/game/ + split App.jsx `[ ]`
+**Problema**: 31 archivos planos + 11 subdirs inconsistente. App.jsx = 51KB.
+**Tareas**: reorganizar en core/combat/world/meta/audio/net. Split App.jsx
+en ui/menus/. Mirror tests/ structure.
+**Verify**: lint+test+build tras cada move.
+
+## Progreso Fase 19
+
+- [x] 19.1 — Wire keybinds al input handler
+- [ ] 19.2 — Fix map loading
+- [ ] 19.3 — Fix cook grenade leaks + spectator Q/E
+- [ ] 19.4 — Click to play overlay + pointer lock
+- [ ] 19.5 — Controles completos en el menú
+- [ ] 19.6 — Normal + roughness maps en 6 texturas
+- [ ] 19.7 — Cortar agujeros de ventanas
+- [ ] 19.8 — Más segmentos en cilindros/esferas
+- [ ] 19.9 — Sky shader real (Preetham)
+- [ ] 19.10 — Rebuild 4 mapas extra detallados
+- [ ] 19.11 — Partículas ambientales
+- [ ] 19.12 — README overhaul
+- [ ] 19.13 — CI/CD + community files
+- [ ] 19.14 — Repo cleanup
+- [ ] 19.15 — Reorganizar src/game/ + split App.jsx

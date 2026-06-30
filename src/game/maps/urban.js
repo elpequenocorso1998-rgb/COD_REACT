@@ -36,6 +36,16 @@ export function buildUrban(colliders) {
   road.receiveShadow = true
   group.add(road)
 
+  // Suelo extendido para cubrir el horizonte.
+  const extRoadMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 })
+  const extRoad = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_SIZE * 6, FLOOR_SIZE * 6),
+    extRoadMat
+  )
+  extRoad.rotation.x = -Math.PI / 2
+  extRoad.position.y = -0.02
+  group.add(extRoad)
+
   const buildingMat = new THREE.MeshStandardMaterial({
     color: 0x6a6a6a, roughness: 0.85, metalness: 0.15
   })

@@ -782,47 +782,51 @@ export function createEngine() {
   /* ----------------------------------------------------------------------
      Input global (R recarga, ESC pausa).
      ---------------------------------------------------------------------- */
+  // Fase 19.1: helper que compara el evento con el keybinding guardado.
+  function isAction(e, action) {
+    const bindings = getSettings().keybindings || {}
+    const bound = bindings[action]
+    if (!bound) return false
+    if (bound.startsWith('Mouse')) {
+      const btn = parseInt(bound.slice(5), 10)
+      return e.button === btn
+    }
+    return e.code === bound
+  }
+
   function onKeyDown(e) {
     const st = store.getState()
-    if (e.code === 'KeyR' && st.gameState === GAME_STATES.PLAYING) {
+    if (isAction(e, 'reload') && st.gameState === GAME_STATES.PLAYING) {
       if (!st.reloading && st.ammo < st.magSize && st.reserve > 0) {
         st.reload()
         audio.playReload()
       }
     }
-    if (e.code === 'Escape' && st.gameState === GAME_STATES.PLAYING) {
+    if (isAction(e, 'pause') && st.gameState === GAME_STATES.PLAYING) {
       st.setState(GAME_STATES.PAUSED)
       audio.setMuted(true)
       player.exitPointerLock()
     }
-    // --- Cambio de arma: teclas 1-7 ---
-    if (st.gameState === GAME_STATES.PLAYING) {
+    // --- Cambio de arma: teclas 1-7 (con Shift) ---
+    if (st.gameState === GAME_STATES.PLAYING && e.shiftKey) {
       const weaponMap = {
         Digit1: 'm4', Digit2: 'ak47', Digit3: 'mp5',
         Digit4: 'sniper', Digit5: 'shotgun', Digit6: 'lmg', Digit7: 'pistol'
       }
-      // Nota: Digit4-7 también se usan para killstreaks. Damos prioridad al
-      // cambio de arma si hay un killstreak disponible del tipo correspondiente.
-      // Para evitar conflicto: usamos Shift+1-7 para armas, 1-7 solas para
-      // killstreaks cuando hay streaks disponibles.
       const weaponId = weaponMap[e.code]
-      if (weaponId && e.shiftKey) {
+      if (weaponId) {
         st.switchWeapon(weaponId)
         player.setWeapon(st.getCurrentWeapon())
-        // Fase 18.16: ninja perk suprime el sonido de swap.
         if (!hasPerk('ninja')) audio.playReload()
       }
     }
-    // --- Fase 6: swap primary↔secondary con tecla Y ---
-    // Antes el loadout.secondary era config muerta: el jugador solo podía
-    // cambiar con Shift+1-7. Ahora Y intercambia entre primary y secondary.
-    if (e.code === 'KeyY' && st.gameState === GAME_STATES.PLAYING) {
+    // --- Swap primary↔secondary ---
+    if (isAction(e, 'switchWeapon') && st.gameState === GAME_STATES.PLAYING) {
       const loadout = getLoadout()
       const target = (st.currentWeapon === loadout.primary) ? loadout.secondary : loadout.primary
       if (target && target !== st.currentWeapon) {
         st.switchWeapon(target)
         player.setWeapon(st.getCurrentWeapon())
-        // Fase 18.16: ninja perk suprime el sonido de swap.
         if (!hasPerk('ninja')) audio.playReload()
       }
     }
@@ -837,7 +841,7 @@ export function createEngine() {
         }
       }
     }
-    // --- Fase 18.4: Field upgrade con tecla T (si charge >= 100 y sin cooldown) ---
+    // --- Field upgrade ---
     if (e.code === 'KeyT' && st.gameState === GAME_STATES.PLAYING && fieldUpgrades) {
       const fuId = st.activeFieldUpgrade
       if (fuId && st.fieldUpgradeCharge >= 100 && st.fieldUpgradeCooldown <= 0) {
@@ -857,47 +861,42 @@ export function createEngine() {
         }
       }
     }
-    // --- Fase 18.5: Spectator controls (Q/E cycle, R toggle mode) ---
+    // --- Spectator controls ---
     if (st.gameState === GAME_STATES.SPECTATING) {
-      if (e.code === 'KeyQ') {
-        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId)
-      } else if (e.code === 'KeyE') {
-        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId)
-      } else if (e.code === 'KeyR') {
+      if (isAction(e, 'leanLeft')) {
+        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId, -1)
+      } else if (isAction(e, 'leanRight')) {
+        st.cycleSpectateTarget(st.mpRemotePlayers, st.mpClientId, 1)
+      } else if (isAction(e, 'reload')) {
         st.cycleSpectateMode()
       }
     }
 
-    // --- Scoreboard: Tab hold ---
-    if (e.code === 'Tab') {
+    // --- Scoreboard ---
+    if (isAction(e, 'scoreboard')) {
       e.preventDefault()
       st.toggleScoreboard(true)
     }
-    // --- Fase 18.7: Profiler toggle (F8) ---
+    // --- Profiler toggle ---
     if (e.code === 'F8') {
       e.preventDefault()
       toggleProfilerOverlay()
     }
-    // --- Granadas: G=frag, X=flash, C=smoke (Q/E son lean) ---
-    // Fase 4: las granadas ahora tienen count finito en el store.
-    // Fase 6: el tipo de G y X viene del loadout (lethal/tactical),
-    // no hardcodeado. Antes loadout.tactical/lethal eran config muerta.
-    // Fase 18.14: cook grenades — G/X empiezan fuse en keydown, liberan en keyup.
+    // --- Granadas: cook grenades ---
     if (st.gameState === GAME_STATES.PLAYING && grenades) {
       const now = performance.now()
       if (now - lastGrenadeAt >= GRENADE_COOLDOWN) {
         const loadout = getLoadout()
         let grenadeType = null
-        if (e.code === 'KeyG') grenadeType = loadout.lethal || 'frag'
-        else if (e.code === 'KeyX') grenadeType = loadout.tactical || 'flash'
-        else if (e.code === 'KeyC') grenadeType = 'smoke'
-        else if (e.code === 'KeyB') grenadeType = 'knife'
+        if (isAction(e, 'lethal')) grenadeType = loadout.lethal || 'frag'
+        else if (isAction(e, 'tactical')) grenadeType = loadout.tactical || 'flash'
+        else if (isAction(e, 'smoke')) grenadeType = 'smoke'
+        else if (isAction(e, 'knife')) grenadeType = 'knife'
         if (grenadeType) {
           if (st.useGrenade(grenadeType)) {
             lastGrenadeAt = now
             _grenadeOrigin.copy(player.getPosition())
             _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
-            // Knife/smoke no se cocinan (inmediatos).
             if (grenadeType === 'knife' || grenadeType === 'smoke') {
               grenades.throwGrenade(grenadeType, _grenadeOrigin, _grenadeDir)
             } else {
@@ -913,14 +912,14 @@ export function createEngine() {
     const st = store.getState()
     // Fase 18.14: liberar granada cocida al soltar tecla.
     if (st.gameState === GAME_STATES.PLAYING && grenades && grenades.isCooking()) {
-      if (e.code === 'KeyG' || e.code === 'KeyX') {
+      if (isAction(e, 'lethal') || isAction(e, 'tactical')) {
         _grenadeOrigin.copy(player.getPosition())
         _grenadeDir.set(0, 0, -1).applyQuaternion(camera.quaternion)
         grenades.releaseCooked(_grenadeDir)
       }
     }
-    // Scoreboard se cierra al soltar Tab.
-    if (e.code === 'Tab') st.toggleScoreboard(false)
+    // Scoreboard se cierra al soltar.
+    if (isAction(e, 'scoreboard')) st.toggleScoreboard(false)
   }
 
   function onResize() {

@@ -35,6 +35,16 @@ export function buildIndustrial(colliders) {
   floor.receiveShadow = true
   group.add(floor)
 
+  // Suelo extendido para cubrir el horizonte.
+  const extFloorMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 })
+  const extFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(FLOOR_SIZE * 6, FLOOR_SIZE * 6),
+    extFloorMat
+  )
+  extFloor.rotation.x = -Math.PI / 2
+  extFloor.position.y = -0.02
+  group.add(extFloor)
+
   const metalMat = new THREE.MeshStandardMaterial({
     color: 0x5a5a5a, roughness: 0.5, metalness: 0.8
   })
