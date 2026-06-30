@@ -651,7 +651,34 @@ function MainMenu({ onStart, onOpenLoadout, onOpenSettings, onOpenMultiplayer, o
         </div>
       </div>
       <div className="menu-controls">
-        <strong>WASD</strong> mover · <strong>SHIFT</strong> correr · <strong>CTRL</strong> slide · <strong>Z</strong> prone · <strong>SPACE</strong> saltar · <strong>F</strong> mantle · <strong>Q/E</strong> lean · <strong>Click izq.</strong> disparar · <strong>Click der.</strong> ADS · <strong>R</strong> recarga · <strong>G/X/C</strong> granadas · <strong>T</strong> field upgrade · <strong>4-7</strong> killstreaks · <strong>TAB</strong> scoreboard · <strong>ESC</strong> pausa
+        <details>
+          <summary>Controles</summary>
+          <div className="controls-grid">
+            <div><strong>WASD</strong> Mover</div>
+            <div><strong>SHIFT</strong> Sprint</div>
+            <div><strong>SHIFT×2</strong> Sprint táctico</div>
+            <div><strong>CTRL</strong> Agacharse / Slide</div>
+            <div><strong>Z</strong> Prone</div>
+            <div><strong>SPACE</strong> Saltar</div>
+            <div><strong>F</strong> Mantle</div>
+            <div><strong>Q / E</strong> Lean izq / der</div>
+            <div><strong>V</strong> Mantener respiración (sniper)</div>
+            <div><strong>Click izq.</strong> Disparar</div>
+            <div><strong>Click der.</strong> ADS</div>
+            <div><strong>R</strong> Recargar</div>
+            <div><strong>Y</strong> Cambiar arma</div>
+            <div><strong>SHIFT+1-7</strong> Seleccionar arma</div>
+            <div><strong>G</strong> Granada letal (cook)</div>
+            <div><strong>X</strong> Granada táctica (cook)</div>
+            <div><strong>C</strong> Humo</div>
+            <div><strong>B</strong> Cuchillo</div>
+            <div><strong>T</strong> Field upgrade</div>
+            <div><strong>4-7</strong> Killstreaks</div>
+            <div><strong>TAB</strong> Scoreboard</div>
+            <div><strong>ESC</strong> Pausa</div>
+            <div><strong>F8</strong> Profiler</div>
+          </div>
+        </details>
       </div>
     </div>
   )

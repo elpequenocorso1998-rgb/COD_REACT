@@ -1727,7 +1727,7 @@ Auto-pause inmediato.
 startGame. Retry pointer lock.
 **Verify**: click Play, ver overlay, click, pointer lock funciona.
 
-### Sub-fase 19.5 — Controles completos en el menú `[ ]`
+### Sub-fase 19.5 — Controles completos en el menú `[x]`
 **Problema**: El menú no lista V, Y, Shift+1-7, B, F8, tactical sprint.
 **Tareas**: actualizar línea de controles con TODAS las teclas. Colapsable.
 **Verify**: ver todos los controles listados.
@@ -1796,7 +1796,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.2 — Fix map loading
 - [x] 19.3 — Fix cook grenade leaks + spectator Q/E
 - [x] 19.4 — Click to play overlay + pointer lock
-- [ ] 19.5 — Controles completos en el menú
+- [x] 19.5 — Controles completos en el menú
 - [ ] 19.6 — Normal + roughness maps en 6 texturas
 - [ ] 19.7 — Cortar agujeros de ventanas
 - [ ] 19.8 — Más segmentos en cilindros/esferas
