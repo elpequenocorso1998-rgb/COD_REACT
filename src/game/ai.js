@@ -27,6 +27,9 @@ const COVER_SEARCH_RADIUS = 8 // radio de búsqueda de cobertura
 const RETREAT_HP_PERCENT = 0.25 // bajo 25% HP → retreat
 const SUPPRESS_DURATION = 2.0  // duración del estado suppress
 
+// Fase 18.25: import del store para leer estado del jugador.
+import { useGameStore } from './store.js'
+
 export const AI_STATES = {
   ENGAGE: 'engage',
   FLANK: 'flank',
@@ -104,6 +107,17 @@ export function createAIController(navmesh) {
       return
     }
     if (ai.state === AI_STATES.RELOAD && ai.reloadTimer > 0) return
+
+    // Fase 18.25: si el jugador está recargando, 40% prob de ADVANCE (push).
+    if (ai.state !== AI_STATES.ADVANCE && dist < 25) {
+      try {
+        const playerReloading = useGameStore.getState().reloading
+        if (playerReloading && Math.random() < 0.4) {
+          ai.state = AI_STATES.ADVANCE
+          return
+        }
+      } catch (e) { /* store no disponible en tests */ }
+    }
 
     // Retreat: HP bajo y jugador cerca.
     if (hpPct < RETREAT_HP_PERCENT && dist < 15) {
@@ -196,6 +210,20 @@ export function createAIController(navmesh) {
         if (ai.coverTimer <= 0 || !ai.coverPos) {
           ai.state = AI_STATES.ADVANCE
           return { x: px, z: pz }
+        }
+        // Fase 18.22: cover peeking — cada 2s, el bot se asoma hacia el jugador.
+        if (!ai.peekTimer) ai.peekTimer = 0
+        ai.peekTimer += DECISION_INTERVAL
+        if (ai.peekTimer >= 2.0) {
+          ai.peekTimer = 0
+          // Peek: moverse ligeramente hacia el jugador durante 0.5s.
+          const dx = px - ai.coverPos.x
+          const dz = pz - ai.coverPos.z
+          const d = Math.hypot(dx, dz) || 1
+          return {
+            x: ai.coverPos.x + dx / d * 2,
+            z: ai.coverPos.z + dz / d * 2
+          }
         }
         return ai.coverPos
       }

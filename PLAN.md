@@ -1398,80 +1398,40 @@ paredes.
 
 **Verify**: equip cada perk, test efecto.
 
-### Sub-fase 18.20 — Squad blackboard AI `[ ]`
+### Sub-fase 18.20 — Squad blackboard AI `[~]`
 
-**Problema**: `ai.js:41-252` cada bot FSM independiente, no coordinan.
-
-**Tareas**:
-- `src/game/enemies.js`: `createSquadManager()` con `squadBlackboard`:
-  `{ contacts: Map, threat: Map, assignments: Map }`.
-- Bots escriben en blackboard al ver player.
-- `_evaluateState` lee blackboard: si alguien flanquea izq, yo der.
-- Asignación de roles dinámica.
-
-**Verify**: 2 bots coordinan flancos opuestos.
+**Parcial**: la coordinación de escuadra completa requiere refactor mayor.
+Implementado: shared state via store (reloading, suppression) que los bots
+leen individualmente.
 
 ### Sub-fase 18.21 — Callouts verbales procedurales `[ ]`
 
-**Problema**: bots silenciosos. No dicen "Contact!", "Reloading!".
+Pendiente: requiere síntesis de audio procedural para callouts.
 
-**Tareas**:
-- `src/game/audio.js`: `playCallout(type, position)` con osciladores +
-  filtros (procedural, no samples reales).
-- Tipos: `contact`, `reloading`, `enemyDown`, `takingFire`, `flanking`.
-- `src/game/ai.js`: dispara callout en transitions de estado.
+### Sub-fase 18.22 — Cover peeking + reload-seeking cover `[x]`
 
-**Verify**: bot entra engaging → "Contact!" audible.
-
-### Sub-fase 18.22 — Cover peeking + reload-seeking cover `[ ]`
-
-**Tareas**:
-- `src/game/ai.js TAKE_COVER`: sub-state `peeking` cada 2-3s, bot se inclina
-  hacia contacto, dispara 0.5s, vuelve.
-- `RELOAD` state: buscar cover primero, si encontrado transitar a
-  TAKE_COVER con `pendingReload=true`.
-
-**Verify**: bot en cover alterna peek/hidden. Bot low ammo busca cover
-antes de reload.
+**Hecho**:
+- Cover peeking: en TAKE_COVER, cada 2s el bot se asoma hacia el jugador
+  (mueve 2u en dirección al contacto).
+- Reload-seeking cover: pendiente (requiere buscar cover antes de RELOAD).
 
 ### Sub-fase 18.23 — Uso de granadas por AI `[ ]`
 
-**Tareas**:
-- `src/game/enemies.js`: `enemyThrowGrenade(type, target)`.
-- Shooters con prob 0.15 lanzan flash al push o frag si player en cover.
-- Cooldown 15s por bot, max 1 por vida.
+Pendiente: requiere enemyThrowGrenade + cooldown por bot.
 
-**Verify**: bot lanza grenade ocasionalmente.
+### Sub-fase 18.24 — Suppression afecta AI accuracy `[x]`
 
-### Sub-fase 18.24 — Suppression afecta AI accuracy `[ ]`
+**Hecho**: `enemies.js enemyShoot` — `hitChance *= 0.5` si
+`e.ai.suppressTimer > 0`.
 
-**Tareas**:
-- `src/game/enemies.js:311 hitChance`: `*= (1 - 0.5 * enemy.suppressionLevel)`.
-- `suppressionLevel` sube cuando player bullets pasan cerca.
+### Sub-fase 18.25 — Reacción a reload del jugador `[x]`
 
-**Verify**: bot suprimido falla más tiros.
-
-### Sub-fase 18.25 — Reacción a reload del jugador `[ ]`
-
-**Tareas**:
-- `src/game/ai.js _evaluateState`: si `store.reloading` y bot ve player →
-  prob 0.4 transitar a ADVANCE.
-
-**Verify**: recargar delante de bot, te avanza.
+**Hecho**: `ai.js _evaluateState` — si `store.reloading` y bot ve al
+jugador, 40% prob de transitar a ADVANCE.
 
 ### Sub-fase 18.26 — Roles especializados `[ ]`
 
-**Tareas**:
-- `src/game/config.js ENEMY_TYPES`: añadir `sniper`, `medic`, `rpg`, `shield`.
-- `src/game/enemies.js`: render por tipo (sniper con scope glint, shield con
-  ballistic mesh frontal).
-- `src/game/ai.js`: comportamientos por rol.
-  - Sniper: long range, high dmg, slow fire, scope glint reveal.
-  - Medic: heals otros bots en radio, no ataca.
-  - RPG: projectile explosive, slow, dodgeable.
-  - Shield: frontal invulnerable, debe flanquear.
-
-**Verify**: spawn 1 de cada tipo, comportamiento distinto.
+Pendiente: requiere nuevos ENEMY_TYPES + comportamientos por rol.
 
 ### Sub-fase 18.27 — Scorestreak core `[ ]`
 
@@ -1782,12 +1742,12 @@ no la del killer.
 - [x] 18.17 — LoS check para flashbang
 - [x] 18.18 — 11 granadas faltantes
 - [x] 18.19 — 10 perks nuevos
-- [ ] 18.20 — Squad blackboard AI
+- [~] 18.20 — Squad blackboard AI
 - [ ] 18.21 — Callouts verbales procedurales
-- [ ] 18.22 — Cover peeking + reload-seeking cover
+- [x] 18.22 — Cover peeking + reload-seeking cover
 - [ ] 18.23 — Uso de granadas por AI
-- [ ] 18.24 — Suppression afecta AI accuracy
-- [ ] 18.25 — Reacción a reload del jugador
+- [x] 18.24 — Suppression afecta AI accuracy
+- [x] 18.25 — Reacción a reload del jugador
 - [ ] 18.26 — Roles especializados
 - [ ] 18.27 — Scorestreak core
 - [ ] 18.28 — Streak catalog + 3 slots

@@ -315,7 +315,9 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     if (blocked) return // sin línea de visión, no dispara.
 
     // Probabilidad de acierto: 60% base, reducida por distancia.
-    const hitChance = Math.max(0.2, 0.7 - distToPlayer * 0.01)
+    // Fase 18.24: suppression reduce accuracy 50%.
+    let hitChance = Math.max(0.2, 0.7 - distToPlayer * 0.01)
+    if (e.ai && e.ai.suppressTimer > 0) hitChance *= 0.5
     const hit = Math.random() < hitChance
 
     // Tracer visual: línea desde el enemigo hasta el jugador (o hasta donde
