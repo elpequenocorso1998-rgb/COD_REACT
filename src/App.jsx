@@ -8,6 +8,7 @@ import { getSettings, saveSettings } from './game/settings.js'
 import { t, setLang, getLang } from './i18n.js'
 import { createNetClient } from './net/client.js'
 import { getMetaSummary, getWeaponStats, CAMO_CATALOG } from './game/meta.js'
+import { DEFAULT_KEYBINDINGS } from './game/accessibility/index.js'
 
 /* =========================================================================
    ErrorBoundary: si WebGL falla o el engine crashea al montar, mostramos
@@ -545,6 +546,8 @@ function GameOverMenu({ onRestart }) {
    ========================================================================= */
 function SettingsScreen({ onClose, onApply }) {
   const [settings, setSettingsState] = useState(() => getSettings())
+  const [keybindTab, setKeybindTab] = useState(false)
+  const [rebindingAction, setRebindingAction] = useState(null)
 
   const update = (patch) => {
     const next = { ...settings, ...patch }
@@ -553,99 +556,179 @@ function SettingsScreen({ onClose, onApply }) {
     onApply(next)
   }
 
+  const startRebind = (action) => setRebindingAction(action)
+
+  useEffect(() => {
+    if (!rebindingAction) return
+    const handler = (e) => {
+      e.preventDefault()
+      let key
+      if (e.type === 'mousedown') {
+        key = `Mouse${e.button}`
+      } else {
+        key = e.code
+      }
+      if (key === 'Escape') {
+        setRebindingAction(null)
+        return
+      }
+      const nextBindings = { ...(settings.keybindings || DEFAULT_KEYBINDINGS), [rebindingAction]: key }
+      update({ keybindings: nextBindings })
+      setRebindingAction(null)
+    }
+    window.addEventListener('keydown', handler)
+    window.addEventListener('mousedown', handler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      window.removeEventListener('mousedown', handler)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rebindingAction, settings.keybindings])
+
+  const resetKeybinds = () => {
+    update({ keybindings: { ...DEFAULT_KEYBINDINGS } })
+  }
+
+  const formatKey = (code) => {
+    if (!code) return '—'
+    if (code.startsWith('Mouse')) return `Mouse ${code.slice(5)}`
+    if (code.startsWith('Key')) return code.slice(3)
+    if (code.startsWith('Digit')) return code.slice(5)
+    if (code.startsWith('Arrow')) return code
+    return code
+  }
+
+  const keybindLabels = {
+    forward: 'Move Forward', backward: 'Move Backward', left: 'Strafe Left', right: 'Strafe Right',
+    sprint: 'Sprint', crouch: 'Crouch', prone: 'Prone', jump: 'Jump', mantle: 'Mantle',
+    leanLeft: 'Lean Left', leanRight: 'Lean Right', fire: 'Fire', ads: 'ADS', reload: 'Reload',
+    switchWeapon: 'Switch Weapon', tactical: 'Tactical', lethal: 'Lethal', smoke: 'Smoke',
+    knife: 'Knife', holdBreath: 'Hold Breath', uav: 'UAV', airstrike: 'Airstrike',
+    heli: 'Heli', gunship: 'Gunship', scoreboard: 'Scoreboard', pause: 'Pause'
+  }
+
   return (
     <div className="menu settings-screen">
       <h1>{t('settings.title')}</h1>
-      <div className="settings-content">
-        <div className="settings-row">
-          <label>{t('settings.fov')}</label>
-          <input
-            type="range" min="60" max="110" step="1"
-            value={settings.fov}
-            onChange={(e) => update({ fov: Number(e.target.value) })}
-          />
-          <span className="settings-value">{settings.fov}°</span>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.sensX')}</label>
-          <input
-            type="range" min="0.0005" max="0.006" step="0.0001"
-            value={settings.mouseSensX}
-            onChange={(e) => update({ mouseSensX: Number(e.target.value) })}
-          />
-          <span className="settings-value">{settings.mouseSensX.toFixed(4)}</span>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.sensY')}</label>
-          <input
-            type="range" min="0.0005" max="0.006" step="0.0001"
-            value={settings.mouseSensY}
-            onChange={(e) => update({ mouseSensY: Number(e.target.value) })}
-          />
-          <span className="settings-value">{settings.mouseSensY.toFixed(4)}</span>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.masterVolume')}</label>
-          <input
-            type="range" min="0" max="1" step="0.05"
-            value={settings.masterVolume}
-            onChange={(e) => update({ masterVolume: Number(e.target.value) })}
-          />
-          <span className="settings-value">{Math.round(settings.masterVolume * 100)}%</span>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.quality')}</label>
-          <select
-            value={settings.quality}
-            onChange={(e) => update({ quality: e.target.value })}
-          >
-            <option value="auto">{t('settings.quality.auto')}</option>
-            <option value="low">{t('settings.quality.low')}</option>
-            <option value="medium">{t('settings.quality.medium')}</option>
-            <option value="high">{t('settings.quality.high')}</option>
-          </select>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.colorblind')}</label>
-          <select
-            value={settings.colorblind}
-            onChange={(e) => update({ colorblind: e.target.value })}
-          >
-            <option value="off">{t('settings.colorblind.off')}</option>
-            <option value="protanopia">Protanopia</option>
-            <option value="deuteranopia">Deuteranopia</option>
-            <option value="tritanopia">Tritanopia</option>
-          </select>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.aimAssist')}</label>
-          <input
-            type="range" min="0" max="1" step="0.1"
-            value={settings.aimAssist}
-            onChange={(e) => update({ aimAssist: Number(e.target.value) })}
-          />
-          <span className="settings-value">{Math.round(settings.aimAssist * 100)}%</span>
-        </div>
-        <div className="settings-row">
-          <label>{t('settings.showFps')}</label>
-          <input
-            type="checkbox"
-            checked={settings.showFps}
-            onChange={(e) => update({ showFps: e.target.checked })}
-          />
-        </div>
-        {/* Fase 6: selector de idioma */}
-        <div className="settings-row">
-          <label>Idioma / Language</label>
-          <select
-            value={getLang()}
-            onChange={(e) => { setLang(e.target.value); update({}) }}
-          >
-            <option value="es">Español</option>
-            <option value="en">English</option>
-          </select>
-        </div>
+      <div className="settings-tabs">
+        <button
+          className={!keybindTab ? 'active' : ''}
+          onClick={() => setKeybindTab(false)}
+        >Game</button>
+        <button
+          className={keybindTab ? 'active' : ''}
+          onClick={() => setKeybindTab(true)}
+        >Keybinds</button>
       </div>
+      {!keybindTab ? (
+        <div className="settings-content">
+          <div className="settings-row">
+            <label>{t('settings.fov')}</label>
+            <input
+              type="range" min="60" max="110" step="1"
+              value={settings.fov}
+              onChange={(e) => update({ fov: Number(e.target.value) })}
+            />
+            <span className="settings-value">{settings.fov}°</span>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.sensX')}</label>
+            <input
+              type="range" min="0.0005" max="0.006" step="0.0001"
+              value={settings.mouseSensX}
+              onChange={(e) => update({ mouseSensX: Number(e.target.value) })}
+            />
+            <span className="settings-value">{settings.mouseSensX.toFixed(4)}</span>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.sensY')}</label>
+            <input
+              type="range" min="0.0005" max="0.006" step="0.0001"
+              value={settings.mouseSensY}
+              onChange={(e) => update({ mouseSensY: Number(e.target.value) })}
+            />
+            <span className="settings-value">{settings.mouseSensY.toFixed(4)}</span>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.masterVolume')}</label>
+            <input
+              type="range" min="0" max="1" step="0.05"
+              value={settings.masterVolume}
+              onChange={(e) => update({ masterVolume: Number(e.target.value) })}
+            />
+            <span className="settings-value">{Math.round(settings.masterVolume * 100)}%</span>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.quality')}</label>
+            <select
+              value={settings.quality}
+              onChange={(e) => update({ quality: e.target.value })}
+            >
+              <option value="auto">{t('settings.quality.auto')}</option>
+              <option value="low">{t('settings.quality.low')}</option>
+              <option value="medium">{t('settings.quality.medium')}</option>
+              <option value="high">{t('settings.quality.high')}</option>
+            </select>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.colorblind')}</label>
+            <select
+              value={settings.colorblind}
+              onChange={(e) => update({ colorblind: e.target.value })}
+            >
+              <option value="off">{t('settings.colorblind.off')}</option>
+              <option value="protanopia">Protanopia</option>
+              <option value="deuteranopia">Deuteranopia</option>
+              <option value="tritanopia">Tritanopia</option>
+            </select>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.aimAssist')}</label>
+            <input
+              type="range" min="0" max="1" step="0.1"
+              value={settings.aimAssist}
+              onChange={(e) => update({ aimAssist: Number(e.target.value) })}
+            />
+            <span className="settings-value">{Math.round(settings.aimAssist * 100)}%</span>
+          </div>
+          <div className="settings-row">
+            <label>{t('settings.showFps')}</label>
+            <input
+              type="checkbox"
+              checked={settings.showFps}
+              onChange={(e) => update({ showFps: e.target.checked })}
+            />
+          </div>
+          {/* Fase 6: selector de idioma */}
+          <div className="settings-row">
+            <label>Idioma / Language</label>
+            <select
+              value={getLang()}
+              onChange={(e) => { setLang(e.target.value); update({}) }}
+            >
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="settings-content keybinds-list">
+          {Object.keys(DEFAULT_KEYBINDINGS).map((action) => (
+            <div className="settings-row keybind-row" key={action}>
+              <label>{keybindLabels[action] || action}</label>
+              <button
+                className={`keybind-btn ${rebindingAction === action ? 'rebinding' : ''}`}
+                onClick={() => startRebind(action)}
+              >
+                {rebindingAction === action
+                  ? 'Press key...'
+                  : formatKey((settings.keybindings || DEFAULT_KEYBINDINGS)[action])}
+              </button>
+            </div>
+          ))}
+          <button className="keybind-reset" onClick={resetKeybinds}>Reset to defaults</button>
+        </div>
+      )}
       <button onClick={onClose}>{t('menu.back')}</button>
     </div>
   )

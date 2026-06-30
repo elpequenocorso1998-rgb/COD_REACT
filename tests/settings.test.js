@@ -19,6 +19,20 @@ describe('settings', () => {
     expect(s.colorblind).toBe('off')
   })
 
+  it('incluye keybindings por defecto (Fase 18.2)', () => {
+    const s = getSettings()
+    expect(s.keybindings).toBeDefined()
+    expect(s.keybindings.forward).toBe('KeyW')
+    expect(s.keybindings.fire).toBe('Mouse0')
+    expect(Object.keys(s.keybindings).length).toBeGreaterThanOrEqual(25)
+  })
+
+  it('saveSettings persiste keybindings', () => {
+    saveSettings({ keybindings: { ...getSettings().keybindings, forward: 'ArrowUp' } })
+    const s = getSettings()
+    expect(s.keybindings.forward).toBe('ArrowUp')
+  })
+
   it('saveSettings persiste cambios', () => {
     saveSettings({ fov: 95, masterVolume: 0.3 })
     const s = getSettings()

@@ -28,6 +28,7 @@ import { GRENADES, PLAYER } from './config.js'
 import { getLoadout } from './loadout.js'
 import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
+import { createAccessibilityManager } from './accessibility/index.js'
 
 /* =========================================================================
    Motor del juego.
@@ -61,8 +62,10 @@ export function createEngine() {
   let scene, camera, renderer, clock, composer
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals, pickups
   let navmesh = null
-  let sunMesh = null
+  let envMap = null
   let remotePlayers = null
+  let accessibility = null
+  let sunMesh = null
   let netClientRef = null
   let netInputTimer = 0
   // Fase 1.8: buffer circular para killcam (posiciones de cámara).
@@ -80,7 +83,6 @@ export function createEngine() {
   let container = null
   let prevState = null
   let selectedMapId = 'pamplona'
-  let envMap = null
   // Fase 6: settings del jugador (showFps, etc.) + contador de FPS.
   const _settings = getSettings()
   let _fpsAccum = 0
@@ -233,6 +235,9 @@ export function createEngine() {
     decals = createDecalSystem(scene, { maxDecals: 80 })
     // Fase 5: pickups (drops de enemigos al morir).
     pickups = createPickupSystem(scene, store, particles, audio)
+    // Fase 18.2: accessibility manager (keybinds, colorblind, subtitles).
+    accessibility = createAccessibilityManager()
+    accessibility.applyColorblindMatrix(accessibility.getColorblind())
 
     sunMesh = world.sunMesh
 
@@ -932,6 +937,7 @@ export function createEngine() {
     if (grenades) grenades.dispose()
     if (decals) decals.dispose()
     if (pickups) pickups.dispose()
+    if (accessibility) { accessibility.dispose(); accessibility = null }
     if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()
     // envMap PMREM: antes se leak-eaba en cada recreación del engine.

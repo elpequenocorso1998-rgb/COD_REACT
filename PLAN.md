@@ -1085,7 +1085,7 @@ lo renderiza.
 
 **Verify**: mata a un bot en MP, ver killfeed top-right.
 
-### Sub-fase 18.2 — Accessibility manager + keybind UI `[ ]`
+### Sub-fase 18.2 — Accessibility manager + keybind UI `[x]`
 
 **Problema**: `src/game/accessibility/index.js` (246 líneas) con keybind
 remap, subtitles, screen reader, motion sickness presets — nunca
@@ -1720,7 +1720,7 @@ no la del killer.
 
 - [x] 18.0 — Setup (lint fix + PLAN.md)
 - [x] 18.1 — Killfeed en HUD
-- [ ] 18.2 — Accessibility manager + keybind UI
+- [x] 18.2 — Accessibility manager + keybind UI
 - [ ] 18.3 — 10 slots de loadout
 - [ ] 18.4 — Field upgrades activation system
 - [ ] 18.5 — Spectator mode on MP death

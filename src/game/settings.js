@@ -1,4 +1,5 @@
 import { FOV } from './constants.js'
+import { DEFAULT_KEYBINDINGS } from './accessibility/index.js'
 
 /* =========================================================================
    Settings — preferencias del jugador persistidas en localStorage.
@@ -19,7 +20,8 @@ const DEFAULT_SETTINGS = {
   quality: 'auto', // 'auto' | 'low' | 'medium' | 'high'
   colorblind: 'off', // 'off' | 'protanopia' | 'deuteranopia' | 'tritanopia'
   aimAssist: 0.0, // 0..1
-  showFps: false
+  showFps: false,
+  keybindings: { ...DEFAULT_KEYBINDINGS }
 }
 
 let _settings = null
@@ -30,7 +32,7 @@ export function getSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) _settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
   } catch (e) { _settings = null }
-  if (!_settings) _settings = { ...DEFAULT_SETTINGS }
+  if (!_settings) _settings = { ...DEFAULT_SETTINGS, keybindings: { ...DEFAULT_KEYBINDINGS } }
   return _settings
 }
 
@@ -43,7 +45,7 @@ export function saveSettings(settings) {
 }
 
 export function resetSettings() {
-  _settings = { ...DEFAULT_SETTINGS }
+  _settings = { ...DEFAULT_SETTINGS, keybindings: { ...DEFAULT_KEYBINDINGS } }
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings))
   } catch (e) {}
