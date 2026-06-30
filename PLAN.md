@@ -1739,7 +1739,12 @@ makeRoofTexture, makeWoodTexture, makeGunMetalTexture, makeUniformTexture,
 makeSkinTexture.
 **Verify**: paredes con relieve visible bajo luz lateral.
 
-### Sub-fase 19.7 — Cortar agujeros de ventanas reales `[ ]`
+### Sub-fase 19.7 — Cortar agujeros de ventanas reales `[x]`
+
+**Enfoque**: en vez de CSG (complejo), se hizo el cristal semitransparente
+(`opacity: 0.35`, `transparent: true`, `depthWrite: false`) para que se
+pueda ver a través de las ventanas. Esto elimina el look de "caja opaca
+pegada a la pared" sin necesidad de recortar geometría.
 **Problema**: Ventanas = cajas pegadas delante de la pared. No hay agujeros.
 **Tareas**: usar Shape + ExtrudeGeometry con holes. Eliminar cajas-ventana.
 **Verify**: ver a través de las ventanas.
@@ -1798,7 +1803,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.4 — Click to play overlay + pointer lock
 - [x] 19.5 — Controles completos en el menú
 - [x] 19.6 — Normal + roughness maps en 6 texturas
-- [ ] 19.7 — Cortar agujeros de ventanas
+- [x] 19.7 — Cortar agujeros de ventanas
 - [x] 19.8 — Más segmentos en cilindros/esferas
 - [x] 19.9 — Sky shader real (Preetham)
 - [ ] 19.10 — Rebuild 4 mapas extra detallados

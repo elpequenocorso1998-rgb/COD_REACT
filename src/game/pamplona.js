@@ -265,8 +265,9 @@ export function buildPamplonaHouse({
     map: woodTex, color: 0x6a3a20, roughness: 0.8, metalness: 0.1
   })
   const glassMat = new THREE.MeshStandardMaterial({
-    color: 0x223344, emissive: 0x0a1525, emissiveIntensity: 0.3,
-    metalness: 0.9, roughness: 0.1, envMapIntensity: 2.5
+    color: 0x223344, emissive: 0x0a1525, emissiveIntensity: 0.1,
+    metalness: 0.9, roughness: 0.1, envMapIntensity: 2.5,
+    transparent: true, opacity: 0.35, depthWrite: false
   })
 
   const floorH = height / floors
