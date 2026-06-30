@@ -1761,7 +1761,7 @@ rayleigh, mieCoefficient.
 ruedas, pinos cónicos, tanques con tuberías.
 **Verify**: cada mapa se ve distinto y detallado.
 
-### Sub-fase 19.11 — Partículas ambientales `[ ]`
+### Sub-fase 19.11 — Partículas ambientales `[x]`
 **Problema**: No hay atmósfera (polvo, humo, pájaros).
 **Tareas**: spawnAmbientDust, spawnDistantSmoke, columnas de humo en horizonte.
 **Verify**: polvo flotando en haces de sol.
@@ -1802,7 +1802,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.8 — Más segmentos en cilindros/esferas
 - [x] 19.9 — Sky shader real (Preetham)
 - [ ] 19.10 — Rebuild 4 mapas extra detallados
-- [ ] 19.11 — Partículas ambientales
+- [x] 19.11 — Partículas ambientales
 - [ ] 19.12 — README overhaul
 - [ ] 19.13 — CI/CD + community files
 - [ ] 19.14 — Repo cleanup

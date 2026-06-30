@@ -232,5 +232,51 @@ export function createParticleSystem(scene, { max = 200 } = {}) {
     freeList.length = 0
   }
 
-  return { spawnBlood, spawnSparks, spawnSmoke, spawnMuzzleBurst, update, reset, dispose }
+  // Fase 19.11: polvo ambiental (partículas flotantes en haces de sol).
+  function spawnAmbientDust(position) {
+    const p = acquire()
+    if (!p) return
+    p.mesh.material.color.setHex(0xddddaa)
+    p.mesh.material.transparent = true
+    p.mesh.material.opacity = 0.15 + Math.random() * 0.15
+    p.mesh.position.copy(position)
+    p.mesh.position.x += (Math.random() - 0.5) * 20
+    p.mesh.position.y += Math.random() * 5
+    p.mesh.position.z += (Math.random() - 0.5) * 20
+    p.mesh.scale.setScalar(0.04 + Math.random() * 0.03)
+    p.mesh.visible = true
+    p.vel.set(
+      (Math.random() - 0.5) * 0.2,
+      0.1 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.2
+    )
+    p.life = 4 + Math.random() * 3
+    p.maxLife = p.life
+    p.fade = true
+    p.gravity = false
+  }
+
+  // Fase 19.11: humo distante (columnas en el horizonte).
+  function spawnDistantSmoke(position) {
+    for (let i = 0; i < 3; i++) {
+      const p = acquire()
+      if (!p) return
+      p.mesh.material.color.setHex(SMOKE_HEX)
+      p.mesh.material.transparent = true
+      p.mesh.material.opacity = 0.3
+      p.mesh.position.copy(position)
+      p.mesh.position.x += (Math.random() - 0.5) * 3
+      p.mesh.position.y += i * 2
+      p.mesh.position.z += (Math.random() - 0.5) * 3
+      p.mesh.scale.setScalar(2 + i * 0.5)
+      p.mesh.visible = true
+      p.vel.set(0, 0.5 + Math.random() * 0.3, 0)
+      p.life = 8 + Math.random() * 4
+      p.maxLife = p.life
+      p.fade = true
+      p.gravity = false
+    }
+  }
+
+  return { spawnBlood, spawnSparks, spawnSmoke, spawnMuzzleBurst, spawnAmbientDust, spawnDistantSmoke, update, reset, dispose }
 }

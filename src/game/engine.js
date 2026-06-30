@@ -71,6 +71,7 @@ export function createEngine() {
   let profiler = null
   let profilerOverlay = null
   let gameStartedAt = 0 // Fase 19.4: timestamp del último startGame
+  let ambientDustTimer = 0 // Fase 19.11: timer para spawn de polvo ambiental
   let navmesh = null
   let envMap = null
   let remotePlayers = null
@@ -265,6 +266,15 @@ export function createEngine() {
 
     sunMesh = world.sunMesh
 
+    // Fase 19.11: spawn de columnas de humo distantes en el horizonte.
+    if (particles && particles.spawnDistantSmoke) {
+      const angles = [0, 2.1, 4.2]
+      for (const a of angles) {
+        const dist = 90
+        particles.spawnDistantSmoke({ x: Math.cos(a) * dist, y: 5, z: Math.sin(a) * dist })
+      }
+    }
+
     // Fase 19.2: callbacks cableados via wireCallbacks() (reutilizable tras rebuild).
     wireCallbacks()
 
@@ -449,6 +459,14 @@ export function createEngine() {
       // Fase 1.7: sombras siguen al jugador (aproximación CSM).
       if (world.updateShadows) world.updateShadows(player.getPosition())
       particles.update(dt)
+      // Fase 19.11: polvo ambiental periódico cerca del jugador.
+      ambientDustTimer += dt
+      if (ambientDustTimer > 0.3) {
+        ambientDustTimer = 0
+        if (particles.spawnAmbientDust) {
+          particles.spawnAmbientDust(player.getPosition())
+        }
+      }
       // Fase 2: actualiza jugadores remotos (interpolación entre snapshots).
       if (remotePlayers) {
         remotePlayers.update(dt)
