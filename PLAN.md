@@ -1772,7 +1772,7 @@ ruedas, pinos cónicos, tanques con tuberías.
 screenshots, Mermaid diagram.
 **Verify**: README se ve profesional en GitHub.
 
-### Sub-fase 19.13 — CI/CD + community files `[ ]`
+### Sub-fase 19.13 — CI/CD + community files `[x]`
 **Problema**: Sin CI, sin CONTRIBUTING, sin CHANGELOG.
 **Tareas**: .github/workflows/ci.yml, dependabot, PR/issue templates,
 CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .prettierrc, husky.
@@ -1804,6 +1804,6 @@ en ui/menus/. Mirror tests/ structure.
 - [ ] 19.10 — Rebuild 4 mapas extra detallados
 - [x] 19.11 — Partículas ambientales
 - [ ] 19.12 — README overhaul
-- [ ] 19.13 — CI/CD + community files
+- [x] 19.13 — CI/CD + community files
 - [x] 19.14 — Repo cleanup
 - [ ] 19.15 — Reorganizar src/game/ + split App.jsx
