@@ -1048,3 +1048,729 @@ docker run --rm -v "$PWD:/app" -w /app node:20-alpine sh -c "npm run lint && npm
   (4 con matrices), subtítulos, screen reader, key remapping (25+ acciones),
   motion sickness presets, aim assist/FOV sliders, keyboard nav.
 - [x] Verificación: lint limpio, 471 tests, build OK.
+
+---
+
+## FASE 18 — Cablear código muerto + gameplay improvements (plan ejecutable)
+
+**Contexto**: tras auditar el código se detectó que muchas Fases 4-17 están
+implementadas como **módulos sueltos no cableados al runtime** (engine.js no
+los instancia). Esta fase cablea ese código muerto y añade las mejoras de
+gameplay core (gunplay, perks, equipment, scorestreaks, AI, modos, match
+flow, UI) que faltan para acercarse a un CoD real.
+
+**Restricciones**: sin assets externos (procedural-only), sin backend
+adicional (server WebSocket actual), cada sub-fase pasa `lint+test+build`.
+
+Orden de ejecución: 18.1 → 18.55. Dependencias entre sub-fases documentadas
+en cada una. Cada sub-fase se commitea con mensaje `feat(18.X): ...`.
+
+### Sub-fase 18.0 — Setup `[x]`
+
+- Arreglar 2 errores de lint pendientes en spectator.js y touch-controls.js.
+- Añadir esta sección Fase 18 al PLAN.md.
+- Verificación base: lint+test+build limpio.
+
+### Sub-fase 18.1 — Killfeed en HUD `[ ]`
+
+**Problema**: `store.js:162` mantiene `mpKillfeed` (capped 5, push en
+`addMpKill`), CSS `.killfeed` existe en `styles.css`, pero `App.jsx` HUD no
+lo renderiza.
+
+**Tareas**:
+- `src/App.jsx`: componente `<Killfeed>` que con `useShallow` subscribe a
+  `mpKillfeed`, mapea entries a divs con killer/victim/weapon icon.
+- Filtar entries > 4s (deprecar).
+- Posición top-right del HUD, debajo de team scores.
+
+**Verify**: mata a un bot en MP, ver killfeed top-right.
+
+### Sub-fase 18.2 — Accessibility manager + keybind UI `[ ]`
+
+**Problema**: `src/game/accessibility/index.js` (246 líneas) con keybind
+remap, subtitles, screen reader, motion sickness presets — nunca
+instanciado. `SettingsScreen` no expone keybinds.
+
+**Tareas**:
+- `src/game/engine.js mount()`: crear `accessibility = createAccessibilityManager()`.
+- `src/game/player.js`: input handler lee `accessibility.getBinding('fire')` en vez de hardcoded keys.
+- `src/App.jsx SettingsScreen`: pestaña "Keybinds" con lista de acciones y
+  botón "Press key to rebind" (captura next keydown).
+- Persistencia en `settings.js` (campo `keybindings`).
+
+**Verify**: rebind fire a mouse4, jugar, funciona.
+
+### Sub-fase 18.3 — 10 slots de loadout `[ ]`
+
+**Problema**: `loadout.js:17,47-60` soporta `MAX_CLASSES=10` con
+`getCustomClasses`/`setActiveClass`, pero `CreateAClassScreen` solo usa
+`getLoadout()`/`saveLoadout()` (1 slot).
+
+**Tareas**:
+- `src/App.jsx CreateAClassScreen`: tabs "Class 1/10", guarda por índice.
+- Botones "Duplicate", "Reset", "Rename".
+- Indicador de clase activa (la que se usa en partida).
+
+**Verify**: crear 3 classes distintas, cambiar entre ellas, la activa se
+persiste.
+
+### Sub-fase 18.4 — Field upgrades activation system `[ ]`
+
+**Problema**: `config.js:712-753` define 8 field upgrades (trophy,
+deadSilence, emp, deployableCover, reconDrone, munitionsBox, reconTower,
+suppressingDrone) — ningún sistema los consume.
+
+**Tareas**:
+- `src/game/engine.js`: input handler tecla activación (default `MiddleMouse`).
+- `src/game/store.js`: campos `fieldUpgradeCharge` (0-100), `fieldUpgradeCooldown`, `activeFieldUpgrade`.
+- `src/game/field-upgrades.js` (existe): importar y wire `activate(type, scene, deps)`.
+- Charge gain: +25 por kill, +10 por hit. Cap 100.
+- Implementar cada tipo:
+  - `trophySystem`: entity que intercepta projectiles en radio 8m.
+  - `deadSilenceField`: timed buff 30s, no footstep audio.
+  - `emp`: desactiva enemy streaks 30s.
+  - `deployableCover`: spawn ballistic shield mesh.
+  - `munitionsBox`: spawn station, +ammo al tocar.
+  - `reconDrone`: pilotable camera 10s.
+  - `reconTower`: spawn beacon, UAV-like pulse 30s.
+  - `suppressingDrone`: orbit + suppress enemies.
+- `loadout.js`: slot nuevo `fieldUpgrade`.
+- Cooldown via `store.trackTimeout`.
+
+**Verify**: equip trophy, matar 4 bots, activar, ver entity. Lint+test+build.
+
+### Sub-fase 18.5 — Spectator mode on MP death `[ ]`
+
+**Problema**: `competitive/spectator.js` (298 líneas) completo pero sin
+cablear. En MP death → GameOver, no spectate.
+
+**Tareas**:
+- `src/game/engine.js`: en MP death, state `SPECTATING` no `GAMEOVER`.
+- `src/game/store.js`: `spectateTarget`, `spectateMode`.
+- Wire `createSpectator(camera, scene)` con modos free/follow/director.
+- Teclas `Q/E` ciclan targets, `Space` free mode, `R` toggle 1st/3rd.
+- Respawn tras 3s de spectate (TDM) o fin de round (S&D).
+
+**Verify**: morir en MP, espectar a teammates, respawn.
+
+### Sub-fase 18.6 — 4 mapas existentes activos `[ ]`
+
+**Problema**: `maps/desert.js, urban.js, snow.js, industrial.js` existen pero
+`world.js:116` solo construye Pamplona.
+
+**Tareas**:
+- `src/game/world.js`: `if (mapId === 'pamplona') ... else if (mapId === 'desert') desert.build(...)`.
+- `src/App.jsx` MP screen: selector de mapa (dropdown o grid).
+- `src/game/store.js`: campo `selectedMap`.
+- Cada mapa con su navmesh, spawn points, sky config.
+
+**Verify**: hostear TDM en 'desert', jugar, ver mapa distinto.
+
+### Sub-fase 18.7 — Profiler toggle `[ ]`
+
+**Problema**: `performance/profiler.js` completo pero sin instanciar.
+
+**Tareas**:
+- `src/game/engine.js mount()`: crear `profiler = createFrameProfiler(renderer)`.
+- Tecla `F8` toggle overlay DOM con FPS/MS/draw calls/memory.
+- `update()` llamado cada frame.
+
+**Verify**: pulsar F8, ver overlay con métricas.
+
+### Sub-fase 18.8 — Wire netcode.js en server.js `[ ]`
+
+**Problema**: `server/netcode.js` (463 líneas) con anti-cheat, lag comp,
+delta snapshots, rate limiter — `server.js` no lo importa (trusted client).
+
+**Tareas**:
+- `server/server.js`: import `createInputValidator`, `createLagCompensator`, `createAntiCheat`, `createSnapshotDelta`, `createRateLimiter`.
+- Reemplazar `TICK_RATE=20` con `60`.
+- Validar inputs antes de aplicar (speed/teleport/aimbot/fire rate).
+- Lag compensation rewind en hit validation.
+- Snapshot delta (enviar solo cambios).
+- Rate limiting por IP.
+- Sin client-side prediction (eso requiere refactor mayor, queda fuera).
+
+**Verify**: test netcode rechaza speed hack. Server corre a 60Hz.
+
+### Sub-fase 18.9 — Bipod requiresCrouch fix `[ ]`
+
+**Problema**: `config.js:636-639` bipod tiene `requiresCrouch:true` pero
+`loadout.js:114-167` aplica `recoilMul:0.5` siempre.
+
+**Tareas**:
+- `src/game/loadout.js applyLoadoutToWeapon`: añadir 3er arg `playerState`.
+- Si attachment es bipod y `!playerState.crouched && !playerState.prone` → no aplicar bonus.
+- `src/game/engine.js` o `player.js`: pasar playerState al calcular weapon stats.
+
+**Verify**: equip bipod, disparar de pie (sin bonus), agacharse (con bonus).
+
+### Sub-fase 18.10 — Recoil patterns por arma `[ ]`
+
+**Problema**: `player.js:343-345` recoil es `recoilPerShot` + random yaw.
+No hay patrón determinista por arma.
+
+**Tareas**:
+- `src/game/config.js WEAPONS`: añadir `recoilPattern: [[x,y], ...]` por arma (20 puntos).
+  - M4: vertical ligero derecha.
+  - AK47: vertical fuerte izquierda.
+  - MP5: saltos cortos horizontales.
+  - Sniper: kick fuerte single-shot.
+  - Shotgun: spread horizontal.
+  - LMG: vertical constante.
+  - Pistol: kick moderado.
+- `src/game/player.js`: `_recoilIdx` que avanza por disparo, aplica `recoilPattern[idx]`.
+- Reset idx tras `recoilRecover` ms sin fire.
+- Mantener random small jitter para naturalidad.
+
+**Verify**: disparar M4 full-auto, ver patrón consistente. Cambiar a AK,
+patrón distinto.
+
+### Sub-fase 18.11 — Damage dropoff por rango `[ ]`
+
+**Problema**: `enemies.js:197-204` daño flat sin importar distancia. CoD
+tiene damage dropoff por rango.
+
+**Tareas**:
+- `src/game/config.js WEAPONS`: añadir `damageRange: [{min:0, max:30, mul:1.0}, {min:30, max:60, mul:0.8}, {min:60, max:999, mul:0.6}]` por arma.
+- `src/game/enemies.js handleShot`: calcular distancia `origin → hitPoint`, aplicar multiplicador.
+- Snipers: rango más largo antes de dropoff.
+- Shotguns: dropoff agresivo.
+
+**Verify**: matar a 10m (full), 50m (mid), 80m (min) con M4.
+
+### Sub-fase 18.12 — Aim punch al recibir daño `[ ]`
+
+**Problema**: `store.js:439-495 takeDamage` solo setea `damageFlash`, no
+camera kick.
+
+**Tareas**:
+- `src/game/store.js takeDamage`: calcular punch `= dmg / maxHealth * PUNCH_SCALE`.
+- Callback `onTakeDamage(pitch, yaw)` (patrón factory).
+- `src/game/player.js`: `applyAimPunch(pitch, yaw)` añade a `targetPitch`/`targetYaw` con recover temporal (lerp a 0 en 0.5s).
+- Direction del punch basado en `damageDirection`.
+
+**Verify**: recibir daño, cámara se sacude en dirección del atacante.
+
+### Sub-fase 18.13 — Suppression effect en jugador `[ ]`
+
+**Problema**: `engine.js:340-354` suppression solo afecta enemies. No hay
+efecto inverso en el jugador cuando bullets pasan cerca.
+
+**Tareas**:
+- `src/game/store.js`: campo `suppression` (0-1, decae con dt).
+- `src/game/enemies.js enemyShoot`: callback `onEnemyShootNearPlayer(origin, dir)`.
+- `src/game/engine.js`: si bullet pasa < 2m del jugador, `store.suppress(0.3)`.
+- Efectos: sube sway (`player.js`), reduce ADS accuracy, vignette + blur en HUD.
+- Decae 0.5/s.
+
+**Verify**: bot dispara cerca, ver vignette + sway aumentado.
+
+### Sub-fase 18.14 — Cook grenades `[ ]`
+
+**Problema**: `grenades.js:54-59` fuse empieza al throw. No cook.
+
+**Tareas**:
+- `src/game/grenades.js`: separar `startCook()` (empieza fuse timer) de `throwCooked()` (release).
+- `src/game/engine.js:736-754`: keydown → `startCook`, keyup → `throw`.
+- `src/game/store.js`: `cookingGrenade` flag, `cookStartTime`.
+- Si `cookStartTime + FUSE_TIME*1000` pasa mientras cooking → explode in hand.
+- HUD progress ring mostrando tiempo hasta explosion.
+
+**Verify**: hold grenade 3s, throw, explosion inmediata. Hold 5s, explode in hand.
+
+### Sub-fase 18.15 — Headshot multiplier por arma `[ ]`
+
+**Problema**: `enemies.js:200` usa `headDmg` directo Y aplica multiplier
+global 4.0. Posible doble aplicación.
+
+**Tareas**:
+- Auditar `config.js:459-466 DAMAGE_MULTIPLIERS.head=4.0` vs `WEAPONS[*].headDamage`.
+- Decidir: o `damage * weapon.headshotMultiplier` (unificado) o `headDmg` directo (actual).
+- Añadir `headshotMultiplier` por arma en config.
+- Eliminar doble aplicación.
+
+**Verify**: test headshot damage = weapon.damage * weapon.headshotMultiplier.
+
+### Sub-fase 18.16 — Enforce 4 perks fiction `[ ]`
+
+**Problema**: `ghost`, `coldBlooded`, `deadSilence`, `ninja` definidos en
+config pero sin efecto runtime.
+
+**Tareas**:
+- `src/game/loadout.js`: `hasPerk(name)` helper.
+- `ghost`: `minimap.js` y `remote-players.js` no revelan al player con ghost si UAV enemigo activo.
+- `coldBlooded`: `store.takeDamage` — si víctima tiene coldBlooded, hitmarker en atacante es gris.
+- `deadSilence`: `engine.js player.onFootstep` — si `hasPerk('deadSilence')` → no audio.
+- `ninja`: `engine.js` weapon swap — si `hasPerk('ninja')` → no `playReload()`.
+
+**Verify**: equip ghost, UAV enemigo no te revela. Equip deadSilence, no
+haces ruido al caminar.
+
+### Sub-fase 18.17 — LoS check para flashbang `[ ]`
+
+**Problema**: `grenades.js:163-170` flash aplica por radio sin importar
+paredes.
+
+**Tareas**:
+- `src/game/world.js`: nuevo `raycast(from, to)` usando SpatialGrid + AABB.
+- `src/game/grenades.js`: antes de aplicar flash, raycast desde explosion → player eye; si bloqueado, no aplicar.
+
+**Verify**: flash detrás de pared no te afecta.
+
+### Sub-fase 18.18 — 11 granadas faltantes `[ ]`
+
+**Problema**: `grenades.js:39-44` switch solo maneja frag/flash/smoke/knife.
+`config.js` define 15. 11 hacen `default: return` (silently no-op).
+
+**Tareas** (una por granada, commit separado):
+- `semtex`: sticky a colliders, fuse 2.5s.
+- `thermite`: DoT area 8s, 10/s en radio.
+- `molotov`: fire spread (crece 2s), 15/s, apaga con smoke.
+- `C4`: `remote:true`, throw + second press detonate, max 2 active.
+- `claymore`: `trigger:'proximity'`, cone 90°/3m, directional explosion.
+- `stun`: slow movement 50% + fov shrink 5s (distincto de flash blind).
+- `decoy`: fake gunfire sounds + tracers por 15s.
+- `snapshot`: recon pulse, marca enemies en minimap 3s.
+- `gas`: área 10s, 5/s + cough distortion.
+- `stim`: instant heal +25 HP.
+- `shuriken`: chargeable throw, retrievable.
+
+**Verify**: equip cada una, throw, ver efecto.
+
+### Sub-fase 18.19 — 10 perks nuevos `[ ]`
+
+**Tareas** (una por perk):
+- `restock`: `engine.js` timer cada 8s resupplies 1 lethal/tactical.
+- `oneShot`: sniper body-shot kill si full health.
+- `highAlert`: `enemies.js` si bot aiming > 0.5s → `store.highAlertPulse`.
+- `tracker`: `decals.js` footprint decals detrás enemies (4s).
+- `battleHardened`: `store.flashPlayer` reduce duration 50%.
+- `eod`: `store.takeDamage` reduce explosive damage 50%.
+- `doubleTime`: `player.js` tac sprint duration x2 (con cap).
+- `overkill`: `loadout.js` secondary puede ser primary.
+- `hardline`: `store.js` streak thresholds -1.
+- `killChain`: kills count double toward streak.
+
+**Verify**: equip cada perk, test efecto.
+
+### Sub-fase 18.20 — Squad blackboard AI `[ ]`
+
+**Problema**: `ai.js:41-252` cada bot FSM independiente, no coordinan.
+
+**Tareas**:
+- `src/game/enemies.js`: `createSquadManager()` con `squadBlackboard`:
+  `{ contacts: Map, threat: Map, assignments: Map }`.
+- Bots escriben en blackboard al ver player.
+- `_evaluateState` lee blackboard: si alguien flanquea izq, yo der.
+- Asignación de roles dinámica.
+
+**Verify**: 2 bots coordinan flancos opuestos.
+
+### Sub-fase 18.21 — Callouts verbales procedurales `[ ]`
+
+**Problema**: bots silenciosos. No dicen "Contact!", "Reloading!".
+
+**Tareas**:
+- `src/game/audio.js`: `playCallout(type, position)` con osciladores +
+  filtros (procedural, no samples reales).
+- Tipos: `contact`, `reloading`, `enemyDown`, `takingFire`, `flanking`.
+- `src/game/ai.js`: dispara callout en transitions de estado.
+
+**Verify**: bot entra engaging → "Contact!" audible.
+
+### Sub-fase 18.22 — Cover peeking + reload-seeking cover `[ ]`
+
+**Tareas**:
+- `src/game/ai.js TAKE_COVER`: sub-state `peeking` cada 2-3s, bot se inclina
+  hacia contacto, dispara 0.5s, vuelve.
+- `RELOAD` state: buscar cover primero, si encontrado transitar a
+  TAKE_COVER con `pendingReload=true`.
+
+**Verify**: bot en cover alterna peek/hidden. Bot low ammo busca cover
+antes de reload.
+
+### Sub-fase 18.23 — Uso de granadas por AI `[ ]`
+
+**Tareas**:
+- `src/game/enemies.js`: `enemyThrowGrenade(type, target)`.
+- Shooters con prob 0.15 lanzan flash al push o frag si player en cover.
+- Cooldown 15s por bot, max 1 por vida.
+
+**Verify**: bot lanza grenade ocasionalmente.
+
+### Sub-fase 18.24 — Suppression afecta AI accuracy `[ ]`
+
+**Tareas**:
+- `src/game/enemies.js:311 hitChance`: `*= (1 - 0.5 * enemy.suppressionLevel)`.
+- `suppressionLevel` sube cuando player bullets pasan cerca.
+
+**Verify**: bot suprimido falla más tiros.
+
+### Sub-fase 18.25 — Reacción a reload del jugador `[ ]`
+
+**Tareas**:
+- `src/game/ai.js _evaluateState`: si `store.reloading` y bot ve player →
+  prob 0.4 transitar a ADVANCE.
+
+**Verify**: recargar delante de bot, te avanza.
+
+### Sub-fase 18.26 — Roles especializados `[ ]`
+
+**Tareas**:
+- `src/game/config.js ENEMY_TYPES`: añadir `sniper`, `medic`, `rpg`, `shield`.
+- `src/game/enemies.js`: render por tipo (sniper con scope glint, shield con
+  ballistic mesh frontal).
+- `src/game/ai.js`: comportamientos por rol.
+  - Sniper: long range, high dmg, slow fire, scope glint reveal.
+  - Medic: heals otros bots en radio, no ataca.
+  - RPG: projectile explosive, slow, dodgeable.
+  - Shield: frontal invulnerable, debe flanquear.
+
+**Verify**: spawn 1 de cada tipo, comportamiento distinto.
+
+### Sub-fase 18.27 — Scorestreak core `[ ]`
+
+**Problema**: `store.js:347` thresholds hardcoded `[3,5,7,11]` kills.
+No hay score system.
+
+**Tareas**:
+- `src/game/store.js`: `streakScore` accumulator, `addScore(amount, reason)`.
+- `registerKill` → `addScore(100, 'kill')`; `registerHit` → `addScore(10, 'hit')`.
+- `config.js`: `STREAKS` catálogo con coste por streak.
+- `loadout.js`: 3 slots de streaks elegidos del catálogo.
+- Categorías: `assault` (resetea en death), `support` (no resetea),
+  `specialist` (cada threshold desbloquea perk extra).
+
+**Verify**: matar 5 bots, acumular score, unlock UAV.
+
+### Sub-fase 18.28 — Streak catalog + 3 slots `[ ]`
+
+**Tareas**:
+- `src/game/config.js`: `STREAKS` catálogo completo con coste y categoría.
+- `src/game/loadout.js`: 3 slots, persistencia.
+- `src/App.jsx CreateAClassScreen`: UI para elegir 3 streaks.
+
+**Verify**: equip 3 streaks distintas, ver en UI.
+
+### Sub-fase 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer `[ ]`
+
+**Tareas**:
+- `src/game/streaks.js`: añadir cases al switch `activate(type)`.
+- CUAV: oculta minimap enemigo 30s.
+- Personal Radar: UAV solo para ti 30s.
+- Care Package: spawn crate, primer player que toca → streak random.
+- Hunter Killer: projectile homing al enemigo más cercano.
+
+**Verify**: activar cada streak, ver efecto.
+
+### Sub-fase 18.30 — Sentry Gun + Predator Missile `[ ]`
+
+**Tareas**:
+- Sentry Gun: deploy mesh, auto-target en cono 90°/30m, 100 HP, 30s.
+- Predator Missile: camera missile, player steer con mouse, explode on impact.
+
+**Verify**: deploy sentry, mata bots. Predator missile pilotable.
+
+### Sub-fase 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke `[ ]`
+
+**Tareas**:
+- AC130: como gunship pero 3 armas (25mm/40mm/105mm) con swap.
+- Juggernaut: player 200 HP + LMG, slow, 60s.
+- EMP: desactiva enemy streaks 30s + scramble minimap.
+- Tactical Nuke: 25 kills → game ender.
+
+**Verify**: activar cada uno.
+
+### Sub-fase 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus `[ ]`
+
+**Tareas**:
+- Cluster: 6 explosions en línea en target zone.
+- Precision: single strafing run con bombs.
+- White Phosphorus: area DoT + smoke + burn effect.
+
+**Verify**: activar cada uno.
+
+### Sub-fase 18.33 — Mode system wiring `[ ]`
+
+**Problema**: `modes/index.js` define 14 modos como data pero `engine.js` no
+tiene `setMode()` que aplique reglas.
+
+**Tareas**:
+- `src/game/engine.js`: `setMode(modeId)` lee `modes/index.js` y aplica:
+  HP, friendly fire, HUD visible, score limit, respawn rules.
+- `server/server.js`: lee `modeId` del room, aplica reglas.
+- `src/game/store.js`: `mode`, `modeRules`, `modeState`.
+
+**Verify**: setMode('hardcore') → HP=30, no HUD, FF on.
+
+### Sub-fase 18.34 — Domination `[ ]`
+
+**Tareas**:
+- `src/game/world.js`: 3 flag entities A/B/C.
+- `src/game/engine.js`: capture progress por tick si player en radio.
+- `server/server.js`: scoring per second per flag held.
+- HUD objective markers.
+
+**Verify**: capturar A, B, C, ganar por score.
+
+### Sub-fase 18.35 — Hardpoint `[ ]`
+
+**Tareas**:
+- `src/game/engine.js`: hill entity, rotación cada 60s.
+- `server/server.js`: scoring 5/s por team en hill.
+- HUD hill timer + next location.
+
+**Verify**: hill rota, scoring funciona.
+
+### Sub-fase 18.36 — Kill Confirmed `[ ]`
+
+**Tareas**:
+- `src/game/pickups.js`: `dogTag` drop en muerte.
+- `src/game/engine.js`: recoger tag → confirm (own team) o deny (enemy).
+- Confirm = +score; deny = prevent enemy score.
+
+**Verify**: matar, recoger tag, sumar score.
+
+### Sub-fase 18.37 — Search & Destroy `[ ]`
+
+**Tareas**:
+- `server/server.js`: round logic, 11 rounds, no respawn, swap sides
+  halftime.
+- `src/game/engine.js`: bomb entity: plant 5s, defuse 5s, 45s timer.
+- Roles attacker/defender, plant zone A/B, HUD round counter.
+
+**Verify**: plantar bomb, explota a 45s. Defuse cancela.
+
+### Sub-fase 18.38 — Gunfight `[ ]`
+
+**Tareas**:
+- `server/server.js`: 2v2, 40s timer, OT flag capture, weapon rotation per
+  round.
+- `src/game/config.js`: loadout rotation array (preset classes per round).
+- Flag spawn at OT.
+
+**Verify**: 2v2, win round, weapon cambia.
+
+### Sub-fase 18.39 — Hardcore variant + FFA `[ ]`
+
+**Tareas**:
+- Hardcore: `engine.js setMode` aplica `PLAYER.maxHealth=30`, no HUD, FF on.
+- FFA: `server.js` no teams, score per kill, first to 30 wins.
+
+**Verify**: hardcore 1-shot kill. FFA sin teams.
+
+### Sub-fase 18.40 — Pre-match countdown + warmup `[ ]`
+
+**Tareas**:
+- `server/server.js`: state `LOBBY` 10s countdown antes de `PLAYING`.
+- `src/App.jsx`: overlay countdown.
+- `src/game/store.js`: `matchPhase: 'lobby'|'playing'|'round-end'|'intermission'`.
+
+**Verify**: conectar a server, ver countdown 10s antes de jugar.
+
+### Sub-fase 18.41 — Round transitions + halftime + overtime `[ ]`
+
+**Tareas**:
+- `server/server.js`: round-end freeze 3s, side swap halftime.
+- `src/game/engine.js` + `App.jsx`: round banner "Round 3", "Halftime",
+  "Overtime".
+
+**Verify**: jugar S&D, ver transiciones.
+
+### Sub-fase 18.42 — MVP card + after-action report `[ ]`
+
+**Tareas**:
+- `src/App.jsx MatchOverScreen`: MVP card (top player + weapon + score +
+  K/D), after-action (XP breakdown, challenge progress, BP tier up).
+- `src/game/progression.js`: `getMatchSummary()`.
+
+**Verify**: terminar match, ver MVP + XP breakdown.
+
+### Sub-fase 18.43 — Intermission lobby + map vote `[ ]`
+
+**Tareas**:
+- `server/server.js`: intermission 20s, vote next map entre 3 opciones.
+- `src/App.jsx`: vote UI con 3 thumbnails.
+- `src/game/store.js`: `mapVote` state.
+
+**Verify**: terminar match, votar mapa, ver resultado.
+
+### Sub-fase 18.44 — Join-in-progress backfill `[ ]`
+
+**Tareas**:
+- `server/server.js:53-56`: si `players.size < MAX_PLAYERS` y match en curso,
+  aceptar conexiones, spawn con protección.
+
+**Verify**: conectar a match en curso, entrar con spawn protection.
+
+### Sub-fase 18.45 — Killer-POV killcam `[ ]`
+
+**Problema**: `engine.js:68-75,496-506,639-662` killcam es tu propia cámara,
+no la del killer.
+
+**Tareas**:
+- `src/game/remote-players.js`: record last 5s position/rotation per remote.
+- `src/game/engine.js`: en death, identificar `killerId`, replay su buffer 5s.
+
+**Verify**: morir, ver killcam desde POV del killer.
+
+### Sub-fase 18.46 — Spawn protection + multiple spawn points `[ ]`
+
+**Problema**: `server.js:46-50` 1 spawn point fijo por team.
+
+**Tareas**:
+- `server/server.js`: array de 8-10 spawn points por team.
+- `src/game/engine.js` + `player.js`: spawn protection 3s invuln + visual shield.
+- `src/game/store.js`: `spawnProtectionUntil` timestamp.
+- Spawn weighting: pick farthest from enemies.
+
+**Verify**: respawn, 3s invuln. No spawn camp.
+
+### Sub-fase 18.47 — Gunsmith depth `[ ]`
+
+**Tareas**:
+- `src/App.jsx CreateAClassScreen`: weapon 3D preview (mini viewmodel render
+  en canvas), stat bars (damage/range/firerate/mobility/control con deltas
+  +/- al aplicar attachment), reticle editor (canvas draw), tuning sliders.
+
+**Verify**: equip attachment, ver stat bars cambiar.
+
+### Sub-fase 18.48 — Store / COD Points UI (local mock) `[ ]`
+
+**Tareas**:
+- `src/App.jsx`: `StoreScreen` con bundles, COD Points balance.
+- `src/game/backend/live-service.js`: `purchase(itemId)` con COD Points de
+  localStorage.
+- Sin backend → todo localStorage, no MTX real.
+
+**Verify**: comprar bundle, ver inventario.
+
+### Sub-fase 18.49 — Prestige UI + flow `[ ]`
+
+**Tareas**:
+- `src/App.jsx BarracksScreen`: botón "Prestige" si level >= 55, confirm
+  modal, reset XP, token +1, prestige icon.
+- `src/game/backend/live-service.js:230-237 prestige()` ya existe, wire UI.
+- Prestige unlock tree visualization.
+
+**Verify**: llegar a 55, prestige, ver icono.
+
+### Sub-fase 18.50 — Ranked Play UI (local SR) `[ ]`
+
+**Tareas**:
+- `src/App.jsx`: `RankedScreen` con SR badge, placements, CDL ruleset
+  toggle.
+- `src/game/competitive/ranked.js`: SR update al final de match (win +25,
+  loss -25 aprox, ELO local).
+
+**Verify**: jugar 5 matches, ver SR subir/bajar.
+
+### Sub-fase 18.51 — Social / friends / party (local mock) `[ ]`
+
+**Tareas**:
+- `src/App.jsx`: party widget en main menu.
+- `src/game/backend/api-client.js:171-205`: friends list (localStorage mock),
+  create party, invite (genera código), join via código.
+
+**Verify**: crear party, ver código, unirse.
+
+### Sub-fase 18.52 — Main menu polish `[ ]`
+
+**Tareas**:
+- `src/App.jsx MainMenu`: 3D background scene (mini engine mount con
+  operator rotating + weapon showcase), season banner, BP tier widget,
+  news ticker.
+
+**Verify**: abrir menú, ver 3D background.
+
+### Sub-fase 18.53 — Firing Range mode `[ ]`
+
+**Tareas**:
+- `src/game/engine.js`: `mode: 'firingRange'`.
+- `src/game/maps/firing-range.js`: builder con targets, dummies, distance
+  markers.
+- Invulnerable, infinite ammo, target practice scoring, weapon swap freely.
+
+**Verify**: entrar a firing range, disparar targets.
+
+### Sub-fase 18.54 — Ping system / ping wheel `[ ]`
+
+**Tareas**:
+- `src/App.jsx`: ping wheel overlay on `Z` hold.
+- `src/game/engine.js`: raycast crosshair → ping position.
+- `src/game/store.js`: `pings` array.
+- `src/game/minimap.js`: render pings.
+- Tipos: default (red), danger (yellow), enemy (red), loot (blue).
+
+**Verify**: ping posición, ver en mundo + minimap.
+
+### Sub-fase 18.55 — Objective markers HUD `[ ]`
+
+**Tareas**:
+- `src/App.jsx`: world-space markers → screen-space projection.
+- `src/game/engine.js`: calc screen pos per frame para A/B/C/hill/bomb.
+- Distance + direction arrows when off-screen, capture progress ring.
+
+**Verify**: jugar Domination, ver markers A/B/C con distancia.
+
+---
+
+## Progreso Fase 18
+
+- [x] 18.0 — Setup (lint fix + PLAN.md)
+- [ ] 18.1 — Killfeed en HUD
+- [ ] 18.2 — Accessibility manager + keybind UI
+- [ ] 18.3 — 10 slots de loadout
+- [ ] 18.4 — Field upgrades activation system
+- [ ] 18.5 — Spectator mode on MP death
+- [ ] 18.6 — 4 mapas existentes activos
+- [ ] 18.7 — Profiler toggle
+- [ ] 18.8 — Wire netcode.js en server.js
+- [ ] 18.9 — Bipod requiresCrouch fix
+- [ ] 18.10 — Recoil patterns por arma
+- [ ] 18.11 — Damage dropoff por rango
+- [ ] 18.12 — Aim punch al recibir daño
+- [ ] 18.13 — Suppression effect en jugador
+- [ ] 18.14 — Cook grenades
+- [ ] 18.15 — Headshot multiplier por arma
+- [ ] 18.16 — Enforce 4 perks fiction
+- [ ] 18.17 — LoS check para flashbang
+- [ ] 18.18 — 11 granadas faltantes
+- [ ] 18.19 — 10 perks nuevos
+- [ ] 18.20 — Squad blackboard AI
+- [ ] 18.21 — Callouts verbales procedurales
+- [ ] 18.22 — Cover peeking + reload-seeking cover
+- [ ] 18.23 — Uso de granadas por AI
+- [ ] 18.24 — Suppression afecta AI accuracy
+- [ ] 18.25 — Reacción a reload del jugador
+- [ ] 18.26 — Roles especializados
+- [ ] 18.27 — Scorestreak core
+- [ ] 18.28 — Streak catalog + 3 slots
+- [ ] 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer
+- [ ] 18.30 — Sentry Gun + Predator Missile
+- [ ] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
+- [ ] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
+- [ ] 18.33 — Mode system wiring
+- [ ] 18.34 — Domination
+- [ ] 18.35 — Hardpoint
+- [ ] 18.36 — Kill Confirmed
+- [ ] 18.37 — Search & Destroy
+- [ ] 18.38 — Gunfight
+- [ ] 18.39 — Hardcore variant + FFA
+- [ ] 18.40 — Pre-match countdown + warmup
+- [ ] 18.41 — Round transitions + halftime + overtime
+- [ ] 18.42 — MVP card + after-action report
+- [ ] 18.43 — Intermission lobby + map vote
+- [ ] 18.44 — Join-in-progress backfill
+- [ ] 18.45 — Killer-POV killcam
+- [ ] 18.46 — Spawn protection + multiple spawn points
+- [ ] 18.47 — Gunsmith depth
+- [ ] 18.48 — Store/MTX UI
+- [ ] 18.49 — Prestige UI + flow
+- [ ] 18.50 — Ranked Play UI
+- [ ] 18.51 — Social/party
+- [ ] 18.52 — Main menu polish
+- [ ] 18.53 — Firing Range mode
+- [ ] 18.54 — Ping system / ping wheel
+- [ ] 18.55 — Objective markers HUD

@@ -77,10 +77,8 @@ export function createTouchControls(container) {
       z-index: 1000;
     `
     btn.textContent = label
-    let active = false
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault()
-      active = true
       btn.style.background = 'rgba(255,255,255,0.4)'
       if (isToggle) {
         emit(action, !state[action.toLowerCase()])
@@ -90,7 +88,6 @@ export function createTouchControls(container) {
     })
     btn.addEventListener('touchend', (e) => {
       e.preventDefault()
-      active = false
       btn.style.background = 'rgba(255,255,255,0.15)'
       if (!isToggle) emit(action, false)
     })

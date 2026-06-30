@@ -16,7 +16,7 @@ export const SPECTATOR_MODES = {
   DIRECTOR: 'director'
 }
 
-export function createSpectator(camera, scene) {
+export function createSpectator(camera, _scene) {
   let mode = SPECTATOR_MODES.FREE
   let targetId = null
   let targets = []
