@@ -31,6 +31,7 @@ import { getLoadout } from './loadout.js'
 import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
 import { createAccessibilityManager } from './accessibility/index.js'
+import { createFrameProfiler } from './performance/profiler.js'
 
 /* =========================================================================
    Motor del juego.
@@ -66,6 +67,8 @@ export function createEngine() {
   let fieldUpgrades = null
   let fieldUpgradeCooldownTimer = null
   let spectator = null
+  let profiler = null
+  let profilerOverlay = null
   let navmesh = null
   let envMap = null
   let remotePlayers = null
@@ -249,6 +252,8 @@ export function createEngine() {
     fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
     // Fase 18.5: spectator mode (para MP death).
     spectator = createSpectator(camera, scene)
+    // Fase 18.7: frame profiler (toggle F8).
+    profiler = createFrameProfiler({ sampleSize: 120 })
     // Fase 18.2: accessibility manager (keybinds, colorblind, subtitles).
     accessibility = createAccessibilityManager()
     accessibility.applyColorblindMatrix(accessibility.getColorblind())
@@ -465,6 +470,7 @@ export function createEngine() {
   function loop() {
     if (!mounted || contextLost) return
     rafId = requestAnimationFrame(loop)
+    if (profiler) profiler.beginFrame()
 
     // Calidad diferida: aplicamos al inicio del frame (antes de update y
     // render) para no disposear shadow maps mid-frame.
@@ -734,6 +740,10 @@ export function createEngine() {
     if (state !== GAME_STATES.PAUSED) {
       composer.render(dt)
     }
+
+    // Fase 18.7: profiler end frame + overlay update.
+    if (profiler) profiler.endFrame()
+    updateProfilerOverlay()
   }
 
   /* ----------------------------------------------------------------------
@@ -827,6 +837,11 @@ export function createEngine() {
     if (e.code === 'Tab') {
       e.preventDefault()
       st.toggleScoreboard(true)
+    }
+    // --- Fase 18.7: Profiler toggle (F8) ---
+    if (e.code === 'F8') {
+      e.preventDefault()
+      toggleProfilerOverlay()
     }
     // --- Granadas: G=frag, X=flash, C=smoke (Q/E son lean) ---
     // Fase 4: las granadas ahora tienen count finito en el store.
@@ -1014,6 +1029,40 @@ export function createEngine() {
   /* ----------------------------------------------------------------------
      DISPOSE.
      ---------------------------------------------------------------------- */
+  // Fase 18.7: profiler overlay toggle.
+  function toggleProfilerOverlay() {
+    if (profilerOverlay) {
+      profilerOverlay.remove()
+      profilerOverlay = null
+      return
+    }
+    profilerOverlay = document.createElement('div')
+    profilerOverlay.className = 'profiler-overlay'
+    profilerOverlay.style.cssText = `
+      position: fixed; top: 8px; left: 8px; z-index: 999;
+      background: rgba(0,0,0,0.85); color: #00ff88;
+      font-family: monospace; font-size: 11px; line-height: 1.5;
+      padding: 8px 12px; border: 1px solid #00ff88;
+      border-radius: 3px; pointer-events: none;
+      white-space: pre;
+    `
+    document.body.appendChild(profilerOverlay)
+  }
+
+  function updateProfilerOverlay() {
+    if (!profilerOverlay || !profiler) return
+    const stats = profiler.getStats()
+    const info = renderer ? renderer.info : null
+    profilerOverlay.textContent =
+      `FPS: ${profiler.getFPS().toFixed(0)}\n` +
+      `Frame: ${profiler.getAvgFrameTime().toFixed(2)}ms\n` +
+      `Draw calls: ${info?.render?.calls ?? 0}\n` +
+      `Triangles: ${info?.render?.triangles ?? 0}\n` +
+      `Geometries: ${info?.memory?.geometries ?? 0}\n` +
+      `Textures: ${info?.memory?.textures ?? 0}\n` +
+      `Min/Max: ${stats.minFrameTime.toFixed(2)}/${stats.maxFrameTime.toFixed(2)}ms`
+  }
+
   function dispose() {
     mounted = false
     if (rafId) { cancelAnimationFrame(rafId); rafId = null }
@@ -1040,6 +1089,8 @@ export function createEngine() {
     if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
     if (fieldUpgradeCooldownTimer) { clearTimeout(fieldUpgradeCooldownTimer); fieldUpgradeCooldownTimer = null }
     if (spectator) { spectator.dispose(); spectator = null }
+    if (profilerOverlay) { profilerOverlay.remove(); profilerOverlay = null }
+    profiler = null
     if (accessibility) { accessibility.dispose(); accessibility = null }
     if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()

@@ -1166,7 +1166,7 @@ cablear. En MP death → GameOver, no spectate.
 
 **Verify**: hostear TDM en 'desert', jugar, ver mapa distinto.
 
-### Sub-fase 18.7 — Profiler toggle `[ ]`
+### Sub-fase 18.7 — Profiler toggle `[x]`
 
 **Problema**: `performance/profiler.js` completo pero sin instanciar.
 
@@ -1193,7 +1193,7 @@ delta snapshots, rate limiter — `server.js` no lo importa (trusted client).
 
 **Verify**: test netcode rechaza speed hack. Server corre a 60Hz.
 
-### Sub-fase 18.9 — Bipod requiresCrouch fix `[ ]`
+### Sub-fase 18.9 — Bipod requiresCrouch fix `[x]`
 
 **Problema**: `config.js:636-639` bipod tiene `requiresCrouch:true` pero
 `loadout.js:114-167` aplica `recoilMul:0.5` siempre.

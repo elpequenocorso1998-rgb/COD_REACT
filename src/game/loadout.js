@@ -111,7 +111,7 @@ export function getFieldUpgrade(loadout = getLoadout()) {
   return FIELD_UPGRADES[fuId] || null
 }
 
-export function applyLoadoutToWeapon(weaponId, loadout = getLoadout()) {
+export function applyLoadoutToWeapon(weaponId, loadout = getLoadout(), playerState = null) {
   const base = WEAPONS[weaponId]
   if (!base) return WEAPONS.m4
 
@@ -124,6 +124,11 @@ export function applyLoadoutToWeapon(weaponId, loadout = getLoadout()) {
     const attId = attachmentsMap[slot]
     const att = ATTACHMENTS[attId]
     if (!att) continue
+    // Fase 18.9: bipod requiere crouch/prone para aplicar bonus.
+    if (att.requiresCrouch) {
+      const crouched = playerState?.crouched || playerState?.prone || false
+      if (!crouched) continue
+    }
     if (att.magSizeMul) effective.magSize = Math.floor(effective.magSize * att.magSizeMul)
     if (att.reloadTimeMul) effective.reloadTime = effective.reloadTime * att.reloadTimeMul
     if (att.damageMul) {
