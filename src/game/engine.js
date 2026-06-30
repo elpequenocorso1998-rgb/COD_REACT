@@ -744,6 +744,8 @@ export function createEngine() {
           firing: false,
           reloading: false
         })
+        // Fase 18.46: spawn protection 3s tras respawn.
+        st.grantSpawnProtection(3)
       } else if (remotePlayers && st.spectateTargetId) {
         // Cámara sigue al target remoto.
         const target = remotePlayers.getPlayer(st.spectateTargetId)

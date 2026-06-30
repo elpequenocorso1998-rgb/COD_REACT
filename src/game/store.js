@@ -138,6 +138,9 @@ export const useGameStore = create((set, get) => {
     // --- Suppression (Fase 18.13) ---
     suppression: 0,                 // 0..1, decae con dt; sube cuando bullets pasan cerca
 
+    // --- Spawn protection (Fase 18.46) ---
+    spawnProtectionUntil: 0,        // timestamp hasta el que el jugador es invulnerable
+
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
 
@@ -352,6 +355,11 @@ export const useGameStore = create((set, get) => {
       suppression: Math.max(0, s.suppression - dt * 0.5)
     })),
 
+    // Fase 18.46: spawn protection (3s de invulnerabilidad tras respawn).
+    grantSpawnProtection: (seconds = 3) => set({
+      spawnProtectionUntil: (typeof performance !== 'undefined' ? performance.now() : Date.now()) + seconds * 1000
+    }),
+
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {
       // Fase 18.19: battleHardened reduce flash duration 50%.
@@ -496,9 +504,11 @@ export const useGameStore = create((set, get) => {
     // transición a GAMEOVER. Antes eran 3 sets separados que dejaban estado
     // intermedio inconsistente.
     takeDamage: (amount, fromDirection = null) => {
-      const { health, gameState, lastDamageAt } = get()
+      const { health, gameState, lastDamageAt, spawnProtectionUntil } = get()
       if (gameState !== GAME_STATES.PLAYING) return
+      // Fase 18.46: spawn protection — ignorar daño si activo.
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+      if (spawnProtectionUntil > now) return
       if (now - lastDamageAt < PLAYER.invulnTime * 1000) return
       const newHealth = Math.max(0, health - amount)
 

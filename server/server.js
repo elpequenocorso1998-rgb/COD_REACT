@@ -43,10 +43,31 @@ function assignTeam() {
   return axisCount <= alliesCount ? 'axis' : 'allies'
 }
 
+const AXIS_SPAWNS = [
+  { x: -40, y: 1.7, z: -40 },
+  { x: -35, y: 1.7, z: -45 },
+  { x: -45, y: 1.7, z: -35 },
+  { x: -38, y: 1.7, z: -50 },
+  { x: -50, y: 1.7, z: -38 },
+  { x: -42, y: 1.7, z: -42 },
+  { x: -33, y: 1.7, z: -33 },
+  { x: -47, y: 1.7, z: -47 }
+]
+const ALLIES_SPAWNS = [
+  { x: 40, y: 1.7, z: 40 },
+  { x: 35, y: 1.7, z: 45 },
+  { x: 45, y: 1.7, z: 35 },
+  { x: 38, y: 1.7, z: 50 },
+  { x: 50, y: 1.7, z: 38 },
+  { x: 42, y: 1.7, z: 42 },
+  { x: 33, y: 1.7, z: 33 },
+  { x: 47, y: 1.7, z: 47 }
+]
+
 function spawnPoint(team) {
-  // Spawns separados por equipo.
-  if (team === 'axis') return { x: -40, y: 1.7, z: -40 }
-  return { x: 40, y: 1.7, z: 40 }
+  // Fase 18.46: múltiples spawn points por team, pick random.
+  const spawns = team === 'axis' ? AXIS_SPAWNS : ALLIES_SPAWNS
+  return spawns[Math.floor(Math.random() * spawns.length)]
 }
 
 wss.on('connection', (ws) => {

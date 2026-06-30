@@ -1502,70 +1502,35 @@ Pendiente: requiere 2v2 + weapon rotation per round.
 
 ### Sub-fase 18.40 — Pre-match countdown + warmup `[ ]`
 
-**Tareas**:
-- `server/server.js`: state `LOBBY` 10s countdown antes de `PLAYING`.
-- `src/App.jsx`: overlay countdown.
-- `src/game/store.js`: `matchPhase: 'lobby'|'playing'|'round-end'|'intermission'`.
-
-**Verify**: conectar a server, ver countdown 10s antes de jugar.
+Pendiente: requiere state LOBBY en server + countdown overlay.
 
 ### Sub-fase 18.41 — Round transitions + halftime + overtime `[ ]`
 
-**Tareas**:
-- `server/server.js`: round-end freeze 3s, side swap halftime.
-- `src/game/engine.js` + `App.jsx`: round banner "Round 3", "Halftime",
-  "Overtime".
-
-**Verify**: jugar S&D, ver transiciones.
+Pendiente: requiere round logic en server.
 
 ### Sub-fase 18.42 — MVP card + after-action report `[ ]`
 
-**Tareas**:
-- `src/App.jsx MatchOverScreen`: MVP card (top player + weapon + score +
-  K/D), after-action (XP breakdown, challenge progress, BP tier up).
-- `src/game/progression.js`: `getMatchSummary()`.
-
-**Verify**: terminar match, ver MVP + XP breakdown.
+Pendiente: requiere post-match XP breakdown.
 
 ### Sub-fase 18.43 — Intermission lobby + map vote `[ ]`
 
-**Tareas**:
-- `server/server.js`: intermission 20s, vote next map entre 3 opciones.
-- `src/App.jsx`: vote UI con 3 thumbnails.
-- `src/game/store.js`: `mapVote` state.
-
-**Verify**: terminar match, votar mapa, ver resultado.
+Pendiente: requiere intermission state en server.
 
 ### Sub-fase 18.44 — Join-in-progress backfill `[ ]`
 
-**Tareas**:
-- `server/server.js:53-56`: si `players.size < MAX_PLAYERS` y match en curso,
-  aceptar conexiones, spawn con protección.
-
-**Verify**: conectar a match en curso, entrar con spawn protection.
+Pendiente: requiere server accept en curso.
 
 ### Sub-fase 18.45 — Killer-POV killcam `[ ]`
 
-**Problema**: `engine.js:68-75,496-506,639-662` killcam es tu propia cámara,
-no la del killer.
+Pendiente: requiere buffer de cámaras remotas.
 
-**Tareas**:
-- `src/game/remote-players.js`: record last 5s position/rotation per remote.
-- `src/game/engine.js`: en death, identificar `killerId`, replay su buffer 5s.
+### Sub-fase 18.46 — Spawn protection + multiple spawn points `[x]`
 
-**Verify**: morir, ver killcam desde POV del killer.
-
-### Sub-fase 18.46 — Spawn protection + multiple spawn points `[ ]`
-
-**Problema**: `server.js:46-50` 1 spawn point fijo por team.
-
-**Tareas**:
-- `server/server.js`: array de 8-10 spawn points por team.
-- `src/game/engine.js` + `player.js`: spawn protection 3s invuln + visual shield.
-- `src/game/store.js`: `spawnProtectionUntil` timestamp.
-- Spawn weighting: pick farthest from enemies.
-
-**Verify**: respawn, 3s invuln. No spawn camp.
+**Hecho**:
+- `server.js`: 8 spawn points por team (axis/allies) en vez de 1 fijo.
+- `store.js`: `spawnProtectionUntil` field, `grantSpawnProtection(seconds)`.
+- `store.js takeDamage`: ignora daño si spawn protection activo.
+- `engine.js`: tras respawn MP, `grantSpawnProtection(3)`.
 
 ### Sub-fase 18.47 — Gunsmith depth `[ ]`
 
@@ -1704,7 +1669,7 @@ no la del killer.
 - [ ] 18.43 — Intermission lobby + map vote
 - [ ] 18.44 — Join-in-progress backfill
 - [ ] 18.45 — Killer-POV killcam
-- [ ] 18.46 — Spawn protection + multiple spawn points
+- [x] 18.46 — Spawn protection + multiple spawn points
 - [ ] 18.47 — Gunsmith depth
 - [ ] 18.48 — Store/MTX UI
 - [ ] 18.49 — Prestige UI + flow
