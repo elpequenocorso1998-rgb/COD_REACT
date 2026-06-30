@@ -17,6 +17,7 @@ import { createStreakManager } from './streaks.js'
 import { createGrenadeSystem } from './grenades.js'
 import { createDecalSystem } from './decals.js'
 import { createPickupSystem } from './pickups.js'
+import { createFieldUpgradeSystem } from './field-upgrades.js'
 import { NavMesh } from './navmesh.js'
 import { createRemotePlayerManager } from './remote-players.js'
 import { useGameStore, GAME_STATES } from './store.js'
@@ -24,7 +25,7 @@ import {
   FOV, CAMERA_NEAR, CAMERA_FAR, MAX_PARTICLES, WAVE_BASE, WAVE_PER_WAVE,
   FLOOR_SIZE
 } from './constants.js'
-import { GRENADES, PLAYER } from './config.js'
+import { GRENADES, PLAYER, FIELD_UPGRADES } from './config.js'
 import { getLoadout } from './loadout.js'
 import { getSettings } from './settings.js'
 import { FpsSampler, applyQuality } from './quality.js'
@@ -61,6 +62,8 @@ const WAVE_BASE_POINTS = 90      // puntos base por kill en oleada n
 export function createEngine() {
   let scene, camera, renderer, clock, composer
   let world, player, enemies, particles, audio, minimap, streaks, grenades, decals, pickups
+  let fieldUpgrades = null
+  let fieldUpgradeCooldownTimer = null
   let navmesh = null
   let envMap = null
   let remotePlayers = null
@@ -235,6 +238,8 @@ export function createEngine() {
     decals = createDecalSystem(scene, { maxDecals: 80 })
     // Fase 5: pickups (drops de enemigos al morir).
     pickups = createPickupSystem(scene, store, particles, audio)
+    // Fase 18.4: field upgrades system.
+    fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
     // Fase 18.2: accessibility manager (keybinds, colorblind, subtitles).
     accessibility = createAccessibilityManager()
     accessibility.applyColorblindMatrix(accessibility.getColorblind())
@@ -585,6 +590,8 @@ export function createEngine() {
       if (grenades) grenades.update(dt, player.getPosition())
       // Fase 5: pickups (detección de proximidad).
       if (pickups) pickups.update(dt, player.getPosition())
+      // Fase 18.4: field upgrades activos (trophy, recon, munitions, etc).
+      if (fieldUpgrades) fieldUpgrades.update(dt)
       // Fase 6: aim assist suave (si está activo en settings y en ADS).
       // Snap suave hacia el enemigo más cercano al centro de la pantalla.
       if (_settings.aimAssist > 0 && player.isAiming && enemies) {
@@ -726,6 +733,26 @@ export function createEngine() {
         const streak = st.availableStreaks.find((s) => s.type === type)
         if (streak && st.useStreak(streak.id)) {
           streaks.activate(type, player.getPosition())
+        }
+      }
+    }
+    // --- Fase 18.4: Field upgrade con tecla T (si charge >= 100 y sin cooldown) ---
+    if (e.code === 'KeyT' && st.gameState === GAME_STATES.PLAYING && fieldUpgrades) {
+      const fuId = st.activeFieldUpgrade
+      if (fuId && st.fieldUpgradeCharge >= 100 && st.fieldUpgradeCooldown <= 0) {
+        const deployed = fieldUpgrades.deploy(fuId, player.getPosition())
+        if (deployed) {
+          st.consumeFieldUpgradeCharge()
+          const fu = FIELD_UPGRADES[fuId]
+          if (fu && fu.cooldown) {
+            st.setFieldUpgradeCooldown(fu.cooldown)
+            if (fieldUpgradeCooldownTimer) clearTimeout(fieldUpgradeCooldownTimer)
+            fieldUpgradeCooldownTimer = setTimeout(() => {
+              useGameStore.getState().setFieldUpgradeCooldown(0)
+              fieldUpgradeCooldownTimer = null
+            }, fu.cooldown * 1000)
+          }
+          if (audio) audio.playReload()
         }
       }
     }
@@ -937,6 +964,8 @@ export function createEngine() {
     if (grenades) grenades.dispose()
     if (decals) decals.dispose()
     if (pickups) pickups.dispose()
+    if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
+    if (fieldUpgradeCooldownTimer) { clearTimeout(fieldUpgradeCooldownTimer); fieldUpgradeCooldownTimer = null }
     if (accessibility) { accessibility.dispose(); accessibility = null }
     if (remotePlayers) { remotePlayers.dispose(); remotePlayers = null }
     if (composer) composer.dispose()

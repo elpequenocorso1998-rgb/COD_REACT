@@ -208,7 +208,8 @@ function HUD() {
     kills, deaths, currentWeapon, stamina, maxStamina,
     grenadeCounts, flashbanged,
     fps,
-    mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit, mpKillfeed
+    mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit, mpKillfeed,
+    fieldUpgradeCharge, fieldUpgradeCooldown, activeFieldUpgrade
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -225,7 +226,10 @@ function HUD() {
     fps: s.fps,
     mpConnected: s.mpConnected, mpRemotePlayers: s.mpRemotePlayers,
     mpTeamScores: s.mpTeamScores, mpTeam: s.mpTeam, mpScoreLimit: s.mpScoreLimit,
-    mpKillfeed: s.mpKillfeed
+    mpKillfeed: s.mpKillfeed,
+    fieldUpgradeCharge: s.fieldUpgradeCharge,
+    fieldUpgradeCooldown: s.fieldUpgradeCooldown,
+    activeFieldUpgrade: s.activeFieldUpgrade
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -389,6 +393,22 @@ function HUD() {
             <span className="grenade-count" title="Flash (X)">X:{grenadeCounts?.flash ?? 0}</span>
             <span className="grenade-count" title="Smoke (C)">S:{grenadeCounts?.smoke ?? 0}</span>
           </div>
+          {/* Fase 18.4: field upgrade charge indicator */}
+          {activeFieldUpgrade && (
+            <div className="field-upgrade-indicator" title={`Field Upgrade (T): ${activeFieldUpgrade}`}>
+              <div className={`field-upgrade-charge ${fieldUpgradeCharge >= 100 && fieldUpgradeCooldown <= 0 ? 'ready' : ''}`}>
+                {fieldUpgradeCooldown > 0
+                  ? `${Math.ceil(fieldUpgradeCooldown)}s`
+                  : `${Math.floor(fieldUpgradeCharge)}%`}
+              </div>
+              <div className="field-upgrade-bar" aria-hidden="true">
+                <div
+                  className="field-upgrade-fill"
+                  style={{ width: `${fieldUpgradeCooldown > 0 ? 100 - (fieldUpgradeCooldown / 60) * 100 : fieldUpgradeCharge}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

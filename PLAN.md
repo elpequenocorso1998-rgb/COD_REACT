@@ -1114,7 +1114,7 @@ instanciado. `SettingsScreen` no expone keybinds.
 **Verify**: crear 3 classes distintas, cambiar entre ellas, la activa se
 persiste.
 
-### Sub-fase 18.4 — Field upgrades activation system `[ ]`
+### Sub-fase 18.4 — Field upgrades activation system `[x]`
 
 **Problema**: `config.js:712-753` define 8 field upgrades (trophy,
 deadSilence, emp, deployableCover, reconDrone, munitionsBox, reconTower,
@@ -1722,7 +1722,7 @@ no la del killer.
 - [x] 18.1 — Killfeed en HUD
 - [x] 18.2 — Accessibility manager + keybind UI
 - [x] 18.3 — 10 slots de loadout
-- [ ] 18.4 — Field upgrades activation system
+- [x] 18.4 — Field upgrades activation system
 - [ ] 18.5 — Spectator mode on MP death
 - [ ] 18.6 — 4 mapas existentes activos
 - [ ] 18.7 — Profiler toggle

@@ -272,6 +272,41 @@ canvas { display: block; }
 }
 .grenade-count { white-space: nowrap; }
 
+/* Fase 18.4: Field upgrade indicator */
+.field-upgrade-indicator {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.field-upgrade-charge {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  color: #6f7a87;
+  letter-spacing: 1px;
+}
+.field-upgrade-charge.ready {
+  color: #4caf50;
+  text-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+  animation: pulse 1.5s infinite;
+}
+.field-upgrade-bar {
+  width: 80px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.field-upgrade-fill {
+  height: 100%;
+  background: #ffd24d;
+  transition: width 0.2s;
+}
+.field-upgrade-charge.ready ~ .field-upgrade-bar .field-upgrade-fill {
+  background: #4caf50;
+}
+
 /* Fase 4: overlay blanco de flashbang (cegada temporal) */
 .flashbang-overlay {
   position: fixed;

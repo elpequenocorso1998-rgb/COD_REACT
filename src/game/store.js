@@ -117,12 +117,17 @@ export const useGameStore = create((set, get) => {
     // --- Stats y killstreaks ---
     kills: 0,                       // kills totales (scoreboard)
     deaths: 0,                      // muertes totales (scoreboard)
-    killStreak: 0,                  // kills consecutivas sin morir
+    killStreak: 0,                  // kills consecutivos sin morir
     availableStreaks: [],           // killstreaks desbloqueados pendientes de usar
     activeStreaks: [],              // killstreaks activos ahora [{id, type, until}]
     lastKillAt: 0,                  // timestamp de la última kill (ventana multikill)
     multikillCount: 0,              // kills dentro de la ventana de 3s
     multikillLabel: null,           // callout efímero ("Double Kill", etc.)
+
+    // --- Field upgrades (Fase 18.4) ---
+    fieldUpgradeCharge: 0,          // 0..100, gana 25 por kill, 10 por hit
+    fieldUpgradeCooldown: 0,        // segundos restantes de cooldown
+    activeFieldUpgrade: null,       // id del field upgrade del loadout actual
 
     // --- UAV (killstreak de 3): revela enemigos en el minimap ---
     uavActive: false,
@@ -300,6 +305,14 @@ export const useGameStore = create((set, get) => {
     // Fase 4: marca el gunship como activo/inactivo (player.update lo lee).
     setGunshipActive: (active) => set({ gunshipActive: active }),
 
+    // Fase 18.4: field upgrades — charge, cooldown, active.
+    setActiveFieldUpgrade: (fuId) => set({ activeFieldUpgrade: fuId }),
+    addFieldUpgradeCharge: (amount) => set((s) => ({
+      fieldUpgradeCharge: Math.min(100, s.fieldUpgradeCharge + amount)
+    })),
+    consumeFieldUpgradeCharge: () => set({ fieldUpgradeCharge: 0 }),
+    setFieldUpgradeCooldown: (seconds) => set({ fieldUpgradeCooldown: Math.max(0, seconds) }),
+
     // Fase 4: flashbang al jugador (overlay blanco + stun temporal).
     flashPlayer: (durationMs) => {
       const until = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + durationMs
@@ -318,7 +331,8 @@ export const useGameStore = create((set, get) => {
       const id = nextId()
       set((s) => ({
         score: s.score + points,
-        hitmarkers: [...s.hitmarkers, { id, type }]
+        hitmarkers: [...s.hitmarkers, { id, type }],
+        fieldUpgradeCharge: Math.min(100, s.fieldUpgradeCharge + 10)
       }))
       trackTimeout(() => {
         set((s) => ({ hitmarkers: s.hitmarkers.filter((h) => h.id !== id) }))
@@ -358,7 +372,8 @@ export const useGameStore = create((set, get) => {
           availableStreaks: newAvailable,
           lastKillAt: now,
           multikillCount: newMultikill,
-          multikillLabel
+          multikillLabel,
+          fieldUpgradeCharge: Math.min(100, s.fieldUpgradeCharge + 25)
         }
       })
       trackTimeout(() => {
@@ -574,6 +589,10 @@ export const useGameStore = create((set, get) => {
         multikillCount: 0,
         multikillLabel: null,
         uavActive: false,
+        // Fase 18.4: field upgrades reset.
+        fieldUpgradeCharge: 0,
+        fieldUpgradeCooldown: 0,
+        activeFieldUpgrade: loadout.fieldUpgrade || null,
         scoreboardOpen: false,
         // Progresión se mantiene (es persistente entre partidas).
         playerLevel: prog.level,
