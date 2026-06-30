@@ -82,6 +82,13 @@ export const WEAPONS = {
     recoilRecover: 0.85,
     pitchKick: 0.012,
     yawKick: 0.008,
+    // Fase 18.10: patrón de recoil determinista (vertical ligero derecha).
+    recoilPattern: [
+      [0, 1.0], [0.1, 1.0], [0.2, 0.9], [0.3, 0.9], [0.2, 0.8],
+      [0.1, 0.8], [0, 0.7], [-0.1, 0.7], [-0.2, 0.6], [-0.3, 0.6],
+      [-0.2, 0.5], [-0.1, 0.5], [0, 0.5], [0.1, 0.4], [0.2, 0.4],
+      [0.3, 0.4], [0.2, 0.3], [0.1, 0.3], [0, 0.3], [-0.1, 0.3]
+    ],
     adsTime: 0.25,           // tiempo de ADS (segundos)
     adsFov: 45,              // FOV al apuntar
     hipFireSpread: 1.0,      // multiplicador de spread hipfire
@@ -89,6 +96,12 @@ export const WEAPONS = {
     adsSensMul: 0.6,         // reducción de sensibilidad al apuntar
     moveSpeedMul: 1.0,       // multiplicador de velocidad al llevarla
     automatic: true,
+    // Fase 18.11: damage dropoff por rango (distancia en metros, multiplicador).
+    damageRange: [
+      { min: 0, max: 30, mul: 1.0 },
+      { min: 30, max: 60, mul: 0.85 },
+      { min: 60, max: 999, mul: 0.7 }
+    ],
     minWave: 1               // disponible desde el inicio
   },
   ak47: {
@@ -107,6 +120,13 @@ export const WEAPONS = {
     recoilRecover: 0.82,
     pitchKick: 0.016,
     yawKick: 0.011,
+    // Fase 18.10: AK47 — vertical fuerte izquierda.
+    recoilPattern: [
+      [0, 1.3], [-0.1, 1.3], [-0.2, 1.2], [-0.3, 1.2], [-0.4, 1.1],
+      [-0.3, 1.0], [-0.2, 0.9], [-0.1, 0.9], [0, 0.8], [0.1, 0.8],
+      [0.2, 0.7], [0.3, 0.7], [0.2, 0.6], [0.1, 0.6], [0, 0.5],
+      [-0.1, 0.5], [-0.2, 0.4], [-0.3, 0.4], [-0.2, 0.4], [-0.1, 0.4]
+    ],
     adsTime: 0.28,
     adsFov: 45,
     hipFireSpread: 1.1,
@@ -132,6 +152,13 @@ export const WEAPONS = {
     recoilRecover: 0.88,
     pitchKick: 0.008,
     yawKick: 0.006,
+    // Fase 18.10: MP5 — saltos cortos horizontales.
+    recoilPattern: [
+      [0.2, 0.7], [-0.2, 0.7], [0.3, 0.6], [-0.3, 0.6], [0.2, 0.5],
+      [-0.2, 0.5], [0.1, 0.5], [-0.1, 0.4], [0.2, 0.4], [-0.2, 0.4],
+      [0.3, 0.3], [-0.3, 0.3], [0.1, 0.3], [-0.1, 0.3], [0.2, 0.3],
+      [-0.2, 0.3], [0.1, 0.2], [-0.1, 0.2], [0, 0.2], [0, 0.2]
+    ],
     adsTime: 0.18,
     adsFov: 50,
     hipFireSpread: 0.7,
@@ -157,6 +184,8 @@ export const WEAPONS = {
     recoilRecover: 0.7,
     pitchKick: 0.05,
     yawKick: 0.02,
+    // Fase 18.10: Sniper — kick fuerte single-shot.
+    recoilPattern: [[0, 2.0]],
     adsTime: 0.4,
     adsFov: 20,              // zoom fuerte
     hipFireSpread: 3.0,      // muy impreciso sin apuntar
@@ -182,6 +211,8 @@ export const WEAPONS = {
     recoilRecover: 0.75,
     pitchKick: 0.04,
     yawKick: 0.02,
+    // Fase 18.10: Shotgun — spread horizontal amplio.
+    recoilPattern: [[0.5, 1.5], [-0.5, 1.5], [0.3, 1.5], [-0.3, 1.5]],
     adsTime: 0.3,
     adsFov: 55,
     hipFireSpread: 0.5,
@@ -208,6 +239,13 @@ export const WEAPONS = {
     recoilRecover: 0.83,
     pitchKick: 0.011,
     yawKick: 0.009,
+    // Fase 18.10: LMG — vertical constante.
+    recoilPattern: [
+      [0, 0.9], [0, 0.9], [0.05, 0.9], [0.05, 0.9], [0.1, 0.8],
+      [0.1, 0.8], [0.05, 0.8], [0.05, 0.8], [0, 0.7], [0, 0.7],
+      [-0.05, 0.7], [-0.05, 0.7], [-0.1, 0.6], [-0.1, 0.6], [-0.05, 0.6],
+      [-0.05, 0.6], [0, 0.6], [0, 0.6], [0.05, 0.6], [0.05, 0.6]
+    ],
     adsTime: 0.35,
     adsFov: 48,
     hipFireSpread: 1.3,
@@ -233,6 +271,11 @@ export const WEAPONS = {
     recoilRecover: 0.9,
     pitchKick: 0.01,
     yawKick: 0.007,
+    // Fase 18.10: Pistol — kick moderado.
+    recoilPattern: [
+      [0, 0.8], [0.1, 0.8], [-0.1, 0.7], [0.1, 0.7], [-0.1, 0.6],
+      [0, 0.6], [0.1, 0.5], [-0.1, 0.5], [0, 0.5], [0.05, 0.4]
+    ],
     adsTime: 0.15,
     adsFov: 55,
     hipFireSpread: 0.8,
@@ -452,6 +495,13 @@ export const WEAPON_PLATFORMS = {
 // WEAPON: alias del arma por defecto (M4) para compatibilidad con código
 // existente que importa WEAPON directamente.
 export const WEAPON = WEAPONS.m4
+
+// Fase 18.11: damage dropoff por rango por defecto (si el arma no define damageRange).
+export const DEFAULT_DAMAGE_RANGE = [
+  { min: 0, max: 30, mul: 1.0 },
+  { min: 30, max: 60, mul: 0.85 },
+  { min: 60, max: 999, mul: 0.7 }
+]
 
 // --- Multiplicadores de daño por zona (Fase 1.3) ---
 // CoD usa head×4, neck×2, chest×1, stomach×1.1, limbs×0.8.

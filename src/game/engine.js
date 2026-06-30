@@ -268,7 +268,11 @@ export function createEngine() {
       const worldAngle = Math.atan2(dx, dz)
       const playerYaw = player.getYaw ? player.getYaw() : 0
       const relAngle = worldAngle - playerYaw
-      store.getState().takeDamage(enemy.damage, relAngle)
+      const dmg = enemy.damage
+      store.getState().takeDamage(dmg, relAngle)
+      // Fase 18.12: aim punch al recibir daño del enemigo.
+      const punchScale = Math.min(0.04, dmg / 100 * 0.04)
+      player.applyAimPunch(-punchScale, Math.sin(relAngle) * punchScale * 0.5)
       audio.playDamage()
       // Marca muzzle report para el minimap (punto parpadeante).
       enemies.markShot(enemy)

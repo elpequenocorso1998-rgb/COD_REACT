@@ -1205,7 +1205,7 @@ delta snapshots, rate limiter — `server.js` no lo importa (trusted client).
 
 **Verify**: equip bipod, disparar de pie (sin bonus), agacharse (con bonus).
 
-### Sub-fase 18.10 — Recoil patterns por arma `[ ]`
+### Sub-fase 18.10 — Recoil patterns por arma `[x]`
 
 **Problema**: `player.js:343-345` recoil es `recoilPerShot` + random yaw.
 No hay patrón determinista por arma.
@@ -1226,7 +1226,7 @@ No hay patrón determinista por arma.
 **Verify**: disparar M4 full-auto, ver patrón consistente. Cambiar a AK,
 patrón distinto.
 
-### Sub-fase 18.11 — Damage dropoff por rango `[ ]`
+### Sub-fase 18.11 — Damage dropoff por rango `[x]`
 
 **Problema**: `enemies.js:197-204` daño flat sin importar distancia. CoD
 tiene damage dropoff por rango.
@@ -1239,7 +1239,7 @@ tiene damage dropoff por rango.
 
 **Verify**: matar a 10m (full), 50m (mid), 80m (min) con M4.
 
-### Sub-fase 18.12 — Aim punch al recibir daño `[ ]`
+### Sub-fase 18.12 — Aim punch al recibir daño `[x]`
 
 **Problema**: `store.js:439-495 takeDamage` solo setea `damageFlash`, no
 camera kick.
@@ -1728,9 +1728,9 @@ no la del killer.
 - [x] 18.7 — Profiler toggle
 - [ ] 18.8 — Wire netcode.js en server.js
 - [x] 18.9 — Bipod requiresCrouch fix
-- [ ] 18.10 — Recoil patterns por arma
-- [ ] 18.11 — Damage dropoff por rango
-- [ ] 18.12 — Aim punch al recibir daño
+- [x] 18.10 — Recoil patterns por arma
+- [x] 18.11 — Damage dropoff por rango
+- [x] 18.12 — Aim punch al recibir daño
 - [ ] 18.13 — Suppression effect en jugador
 - [ ] 18.14 — Cook grenades
 - [x] 18.15 — Headshot multiplier por arma (revisar duplicación)

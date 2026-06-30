@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
-import { WEAPON, ENEMY_TYPES, WAVE_SCALING, DAMAGE_MULTIPLIERS, PENETRATION } from './config.js'
+import { WEAPON, ENEMY_TYPES, WAVE_SCALING, DAMAGE_MULTIPLIERS, PENETRATION, DEFAULT_DAMAGE_RANGE } from './config.js'
 import { createAIController } from './ai.js'
 import { createRagdoll } from './ragdoll.js'
 
@@ -202,6 +202,12 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       const mul = DAMAGE_MULTIPLIERS[part] || 1.0
       dmg *= mul
     }
+
+    // Fase 18.11: damage dropoff por rango.
+    const distance = originVec.distanceTo(hit.point)
+    const ranges = (weaponDef && weaponDef.damageRange) || DEFAULT_DAMAGE_RANGE
+    const rangeMul = ranges.find((r) => distance >= r.min && distance < r.max)?.mul ?? 1.0
+    dmg *= rangeMul
 
     // Fase 1.3: wallbang. Si hay un collider entre el origen y el punto
     // de impacto, el daño se reduce según el material (PENETRATION).

@@ -66,6 +66,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
   // --- Arma ---
   let recoil = 0
+  let recoilIdx = 0
+  let recoilResetTimer = 0
   let viewmodelSwayX = 0, viewmodelSwayY = 0
   let viewmodelRotX = 0, viewmodelRotY = 0
   // Auto-fire con acumulador (sin setInterval).
@@ -341,8 +343,19 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
     // Retroceso visual + subida de la cámara (solo si hubo disparo real).
     recoil = Math.min(recoil + w.recoilPerShot, w.recoilMax)
-    targetPitch += w.pitchKick
-    targetYaw += (Math.random() - 0.5) * w.yawKick
+    // Fase 18.10: recoil pattern determinista por arma.
+    // Si el arma tiene recoilPattern, lo usamos; si no, random como antes.
+    const pattern = w.recoilPattern
+    if (pattern && pattern.length > 0) {
+      const p = pattern[recoilIdx % pattern.length]
+      targetPitch += w.pitchKick * p[1]
+      targetYaw += w.yawKick * p[0] * 2
+      recoilIdx++
+      recoilResetTimer = 0
+    } else {
+      targetPitch += w.pitchKick
+      targetYaw += (Math.random() - 0.5) * w.yawKick
+    }
 
     muzzleLight.intensity = 6
     muzzleSprite.material.opacity = 1
@@ -725,6 +738,14 @@ export function createPlayer(scene, camera, world, particles, renderer) {
 
     // Retroceso aplicado al grupo entero del rifle (no a piezas sueltas).
     recoil *= Math.pow((currentWeaponDef || WEAPON).recoilRecover, dt * 60)
+    // Fase 18.10: reset del índice de recoil pattern tras 0.4s sin disparar.
+    if (recoilIdx > 0) {
+      recoilResetTimer += dt
+      if (recoilResetTimer > 0.4) {
+        recoilIdx = 0
+        recoilResetTimer = 0
+      }
+    }
     rifleGroup.position.z = recoil
     rifleGroup.rotation.x = -recoil * 1.2
 
@@ -825,6 +846,8 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     sprinting = false; isCrouching = false
     isFiring = false; fireAccumulator = 0
     recoil = 0
+    recoilIdx = 0
+    recoilResetTimer = 0
     isAiming = false; adsProgress = 0
     isSliding = false; slideTimer = 0
     isProne = false
@@ -906,6 +929,12 @@ export function createPlayer(scene, camera, world, particles, renderer) {
     }
   }
 
+  // Fase 18.12: aim punch al recibir daño (camera kick temporal).
+  function applyAimPunch(pitchAmount, yawAmount) {
+    targetPitch += pitchAmount
+    targetYaw += yawAmount
+  }
+
   function setWeapon(weaponDef) {
     currentWeaponDef = weaponDef || WEAPON
     raycaster.far = currentWeaponDef.raycastFar
@@ -920,6 +949,7 @@ export function createPlayer(scene, camera, world, particles, renderer) {
   return {
     update, reset, dispose, getPosition, getYaw,
     requestPointerLock, exitPointerLock, setWeapon, applySettings,
+    applyAimPunch,
     setGunshipActive: (v) => { gunshipActive = v },
     getStamina: () => stamina,
     getMaxStamina: () => STAMINA.max,
