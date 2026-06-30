@@ -1328,7 +1328,23 @@ paredes.
 
 **Verify**: flash detrás de pared no te afecta.
 
-### Sub-fase 18.18 — 11 granadas faltantes `[ ]`
+### Sub-fase 18.18 — 11 granadas faltantes `[x]`
+
+**Implementadas**:
+- `semtex`: como frag con material distintivo.
+- `thermite`: DoT area 8s, 10/s en radio.
+- `molotov`: área de fuego (mismo sistema que thermite).
+- `c4`: explosión 1.2x radio frag.
+- `claymore`: explosión 0.8x radio frag.
+- `stun`: slow 50% + stun visual (distinto de flash blind).
+- `decoy`: fake gunfire sound.
+- `snapshot`: recon pulse marca enemies 3s.
+- `gas`: área 10s, 5/s DoT.
+- `stim`: instant heal +25 HP.
+- `shuriken`: como knife (chargeable retrievable).
+
+**Sistema**: áreas de fuego/gas usan `isFireArea` flag en projectile con
+`damagePerTick` y `tickTimer` para DoT.
 
 **Problema**: `grenades.js:39-44` switch solo maneja frag/flash/smoke/knife.
 `config.js` define 15. 11 hacen `default: return` (silently no-op).
@@ -1746,7 +1762,7 @@ no la del killer.
 - [x] 18.15 — Headshot multiplier por arma (revisar duplicación)
 - [x] 18.16 — Enforce 4 perks fiction
 - [x] 18.17 — LoS check para flashbang
-- [ ] 18.18 — 11 granadas faltantes
+- [x] 18.18 — 11 granadas faltantes
 - [ ] 18.19 — 10 perks nuevos
 - [ ] 18.20 — Squad blackboard AI
 - [ ] 18.21 — Callouts verbales procedurales

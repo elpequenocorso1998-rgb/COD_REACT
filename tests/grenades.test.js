@@ -9,6 +9,8 @@ vi.mock('three', () => {
   return {
     SphereGeometry: class { dispose() {} },
     ConeGeometry: class { dispose() {} },
+    BoxGeometry: class { dispose() {} },
+    OctahedronGeometry: class { dispose() {} },
     MeshStandardMaterial: class {
       constructor(opts) { this.color = opts?.color; this.dispose = () => {} }
     },
