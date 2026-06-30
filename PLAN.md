@@ -1317,7 +1317,7 @@ config pero sin efecto runtime.
 **Verify**: equip ghost, UAV enemigo no te revela. Equip deadSilence, no
 haces ruido al caminar.
 
-### Sub-fase 18.17 — LoS check para flashbang `[ ]`
+### Sub-fase 18.17 — LoS check para flashbang `[x]`
 
 **Problema**: `grenades.js:163-170` flash aplica por radio sin importar
 paredes.
@@ -1745,7 +1745,7 @@ no la del killer.
 - [x] 18.14 — Cook grenades
 - [x] 18.15 — Headshot multiplier por arma (revisar duplicación)
 - [x] 18.16 — Enforce 4 perks fiction
-- [ ] 18.17 — LoS check para flashbang
+- [x] 18.17 — LoS check para flashbang
 - [ ] 18.18 — 11 granadas faltantes
 - [ ] 18.19 — 10 perks nuevos
 - [ ] 18.20 — Squad blackboard AI

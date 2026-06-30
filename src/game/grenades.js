@@ -32,6 +32,26 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
   // Vectores scratch.
   const _vel = new THREE.Vector3()
   const _pos = new THREE.Vector3()
+  // Fase 18.17: rayo scratch para LoS check.
+  const _losRay = new THREE.Ray()
+  const _losTarget = new THREE.Vector3()
+  const _losHit = new THREE.Vector3()
+
+  // Fase 18.17: comprueba línea de visión entre dos puntos (sin paredes).
+  function checkLoS(from, to) {
+    _losTarget.set(to.x, to.y, to.z)
+    _losRay.origin.set(from.x, from.y, from.z)
+    _losRay.direction.subVectors(_losTarget, _losRay.origin).normalize()
+    const dist = from.distanceTo(_losTarget)
+    if (!world || !world.colliders) return true
+    for (const c of world.colliders) {
+      if (_losRay.intersectBox(c.box, _losHit)) {
+        const d = _losRay.origin.distanceTo(_losHit)
+        if (d < dist) return false // pared bloquea
+      }
+    }
+    return true
+  }
 
   // Lanza una granada del tipo dado desde la posición del jugador.
   function throwGrenade(type, originPos, direction) {
@@ -244,13 +264,16 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
 
       case 'flash':
         if (audio) audio.playExplosion?.()
-        // Flash: cegada al jugador si está en el radio (sin importar línea
-        // de visión — simplificación para jugabilidad).
+        // Fase 18.17: flash con LoS check — solo ciega si hay línea de visión.
         if (store && _player) {
           const ppos = _player.getPosition()
           const dToPlayer = Math.hypot(ppos.x - _pos.x, ppos.z - _pos.z)
           if (dToPlayer <= FLASH_STUN_RADIUS) {
-            store.getState().flashPlayer(2000) // 2s de overlay blanco
+            // Raycast desde explosion → player eye; si hay pared, no aplicar.
+            const hasLoS = !world || !world.colliders || checkLoS(_pos, ppos)
+            if (hasLoS) {
+              store.getState().flashPlayer(2000) // 2s de overlay blanco
+            }
           }
         }
         // Para enemigos: los aturde (reducen velocidad temporalmente).
