@@ -1760,7 +1760,16 @@ pegada a la pared" sin necesidad de recortar geometría.
 rayleigh, mieCoefficient.
 **Verify**: cielo realista con disco solar.
 
-### Sub-fase 19.10 — Rebuild 4 mapas extra con geometría detallada `[ ]`
+### Sub-fase 19.10 — Rebuild 4 mapas extra con geometría detallada `[x]`
+
+**Mejoras aplicadas**:
+- `desert.js`: hangares y barracks ahora usan PBR concrete textures (normalMap +
+  roughnessMap). Crates usan crateMat con PBR.
+- `urban.js`: edificios usan PBR concrete textures. Importado makeCrateTextures.
+- `snow.js`: edificios usan PBR concrete textures con tinte azul.
+- `industrial.js`: edificios usan PBR concrete textures.
+- Todas las superficies de edificios ahora tienen relieve visible bajo luz
+  lateral (normalMap) en vez de colores sólidos planos.
 **Problema**: desert/urban/snow/industrial = solo addBox() con colores sólidos.
 **Tareas**: reutilizar buildPamplonaHouse con paletas. Hangares, coches con
 ruedas, pinos cónicos, tanques con tuberías.
@@ -1806,7 +1815,7 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.7 — Cortar agujeros de ventanas
 - [x] 19.8 — Más segmentos en cilindros/esferas
 - [x] 19.9 — Sky shader real (Preetham)
-- [ ] 19.10 — Rebuild 4 mapas extra detallados
+- [x] 19.10 — Rebuild 4 mapas extra detallados
 - [x] 19.11 — Partículas ambientales
 - [x] 19.12 — README overhaul
 - [x] 19.13 — CI/CD + community files

@@ -47,11 +47,23 @@ export function buildDesert(colliders) {
   extSand.position.y = -0.02
   group.add(extSand)
 
+  // Fase 19.10: texturas PBR para edificios del desierto.
+  const concreteTex = makeConcreteTextures(512)
+  concreteTex.map.repeat.set(4, 4)
+  concreteTex.normalMap.repeat.set(4, 4)
+  concreteTex.roughnessMap.repeat.set(4, 4)
   const hangarMat = new THREE.MeshStandardMaterial({
+    map: concreteTex.map, normalMap: concreteTex.normalMap,
+    roughnessMap: concreteTex.roughnessMap,
     color: 0x8a7a5a, roughness: 0.85, metalness: 0.2
   })
   const metalMat = new THREE.MeshStandardMaterial({
     color: 0x4a3a2a, roughness: 0.6, metalness: 0.7
+  })
+  const crateTexResult = makeCrateTextures(256)
+  const crateMat = new THREE.MeshStandardMaterial({
+    map: crateTexResult.map, normalMap: crateTexResult.normalMap,
+    color: 0x6a5a3a, roughness: 0.8, metalness: 0.1
   })
 
   function addBox(x, y, z, w, h, d, mat, type = 'wall') {
@@ -87,14 +99,14 @@ export function buildDesert(colliders) {
     const x = (rng() - 0.5) * 70
     const z = (rng() - 0.5) * 70
     if (Math.abs(x) < 5 && Math.abs(z) < 5) continue
-    addBox(x, 1, z, 1.2, 1.2, 1.2, metalMat, 'crate')
+    addBox(x, 1, z, 1.2, 1.2, 1.2, crateMat, 'crate')
   }
 
   for (let i = 0; i < 12; i++) {
     const x = (rng() - 0.5) * 60
     const z = (rng() - 0.5) * 60
     if (Math.abs(x) < 6 && Math.abs(z) < 6) continue
-    addBox(x, 0.7, z, 0.8, 1.4, 0.8, metalMat, 'crate')
+    addBox(x, 0.7, z, 0.8, 1.4, 0.8, crateMat, 'crate')
   }
 
   addBox(0, 2, -8, 12, 4, 1, hangarMat)
@@ -114,12 +126,6 @@ export function buildDesert(colliders) {
     }
   }
 
-  const crateTex = makeCrateTextures(256)
-  const crateMat = new THREE.MeshStandardMaterial({
-    map: crateTex.map,
-    normalMap: crateTex.normalMap,
-    roughness: 0.85
-  })
   for (let i = 0; i < 15; i++) {
     const x = (rng() - 0.5) * 80
     const z = (rng() - 0.5) * 80

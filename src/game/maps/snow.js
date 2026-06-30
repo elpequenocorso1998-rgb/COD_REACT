@@ -46,7 +46,14 @@ export function buildSnow(colliders) {
   extSnow.position.y = -0.02
   group.add(extSnow)
 
+  // Fase 19.10: texturas PBR para edificios de nieve.
+  const concTex = makeConcreteTextures(512)
+  concTex.map.repeat.set(4, 4)
+  concTex.normalMap.repeat.set(4, 4)
+  concTex.roughnessMap.repeat.set(4, 4)
   const metalMat = new THREE.MeshStandardMaterial({
+    map: concTex.map, normalMap: concTex.normalMap,
+    roughnessMap: concTex.roughnessMap,
     color: 0x4a5a6a, roughness: 0.5, metalness: 0.7
   })
   const darkMat = new THREE.MeshStandardMaterial({

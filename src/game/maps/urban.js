@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { mulberry32 } from '../math.js'
-import { makeConcreteTextures } from '../textures.js'
+import { makeConcreteTextures, makeCrateTextures } from '../textures.js'
 import { FLOOR_SIZE } from '../constants.js'
 
 /* =========================================================================
@@ -46,8 +46,20 @@ export function buildUrban(colliders) {
   extRoad.position.y = -0.02
   group.add(extRoad)
 
+  // Fase 19.10: texturas PBR para edificios urbanos.
+  const concTex = makeConcreteTextures(512)
+  concTex.map.repeat.set(6, 6)
+  concTex.normalMap.repeat.set(6, 6)
+  concTex.roughnessMap.repeat.set(6, 6)
   const buildingMat = new THREE.MeshStandardMaterial({
+    map: concTex.map, normalMap: concTex.normalMap,
+    roughnessMap: concTex.roughnessMap,
     color: 0x6a6a6a, roughness: 0.85, metalness: 0.15
+  })
+  const crateTexResult = makeCrateTextures(256)
+  const crateMat = new THREE.MeshStandardMaterial({
+    map: crateTexResult.map, normalMap: crateTexResult.normalMap,
+    color: 0x4a3a2a, roughness: 0.8, metalness: 0.1
   })
   const darkMat = new THREE.MeshStandardMaterial({
     color: 0x2a2a2a, roughness: 0.7, metalness: 0.4

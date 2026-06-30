@@ -45,7 +45,14 @@ export function buildIndustrial(colliders) {
   extFloor.position.y = -0.02
   group.add(extFloor)
 
+  // Fase 19.10: texturas PBR para edificios industriales.
+  const concTex = makeConcreteTextures(512)
+  concTex.map.repeat.set(5, 5)
+  concTex.normalMap.repeat.set(5, 5)
+  concTex.roughnessMap.repeat.set(5, 5)
   const metalMat = new THREE.MeshStandardMaterial({
+    map: concTex.map, normalMap: concTex.normalMap,
+    roughnessMap: concTex.roughnessMap,
     color: 0x5a5a5a, roughness: 0.5, metalness: 0.8
   })
   const rustMat = new THREE.MeshStandardMaterial({
