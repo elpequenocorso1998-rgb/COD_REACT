@@ -57,7 +57,7 @@ export function buildUrban(colliders) {
     color: 0x6a6a6a, roughness: 0.85, metalness: 0.15
   })
   const crateTexResult = makeCrateTextures(256)
-  const crateMat = new THREE.MeshStandardMaterial({
+  const _crateMat = new THREE.MeshStandardMaterial({
     map: crateTexResult.map, normalMap: crateTexResult.normalMap,
     color: 0x4a3a2a, roughness: 0.8, metalness: 0.1
   })

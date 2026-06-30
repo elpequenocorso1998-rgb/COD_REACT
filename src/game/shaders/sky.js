@@ -7,7 +7,7 @@
 
 import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { SKY_TOP, SKY_MIDDLE, SKY_BOTTOM, SUN_DIR } from '../constants.js'
+import { SUN_DIR } from '../constants.js'
 
 export function createSkyMaterial() {
   // Fallback: si Sky no está disponible, usar el gradiente antiguo.

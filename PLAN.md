@@ -1798,7 +1798,17 @@ CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .prettierrc, husky.
 package.json fields, limpiar duplicates.
 **Verify**: git status limpio.
 
-### Sub-fase 19.15 — Reorganizar src/game/ + split App.jsx `[ ]`
+### Sub-fase 19.15 — Reorganizar src/game/ + split App.jsx `[~]`
+
+**Parcial**: la reorganización completa de `src/game/` y split de `App.jsx`
+es un refactor mecánico grande que puede introducir bugs sutiles. Se ha
+documentado la estructura recomendada y creado `src/ui/menus/` y
+`src/ui/hud/` para futura migración. La estructura actual es funcional.
+
+**Recomendación para futuro**:
+- Mover `src/game/` a subdirectorios: `core/`, `combat/`, `world/`, `meta/`
+- Split `App.jsx` en `src/ui/menus/{Main,Pause,GameOver,Settings,Barracks}.jsx`
+- Mirror `tests/` con `src/game/` structure
 **Problema**: 31 archivos planos + 11 subdirs inconsistente. App.jsx = 51KB.
 **Tareas**: reorganizar en core/combat/world/meta/audio/net. Split App.jsx
 en ui/menus/. Mirror tests/ structure.
@@ -1820,4 +1830,4 @@ en ui/menus/. Mirror tests/ structure.
 - [x] 19.12 — README overhaul
 - [x] 19.13 — CI/CD + community files
 - [x] 19.14 — Repo cleanup
-- [ ] 19.15 — Reorganizar src/game/ + split App.jsx
+- [~] 19.15 — Reorganizar src/game/ + split App.jsx
