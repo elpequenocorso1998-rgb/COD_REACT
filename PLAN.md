@@ -1071,7 +1071,7 @@ en cada una. Cada sub-fase se commitea con mensaje `feat(18.X): ...`.
 - Añadir esta sección Fase 18 al PLAN.md.
 - Verificación base: lint+test+build limpio.
 
-### Sub-fase 18.1 — Killfeed en HUD `[ ]`
+### Sub-fase 18.1 — Killfeed en HUD `[x]`
 
 **Problema**: `store.js:162` mantiene `mpKillfeed` (capped 5, push en
 `addMpKill`), CSS `.killfeed` existe en `styles.css`, pero `App.jsx` HUD no
@@ -1719,7 +1719,7 @@ no la del killer.
 ## Progreso Fase 18
 
 - [x] 18.0 — Setup (lint fix + PLAN.md)
-- [ ] 18.1 — Killfeed en HUD
+- [x] 18.1 — Killfeed en HUD
 - [ ] 18.2 — Accessibility manager + keybind UI
 - [ ] 18.3 — 10 slots de loadout
 - [ ] 18.4 — Field upgrades activation system

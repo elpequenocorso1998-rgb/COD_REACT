@@ -207,7 +207,7 @@ function HUD() {
     kills, deaths, currentWeapon, stamina, maxStamina,
     grenadeCounts, flashbanged,
     fps,
-    mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit
+    mpConnected, mpRemotePlayers, mpTeamScores, mpTeam, mpScoreLimit, mpKillfeed
   } = useGameStore(useShallow((s) => ({
     health: s.health, maxHealth: s.maxHealth, ammo: s.ammo, reserve: s.reserve,
     reloading: s.reloading, score: s.score, wave: s.wave,
@@ -223,7 +223,8 @@ function HUD() {
     grenadeCounts: s.grenadeCounts, flashbanged: s.flashbanged,
     fps: s.fps,
     mpConnected: s.mpConnected, mpRemotePlayers: s.mpRemotePlayers,
-    mpTeamScores: s.mpTeamScores, mpTeam: s.mpTeam, mpScoreLimit: s.mpScoreLimit
+    mpTeamScores: s.mpTeamScores, mpTeam: s.mpTeam, mpScoreLimit: s.mpScoreLimit,
+    mpKillfeed: s.mpKillfeed
   })))
 
   const hpPct = Math.max(0, (health / maxHealth) * 100)
@@ -243,6 +244,22 @@ function HUD() {
       {/* Fase 6: FPS counter (si showFps activo en settings) */}
       {fps > 0 && (
         <div className="fps-counter" aria-hidden="true">{fps} FPS</div>
+      )}
+
+      {/* Fase 18.1: Killfeed MP (top-right, últimas 5 kills < 4s) */}
+      {mpConnected && mpKillfeed && mpKillfeed.length > 0 && (
+        <div className="killfeed" aria-label="Killfeed">
+          {mpKillfeed
+            .filter((k) => Date.now() - k.t < 4000)
+            .slice(-5)
+            .map((k, i) => (
+              <div className="killfeed-row" key={`${k.t}-${i}`}>
+                <span className="killer">{k.killer}</span>
+                <span className="weapon">{k.weapon}{k.headshot ? ' ⊕' : ''}</span>
+                <span className="victim">{k.victim}</span>
+              </div>
+            ))}
+        </div>
       )}
 
       {/* --- Multikill callout (centro, efímero) --- */}
