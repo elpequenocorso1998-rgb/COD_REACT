@@ -633,6 +633,11 @@ export function buildViewModel(weaponId) {
 
 // Dispose compartido de texturas (gunTex + muzzleTex) al destruir engine.
 export function disposeViewModelShared() {
-  if (_sharedGunTex) { _sharedGunTex.dispose(); _sharedGunTex = null }
+  if (_sharedGunTex) {
+    _sharedGunTex.map?.dispose()
+    _sharedGunTex.normalMap?.dispose()
+    _sharedGunTex.roughnessMap?.dispose()
+    _sharedGunTex = null
+  }
   if (_sharedMuzzleTex) { _sharedMuzzleTex.dispose(); _sharedMuzzleTex = null }
 }

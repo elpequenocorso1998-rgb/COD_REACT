@@ -5,7 +5,6 @@
    disco solar, turbidity, rayleigh y mie. Más realista que un gradiente.
    ========================================================================= */
 
-import * as THREE from 'three'
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { SUN_DIR } from '../constants.js'
 
