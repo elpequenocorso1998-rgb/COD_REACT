@@ -1443,9 +1443,19 @@ leen individualmente.
   (mueve 2u en dirección al contacto).
 - Reload-seeking cover: pendiente (requiere buscar cover antes de RELOAD).
 
-### Sub-fase 18.23 — Uso de granadas por AI `[ ]`
+### Sub-fase 18.23 — Uso de granadas por AI `[x]`
 
-Pendiente: requiere enemyThrowGrenade + cooldown por bot.
+**Hecho**:
+- `src/game/grenades.js`: nueva función `throwEnemyGrenade(origin, dir, type)`
+  que delega en `throwGrenade` para que los enemigos puedan lanzar granadas.
+- `src/game/enemies.js`: rol `grenadier` con cooldown de 8s lanza frag al
+  jugador si está entre 8-35m. Cooldown escalado por oleada. Llamada al
+  sistema de granadas vía `setGrenadesSystem(g)`.
+- `src/game/engine.js`: wiring de `enemies.setGrenadesSystem(grenades)` tras
+  crear ambos sistemas.
+- Test: `setGrenadesSystem` expone API y lanza granada tras cooldown.
+
+**Verify**: equip granadier, esperar 8s, ver granada hacia el jugador.
 
 ### Sub-fase 18.24 — Suppression afecta AI accuracy `[x]`
 
@@ -1457,9 +1467,26 @@ Pendiente: requiere enemyThrowGrenade + cooldown por bot.
 **Hecho**: `ai.js _evaluateState` — si `store.reloading` y bot ve al
 jugador, 40% prob de transitar a ADVANCE.
 
-### Sub-fase 18.26 — Roles especializados `[ ]`
+### Sub-fase 18.26 — Roles especializados `[x]`
 
-Pendiente: requiere nuevos ENEMY_TYPES + comportamientos por rol.
+**Hecho**:
+- `src/game/config.js ENEMY_TYPES`: 4 roles nuevos:
+  - `grenadier` (minWave 4, ranged, lanza frag cada 8s).
+  - `sniper` (minWave 5, ranged, fireCooldown 4s, minRange 30, daño ×3).
+  - `shotgunner` (minWave 3, ranged, fireCooldown 1.5s, maxRange 12, daño
+    reducido a larga distancia).
+  - `medic` (minWave 6, ranged, cura aliados en radio 8m cada 6s +30 HP).
+- `src/game/enemies.js`: lógica por rol en `update()`:
+  - Ajuste de `PREFERRED_RANGE` y `minEngageRange` por rol.
+  - `enemyShoot` aplica multiplicador de daño (sniper ×3, shotgunner ×0.6
+    si está lejos).
+  - Médico itera aliados, cura HP y aplica flash verde emissive.
+- `src/game/engine.js spawnWave`: probabilidades por rol (5% grenadier,
+  3% sniper, 6% shotgunner, 3% medic en oleadas apropiadas).
+- 5 tests nuevos en `tests/enemies.test.js` cubren asignación de campos
+  por rol y setGrenadesSystem.
+
+**Verify**: spawn oleada 6, ver enemigos con roles distintos (colores).
 
 ### Sub-fase 18.27 — Scorestreak core `[~]`
 
@@ -1681,10 +1708,10 @@ Pendiente: requiere buffer de cámaras remotas.
 - [~] 18.20 — Squad blackboard AI
 - [x] 18.21 — Callouts verbales procedurales
 - [x] 18.22 — Cover peeking + reload-seeking cover
-- [ ] 18.23 — Uso de granadas por AI
+- [x] 18.23 — Uso de granadas por AI
 - [x] 18.24 — Suppression afecta AI accuracy
 - [x] 18.25 — Reacción a reload del jugador
-- [ ] 18.26 — Roles especializados
+- [x] 18.26 — Roles especializados
 - [~] 18.27 — Scorestreak core
 - [x] 18.28 — Streak catalog + 3 slots
 - [x] 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer

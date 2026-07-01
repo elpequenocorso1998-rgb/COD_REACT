@@ -990,6 +990,65 @@ export const ENEMY_TYPES = {
     ranged: true,
     points: 1000,
     minWave: 5 // cada 5 oleadas
+  },
+  // --- Fase 18.26: roles especializados ---
+  grenadier: {
+    name: 'grenadier',
+    baseHp: 70,
+    baseSpeed: 1.5,
+    baseDamage: 8,
+    color: 0x3a2a4a,
+    scale: 1.0,
+    ranged: true,
+    points: 250,
+    minWave: 4,
+    role: 'grenadier',
+    grenadeCooldown: 8.0,
+    grenadeType: 'frag'
+  },
+  sniper: {
+    name: 'sniper',
+    baseHp: 50,
+    baseSpeed: 1.2,
+    baseDamage: 35,
+    color: 0x2a3a2a,
+    scale: 0.95,
+    ranged: true,
+    points: 350,
+    minWave: 5,
+    role: 'sniper',
+    fireCooldown: 4.0,
+    minRange: 30
+  },
+  shotgunner: {
+    name: 'shotgunner',
+    baseHp: 90,
+    baseSpeed: 2.6,
+    baseDamage: 14,
+    color: 0x4a3a2a,
+    scale: 1.1,
+    ranged: true,
+    points: 220,
+    minWave: 3,
+    role: 'shotgunner',
+    fireCooldown: 1.5,
+    maxRange: 12,
+    pellets: 6
+  },
+  medic: {
+    name: 'medic',
+    baseHp: 80,
+    baseSpeed: 1.7,
+    baseDamage: 4,
+    color: 0x2a4a3a,
+    scale: 1.0,
+    ranged: true,
+    points: 300,
+    minWave: 6,
+    role: 'medic',
+    healCooldown: 6.0,
+    healAmount: 30,
+    healRadius: 8
   }
 }
 

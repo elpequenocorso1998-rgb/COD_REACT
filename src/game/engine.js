@@ -252,6 +252,7 @@ export function createEngine() {
     if (onMinimapReady) onMinimapReady(minimap.canvas)
     streaks = createStreakManager(scene, enemies, particles, audio, player, camera, store)
     grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player, store)
+    enemies.setGrenadesSystem(grenades)
     decals = createDecalSystem(scene, { maxDecals: 80 })
     // Fase 5: pickups (drops de enemigos al morir).
     pickups = createPickupSystem(scene, store, particles, audio)
@@ -912,6 +913,7 @@ export function createEngine() {
     player = createPlayer(scene, camera, world, particles, renderer)
     enemies = createEnemyManager(scene, world, particles, audio, navmesh)
     grenades = createGrenadeSystem(scene, world, enemies, particles, audio, player, store)
+    enemies.setGrenadesSystem(grenades)
     decals = createDecalSystem(scene, { maxDecals: 80 })
     pickups = createPickupSystem(scene, store, particles, audio)
     fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
@@ -1110,6 +1112,8 @@ export function createEngine() {
       //   - Oleada 3-5: 60% shooters, 30% walkers, 10% runners.
       //   - Oleada 6+:  70% shooters, 15% walkers, 10% runners, 5% tanks.
       //   - Boss cada 5 oleadas (1 unidad).
+      //   - Fase 18.26: roles especializados (grenadier, sniper, shotgunner,
+      //     medic) aparecen desde su minWave con baja probabilidad.
       const r = Math.random()
       if (n <= 2) {
         if (available.length > 1 && r < 0.2) {
@@ -1118,16 +1122,22 @@ export function createEngine() {
         }
       } else if (n % 5 === 0 && i === 0) {
         typeDef = ENEMY_TYPES.boss
+      } else if (r < 0.05 && n >= 4) {
+        typeDef = ENEMY_TYPES.grenadier
+      } else if (r < 0.08 && n >= 5) {
+        typeDef = ENEMY_TYPES.sniper
+      } else if (r < 0.14 && n >= 3) {
+        typeDef = ENEMY_TYPES.shotgunner
+      } else if (r < 0.17 && n >= 6) {
+        typeDef = ENEMY_TYPES.medic
+      } else if (shootersAvailable.length > 0 && r < 0.65) {
+        typeDef = shootersAvailable[Math.floor(Math.random() * shootersAvailable.length)]
+      } else if (r < 0.80) {
+        typeDef = ENEMY_TYPES.walker
+      } else if (n >= 4 && r < 0.95) {
+        typeDef = ENEMY_TYPES.tank
       } else {
-        if (shootersAvailable.length > 0 && r < 0.65) {
-          typeDef = shootersAvailable[Math.floor(Math.random() * shootersAvailable.length)]
-        } else if (r < 0.80) {
-          typeDef = ENEMY_TYPES.walker
-        } else if (n >= 4 && r < 0.95) {
-          typeDef = ENEMY_TYPES.tank
-        } else {
-          typeDef = ENEMY_TYPES.runner
-        }
+        typeDef = ENEMY_TYPES.runner
       }
       const hp = typeDef.baseHp + n * WAVE_SCALING.hpPerWave
       const speed = typeDef.baseSpeed + n * WAVE_SCALING.speedPerWave

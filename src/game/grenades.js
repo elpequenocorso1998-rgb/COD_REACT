@@ -51,6 +51,8 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
   // Vectores scratch.
   const _vel = new THREE.Vector3()
   const _pos = new THREE.Vector3()
+  // Fase 18.23: scratch para throwEnemyGrenade.
+  const _origin = new THREE.Vector3()
   // Fase 18.17: rayo scratch para LoS check.
   const _losRay = new THREE.Ray()
   const _losTarget = new THREE.Vector3()
@@ -112,6 +114,19 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
       bounced: false
     })
     if (audio) audio.playReload?.() // reusamos click metálico como sonido de lanzamiento
+  }
+
+  // Fase 18.23: enemigos (granaderos) lanzan granadas al jugador.
+  // origin: { x, y, z }, direction: { x, y, z } (no necesariamente normalizado).
+  function throwEnemyGrenade(origin, direction, type = 'frag') {
+    const dirVec = typeof direction.clone === 'function'
+      ? direction.clone()
+      : _vel.set(direction.x || 0, direction.y || 0, direction.z || 0)
+    const originVec = typeof origin.clone === 'function'
+      ? origin.clone()
+      : _origin.set(origin.x || 0, origin.y || 0, origin.z || 0)
+    // Reusar throwGrenade con una dirección escalada.
+    throwGrenade(type, originVec, dirVec.normalize())
   }
 
   // Fase 18.14: cook grenade — empieza el fuse sin lanzar.
@@ -540,7 +555,7 @@ export function createGrenadeSystem(scene, world, enemies, particles, audio, _pl
   }
 
   return {
-    throwGrenade, update, reset, dispose,
+    throwGrenade, throwEnemyGrenade, update, reset, dispose,
     startCook, releaseCooked, cancelCook, isCooking, getCookProgress
   }
 }

@@ -200,3 +200,78 @@ describe('EnemyManager - wall avoidance (H3)', () => {
     expect(e.avoidDir).toBe(0)
   })
 })
+
+describe('EnemyManager - roles especializados (Fase 18.26)', () => {
+  it('spawn con typeDef de grenadier asigna role + grenadeCooldown', () => {
+    const scene = makeScene()
+    const world = makeWorld()
+    const mgr = createEnemyManager(scene, world, {})
+    mgr.spawn(70, 1.5, 8, 250, {
+      name: 'grenadier', baseHp: 70, ranged: true, role: 'grenadier',
+      grenadeCooldown: 8.0, grenadeType: 'frag'
+    })
+    const e = findEnemy(scene)
+    expect(e.role).toBe('grenadier')
+    expect(e.grenadeCooldown).toBe(8.0)
+    expect(e.grenadeType).toBe('frag')
+    expect(e.grenadeTimer).toBeGreaterThan(0)
+  })
+
+  it('spawn con typeDef de sniper asigna minRange + fireCooldown', () => {
+    const scene = makeScene()
+    const world = makeWorld()
+    const mgr = createEnemyManager(scene, world, {})
+    mgr.spawn(50, 1.2, 35, 350, {
+      name: 'sniper', baseHp: 50, ranged: true, role: 'sniper',
+      fireCooldown: 4.0, minRange: 30
+    })
+    const e = findEnemy(scene)
+    expect(e.role).toBe('sniper')
+    expect(e.fireCooldown).toBe(4.0)
+    expect(e.minRange).toBe(30)
+  })
+
+  it('spawn con typeDef de medic asigna healCooldown + healRadius', () => {
+    const scene = makeScene()
+    const world = makeWorld()
+    const mgr = createEnemyManager(scene, world, {})
+    mgr.spawn(80, 1.7, 4, 300, {
+      name: 'medic', baseHp: 80, ranged: true, role: 'medic',
+      healCooldown: 6.0, healAmount: 30, healRadius: 8
+    })
+    const e = findEnemy(scene)
+    expect(e.role).toBe('medic')
+    expect(e.healCooldown).toBe(6.0)
+    expect(e.healAmount).toBe(30)
+    expect(e.healRadius).toBe(8)
+  })
+
+  it('spawn sin typeDef no asigna role', () => {
+    const scene = makeScene()
+    const world = makeWorld()
+    const mgr = createEnemyManager(scene, world, {})
+    mgr.spawn(50, 2, 8, 100)
+    const e = findEnemy(scene)
+    expect(e.role).toBeNull()
+  })
+
+  it('setGrenadesSystem expone API', () => {
+    const scene = makeScene()
+    const world = makeWorld()
+    const mgr = createEnemyManager(scene, world, {})
+    expect(typeof mgr.setGrenadesSystem).toBe('function')
+    let called = false
+    mgr.setGrenadesSystem({ throwEnemyGrenade: () => { called = true } })
+    // Verifica que el sistema se inyecta sin errores.
+    mgr.spawn(70, 1.5, 8, 250, {
+      name: 'grenadier', baseHp: 70, ranged: true, role: 'grenadier',
+      grenadeCooldown: 0.01, grenadeType: 'frag'
+    })
+    const e = findEnemy(scene)
+    e.grenadeTimer = 0.001
+    e.group.position.set(0, 0, 0)
+    mgr.update(0.016, new THREE.Vector3(20, 0, 0))
+    // El granadero debería haber intentado lanzar.
+    expect(called).toBe(true)
+  })
+})

@@ -121,7 +121,20 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       // Contador de disparos (para IA: recarga cada 5).
       shotsFired: 0,
       // Cámara de muerte (animación legacy desactivada; ahora ragdoll).
-      dyingT: 0
+      dyingT: 0,
+      // --- Fase 18.23 + 18.26: rol + cooldowns especializados ---
+      role: typeDef?.role || null,
+      grenadeCooldown: typeDef?.grenadeCooldown || 0,
+      grenadeTimer: (typeDef?.grenadeCooldown || 0) * (0.5 + Math.random() * 0.5),
+      grenadeType: typeDef?.grenadeType || 'frag',
+      fireCooldown: typeDef?.fireCooldown || 0,
+      minRange: typeDef?.minRange || 0,
+      maxRange: typeDef?.maxRange || 0,
+      pellets: typeDef?.pellets || 0,
+      healCooldown: typeDef?.healCooldown || 0,
+      healTimer: (typeDef?.healCooldown || 0) * 0.5,
+      healAmount: typeDef?.healAmount || 0,
+      healRadius: typeDef?.healRadius || 0
     }
   }
 
@@ -355,7 +368,36 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
 
     // Si acierta, aplicamos daño via callback (engine registra takeDamage).
     if (hit && onShootPlayerCb) {
-      onShootPlayerCb(e, e.damage)
+      // Fase 18.26: sniper hace más daño por disparo (rol sniper).
+      let dmg = e.damage
+      if (e.role === 'sniper') dmg *= 3.0
+      // Fase 18.26: shotgunner dispara múltiples perdigones (aquí 1 hit
+      // representativo, pero con daño reducido si está en el borde del rango).
+      if (e.role === 'shotgunner' && distToPlayer > (e.maxRange || 12) * 0.7) {
+        dmg *= 0.6
+      }
+      onShootPlayerCb(e, dmg)
+    }
+  }
+
+  // Fase 18.23: enemigo granadero lanza una granada al jugador.
+  // Usa el sistema de grenades del engine si está disponible.
+  let grenadesSystem = null
+  function setGrenadesSystem(g) { grenadesSystem = g }
+  function enemyThrowGrenade(e, playerPos) {
+    if (!grenadesSystem) return
+    const origin = { x: e.group.position.x, y: 1.5, z: e.group.position.z }
+    // Predicción simple: lanza hacia la posición predicha del jugador.
+    const dx = playerPos.x - origin.x
+    const dz = playerPos.z - origin.z
+    const dist = Math.hypot(dx, dz)
+    if (dist < 1) return
+    const dir = { x: dx / dist, y: 0.4, z: dz / dist }
+    if (audio) audio.playVoiceCallout?.('airstrikeIncoming')
+    if (typeof grenadesSystem.throwEnemyGrenade === 'function') {
+      grenadesSystem.throwEnemyGrenade(origin, dir, e.grenadeType || 'frag')
+    } else if (typeof grenadesSystem.throwGrenade === 'function') {
+      grenadesSystem.throwGrenade(origin, dir, e.grenadeType || 'frag')
     }
   }
 
@@ -416,17 +458,60 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
       if (dist > 1.5) {
         const nx = dx / dist
         const nz = dz / dist
-        // --- IA de disparo: enemigos ranged en estado SUPPRESS disparan ---
+        // --- IA de disparo: enemigos ranged en estado SUPPRESS/ENGAGE ---
         const aiState = aiController.getState(e)
         const isSuppressing = aiState === 'suppress'
-        const PREFERRED_RANGE = 20
-        const inRange = e.isRanged && dist < PREFERRED_RANGE && dist > 5
+        let PREFERRED_RANGE = 20
+        let minEngageRange = 5
+        // Fase 18.26: ajustes de rango por rol.
+        if (e.role === 'sniper') { PREFERRED_RANGE = 60; minEngageRange = e.minRange || 30 }
+        else if (e.role === 'shotgunner') { PREFERRED_RANGE = e.maxRange || 12; minEngageRange = 0 }
+        else if (e.role === 'medic') { PREFERRED_RANGE = 15; minEngageRange = 3 }
+        else if (e.role === 'grenadier') { PREFERRED_RANGE = 25; minEngageRange = 8 }
+        const inRange = e.isRanged && dist < PREFERRED_RANGE && dist > minEngageRange
         if (inRange && (isSuppressing || aiState === 'engage')) {
+          // Fase 18.26: cooldown por rol.
+          const baseCd = e.fireCooldown || (1.0 + Math.random() * 1.5)
           e.shootCooldown -= dt
           if (e.shootCooldown <= 0) {
-            e.shootCooldown = 1.0 + Math.random() * 1.5
+            e.shootCooldown = baseCd
             enemyShoot(e, playerPos)
             e.shotsFired = (e.shotsFired || 0) + 1
+          }
+        }
+
+        // --- Fase 18.23: granadero lanza frag al jugador ---
+        if (e.role === 'grenadier' && e.grenadeTimer > 0) {
+          e.grenadeTimer -= dt
+          if (e.grenadeTimer <= 0 && dist < 35 && dist > 8) {
+            e.grenadeTimer = e.grenadeCooldown
+            enemyThrowGrenade(e, playerPos)
+          }
+        }
+
+        // --- Fase 18.26: médico cura aliados cercanos ---
+        if (e.role === 'medic' && e.healTimer > 0) {
+          e.healTimer -= dt
+          if (e.healTimer <= 0) {
+            e.healTimer = e.healCooldown
+            let healed = false
+            for (const ally of enemies) {
+              if (ally === e || ally.dead || ally.hp <= 0) continue
+              const adx = ally.group.position.x - e.group.position.x
+              const adz = ally.group.position.z - e.group.position.z
+              if (adx * adx + adz * adz <= e.healRadius * e.healRadius) {
+                if (ally.hp < ally.maxHp) {
+                  ally.hp = Math.min(ally.maxHp, ally.hp + e.healAmount)
+                  ally.hitFlash = 0.18
+                  for (const m of ally.materials) {
+                    m.emissive.setHex(0x40ff80)
+                    m.emissiveIntensity = 0.6
+                  }
+                  healed = true
+                }
+              }
+            }
+            if (healed && audio) audio.playVoiceCallout?.('friendlyDown')
           }
         }
 
@@ -564,7 +649,8 @@ export function createEnemyManager(scene, world, _particles, audio, navmesh = nu
     set onKilled(fn) { onKilledCb = fn },
     set onReachPlayer(fn) { onReachPlayerCb = fn },
     set onShootPlayer(fn) { onShootPlayerCb = fn },
-    set onEnemyShoot(fn) { onEnemyShootCb = fn }
+    set onEnemyShoot(fn) { onEnemyShootCb = fn },
+    setGrenadesSystem
   }
 }
 
