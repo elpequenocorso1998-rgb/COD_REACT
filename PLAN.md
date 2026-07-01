@@ -1177,19 +1177,29 @@ cablear. En MP death → GameOver, no spectate.
 
 **Verify**: pulsar F8, ver overlay con métricas.
 
-### Sub-fase 18.8 — Wire netcode.js en server.js `[ ]`
+### Sub-fase 18.8 — Wire netcode.js en server.js `[x]`
 
-**Problema**: `server/netcode.js` (463 líneas) con anti-cheat, lag comp,
-delta snapshots, rate limiter — `server.js` no lo importa (trusted client).
-
-**Tareas**:
-- `server/server.js`: import `createInputValidator`, `createLagCompensator`, `createAntiCheat`, `createSnapshotDelta`, `createRateLimiter`.
-- Reemplazar `TICK_RATE=20` con `60`.
-- Validar inputs antes de aplicar (speed/teleport/aimbot/fire rate).
-- Lag compensation rewind en hit validation.
-- Snapshot delta (enviar solo cambios).
-- Rate limiting por IP.
-- Sin client-side prediction (eso requiere refactor mayor, queda fuera).
+**Hecho**:
+- `server/server.js` reescrito para importar y cablear todos los componentes
+  de `server/netcode.js`: `createInputValidator`, `createLagCompensator`,
+  `createSnapshotDelta`, `createRateLimiter`, `createAntiCheat`.
+- Tick rate subido a 60Hz (NETCODE_CONFIG.TICK_RATE), snapshot rate 30Hz
+  (NETCODE_CONFIG.SNAPSHOT_RATE).
+- Inputs validados antes de aplicar: speed/teleport/aimbot/fire rate/health/
+  weapon. Cliente baneado automáticamente si `shouldBan()` devuelve true.
+- Lag compensation: cada input se guarda en `lagComp.recordSnapshot()`; al
+  validar una kill se hace `rewind(victimId, shotTime)` ("favor the shooter").
+- Snapshot delta: el server envía `snapshot` (full) la primera vez y
+  `snapshotDelta` (solo cambios) en adelante.
+- Rate limiting por IP (120/s, 6000/min).
+- Anti-cheat heurístico: tracking de kills/headshots/shots/hits/trackingSpeed.
+  Scanner periódico (cada 10s) banea clientes sospechosos
+  (`isSuspicious()` → ban 1h).
+- `src/net/client.js` extendido: handle `snapshotDelta` (merge incremental
+  de remotePlayers), nuevas funciones `sendShot` y `sendHit` para alimentar
+  anti-cheat.
+- 8 tests nuevos en `tests/net-client.test.js` cubren delta merge, removed,
+  killfeed cap, sendShot/sendHit/sendKill.
 
 **Verify**: test netcode rechaza speed hack. Server corre a 60Hz.
 
@@ -1638,7 +1648,7 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.5 — Spectator mode on MP death
 - [x] 18.6 — 4 mapas existentes activos
 - [x] 18.7 — Profiler toggle
-- [ ] 18.8 — Wire netcode.js en server.js
+- [x] 18.8 — Wire netcode.js en server.js
 - [x] 18.9 — Bipod requiresCrouch fix
 - [x] 18.10 — Recoil patterns por arma
 - [x] 18.11 — Damage dropoff por rango

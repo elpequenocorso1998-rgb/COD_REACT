@@ -1,18 +1,18 @@
 /* =========================================================================
-   Cliente de red (Fase 2).
+   Cliente de red (Fase 2 + Fase 18.8).
    --------------------------------------------------------------------------
-   Conecta al servidor WebSocket. Envía inputs del jugador local a 60Hz
-   y recibe snapshots a 20Hz. Maneja:
+   Conecta al servidor WebSocket. Envía inputs del jugador local a 120Hz
+   y recibe snapshots a 30Hz (full + delta). Maneja:
    - init: configuración inicial (clientId, team, spawn, scoreLimit).
-   - snapshot: estado de todos los jugadores.
+   - snapshot: snapshot completo (reemplaza todo el estado remoto).
+   - snapshotDelta: delta con solo los cambios (merge incremental).
    - kill: notificación de baja (para killfeed).
    - respawn: jugador reaparece.
    - matchOver: fin de partida.
    - playerLeft: jugador desconectado.
 
-   El cliente NO hace predicción compleja: el server es "trusted client"
-   para posición (Fase 2.5 añadirá validación). El remote-players.js
-   interpola entre snapshots para suavizar movimiento.
+   El servidor valida inputs server-side (anti-cheat + lag compensation).
+   El remote-players.js interpola entre snapshots para suavizar movimiento.
    ========================================================================= */
 
 export function createNetClient(serverUrl) {
@@ -85,7 +85,6 @@ export function createNetClient(serverUrl) {
         emit('onInit', msg)
         break
       case 'snapshot':
-        // Actualizamos el estado remoto. Reemplazamos todo el map.
         remotePlayers.clear()
         for (const p of msg.players) {
           if (p.id !== clientId) remotePlayers.set(p.id, p)
@@ -93,6 +92,41 @@ export function createNetClient(serverUrl) {
         teamScores = msg.teams
         emit('onSnapshot', { players: Array.from(remotePlayers.values()), teams: teamScores, time: msg.time })
         break
+      case 'snapshotDelta': {
+        if (Array.isArray(msg.removed)) {
+          for (const id of msg.removed) remotePlayers.delete(id)
+        }
+        if (Array.isArray(msg.players)) {
+          for (const delta of msg.players) {
+            if (delta.id === clientId) continue
+            const cur = remotePlayers.get(delta.id)
+            if (cur) {
+              const merged = { ...cur, ...delta }
+              if (delta.pos) merged.pos = { ...delta.pos }
+              remotePlayers.set(delta.id, merged)
+            } else {
+              remotePlayers.set(delta.id, {
+                id: delta.id,
+                name: delta.name || `Player${delta.id}`,
+                team: delta.team,
+                pos: delta.pos || { x: 0, y: 0, z: 0 },
+                yaw: delta.yaw || 0,
+                pitch: delta.pitch || 0,
+                weapon: delta.weapon || 'm4',
+                firing: !!delta.firing,
+                alive: delta.alive !== undefined ? delta.alive : true,
+                health: delta.health !== undefined ? delta.health : 100,
+                kills: delta.kills || 0,
+                deaths: delta.deaths || 0,
+                score: delta.score || 0
+              })
+            }
+          }
+        }
+        if (msg.teams) teamScores = msg.teams
+        emit('onSnapshot', { players: Array.from(remotePlayers.values()), teams: teamScores, time: msg.time })
+        break
+      }
       case 'kill':
         killfeed.push({
           killer: msg.killerName,
@@ -127,7 +161,17 @@ export function createNetClient(serverUrl) {
 
   function sendKill(victimId, weapon, headshot) {
     if (!connected || !ws || ws.readyState !== 1 || !clientId) return
-    ws.send(JSON.stringify({ type: 'kill', killer: clientId, victim: victimId, weapon, headshot }))
+    ws.send(JSON.stringify({ type: 'kill', killer: clientId, victim: victimId, weapon, headshot, t: Date.now() }))
+  }
+
+  function sendShot(weapon) {
+    if (!connected || !ws || ws.readyState !== 1 || !clientId) return
+    ws.send(JSON.stringify({ type: 'shot', weapon, t: Date.now() }))
+  }
+
+  function sendHit() {
+    if (!connected || !ws || ws.readyState !== 1 || !clientId) return
+    ws.send(JSON.stringify({ type: 'hit', t: Date.now() }))
   }
 
   function sendName(name) {
@@ -142,7 +186,7 @@ export function createNetClient(serverUrl) {
   }
 
   return {
-    connect, disconnect, on, sendInput, sendKill, sendName,
+    connect, disconnect, on, sendInput, sendKill, sendShot, sendHit, sendName,
     get connected() { return connected },
     get clientId() { return clientId },
     get team() { return team },

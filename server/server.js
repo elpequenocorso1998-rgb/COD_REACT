@@ -1,40 +1,68 @@
 import { WebSocketServer } from 'ws'
+import {
+  createInputValidator,
+  createLagCompensator,
+  createSnapshotDelta,
+  createRateLimiter,
+  createAntiCheat,
+  NETCODE_CONFIG,
+  BAN_REASONS
+} from './netcode.js'
+import { getMaxPlayers, getGameMode } from '../src/game/modes/index.js'
 
 /* =========================================================================
-   Servidor de juego autoritativo (Fase 2).
+   Servidor de juego autoritativo (Fase 2 + Fase 18.8).
    --------------------------------------------------------------------------
    Mantiene el estado de todos los jugadores conectados y lo broadcastea
-   a 20Hz (snapshots). Recibe inputs de los clientes a 60Hz.
+   a SNAPSHOT_RATE (30Hz). Recibe inputs de los clientes a INPUT_RATE (120Hz).
 
-   Modelo:
-   - Cada cliente envía { type: 'input', input: { pos, yaw, pitch, firing,
-     weapon, alive, health } } cada frame.
-   - El servidor NO valida los inputs (trusted client de momento; en Fase 2.5
-     añadiremos anti-cheat). Solo los retransmite a los demás.
-   - Cada 50ms (20Hz) broadcastea un snapshot con el estado de todos.
-   - Los kills se registran via { type: 'kill', killer, victim } y el
-     servidor lleva el scoreboard.
+   Modelo (Fase 18.8 — netcode AAA cableado):
+   - Inputs validados por createInputValidator (speed/teleport/aimbot/
+     fire rate/health/weapon).
+   - Lag compensation: createLagCompensator guarda historial de estados
+     por cliente; al validar una kill se hace rewind al tick del cliente
+     ("favor the shooter").
+   - Snapshot delta: createSnapshotDelta envía solo los cambios (full
+     snapshot la primera vez o tras reset).
+   - Rate limiting por IP: createRateLimiter (60/s, 3000/min).
+   - Heurísticas anti-cheat: createAntiCheat (HS rate, accuracy, K/D,
+     tracking speed). Bans automáticos a clientes sospechosos.
 
    Modo: TDM (Team Deathmatch) — 2 equipos, 75 kills gana.
    ========================================================================= */
 
 const PORT = process.env.MW_PORT || 9433
-const TICK_RATE = 20
-const TICK_INTERVAL = 1000 / TICK_RATE
-const MAX_PLAYERS = 12
-const SCORE_LIMIT = 75
+const TICK_RATE = NETCODE_CONFIG.TICK_RATE
+const TICK_INTERVAL = NETCODE_CONFIG.TICK_INTERVAL
+const SNAPSHOT_INTERVAL = NETCODE_CONFIG.SNAPSHOT_INTERVAL
+const MAX_PLAYERS_DEFAULT = 12
+const SCORE_LIMIT_DEFAULT = 75
+const MAX_PLAYERS = parseInt(process.env.MW_MAX_PLAYERS, 10) || MAX_PLAYERS_DEFAULT
+const SCORE_LIMIT = parseInt(process.env.MW_SCORE_LIMIT, 10) || SCORE_LIMIT_DEFAULT
+const MODE = process.env.MW_MODE || 'tdm'
+const RATE_LIMIT_PER_SECOND = 120
+const RATE_LIMIT_PER_MINUTE = 6000
 
 const wss = new WebSocketServer({ port: PORT })
 
-// Estado del juego en el servidor.
-const players = new Map() // clientId -> playerState
+const validator = createInputValidator()
+const lagComp = createLagCompensator()
+const snapshotDelta = createSnapshotDelta()
+const rateLimiter = createRateLimiter({
+  maxPerSecond: RATE_LIMIT_PER_SECOND,
+  maxPerMinute: RATE_LIMIT_PER_MINUTE
+})
+const antiCheat = createAntiCheat()
+
+const players = new Map()
+const lastInputState = new Map()
+const lastShotTime = new Map()
 let nextId = 1
-const teams = { axis: 0, allies: 0 } // kills por equipo
+const teams = { axis: 0, allies: 0 }
 let matchTime = 0
 let matchOver = false
 
 function assignTeam() {
-  // Equilibra equipos: asigna al equipo con menos jugadores.
   let axisCount = 0, alliesCount = 0
   for (const p of players.values()) {
     if (p.team === 'axis') axisCount++
@@ -65,14 +93,44 @@ const ALLIES_SPAWNS = [
 ]
 
 function spawnPoint(team) {
-  // Fase 18.46: múltiples spawn points por team, pick random.
   const spawns = team === 'axis' ? AXIS_SPAWNS : ALLIES_SPAWNS
   return spawns[Math.floor(Math.random() * spawns.length)]
 }
 
-wss.on('connection', (ws) => {
+function ipFromReq(req) {
+  const fwd = req.headers && req.headers['x-forwarded-for']
+  if (fwd) return String(fwd).split(',')[0].trim()
+  return (req.socket && req.socket.remoteAddress) || 'unknown'
+}
+
+function snapshotPlayer(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    team: p.team,
+    pos: p.pos,
+    yaw: p.yaw,
+    pitch: p.pitch,
+    weapon: p.weapon,
+    firing: p.firing,
+    alive: p.alive,
+    health: p.health,
+    kills: p.kills,
+    deaths: p.deaths,
+    score: p.score
+  }
+}
+
+wss.on('connection', (ws, req) => {
   if (players.size >= MAX_PLAYERS) {
     ws.send(JSON.stringify({ type: 'error', message: 'Server full' }))
+    ws.close()
+    return
+  }
+
+  const ip = ipFromReq(req)
+  if (antiCheat.isBanned(ip)) {
+    ws.send(JSON.stringify({ type: 'error', message: 'You are banned' }))
     ws.close()
     return
   }
@@ -94,30 +152,49 @@ wss.on('connection', (ws) => {
     kills: 0,
     deaths: 0,
     score: 0,
+    ip,
     ws
   }
   players.set(clientId, player)
+  lastInputState.set(clientId, {
+    pos: { x: spawn.x, y: spawn.y, z: spawn.z },
+    yaw: 0,
+    pitch: 0,
+    health: 100
+  })
 
-  console.log(`[server] Player ${clientId} connected (${team}). Total: ${players.size}`)
+  console.log(`[server] Player ${clientId} connected (${team}) ip=${ip}. Total: ${players.size}`)
 
-  // Envia init al cliente recién conectado.
   ws.send(JSON.stringify({
     type: 'init',
     clientId,
     team,
     spawn,
     scoreLimit: SCORE_LIMIT,
-    teams: { axis: teams.axis, allies: teams.allies }
+    teams: { axis: teams.axis, allies: teams.allies },
+    tickRate: TICK_RATE,
+    snapshotRate: NETCODE_CONFIG.SNAPSHOT_RATE,
+    interpDelay: NETCODE_CONFIG.INTERP_DELAY
   }))
 
   ws.on('message', (data) => {
     let msg
     try { msg = JSON.parse(data.toString()) } catch (e) { return }
+
+    if (!rateLimiter.check(ip)) {
+      validator.recordViolation(clientId, 'rate_limit')
+      return
+    }
     handleMsg(clientId, msg)
   })
 
   ws.on('close', () => {
     players.delete(clientId)
+    lastInputState.delete(clientId)
+    lastShotTime.delete(clientId)
+    lagComp.clearClient(clientId)
+    validator.reset(clientId)
+    antiCheat.reset(clientId)
     console.log(`[server] Player ${clientId} disconnected. Total: ${players.size}`)
     broadcast({ type: 'playerLeft', id: clientId })
   })
@@ -127,63 +204,110 @@ function handleMsg(clientId, msg) {
   const p = players.get(clientId)
   if (!p) return
   switch (msg.type) {
-    case 'input':
-      // El cliente envía su estado predicho. El servidor confía (Fase 2.5:
-      // validación real). Actualizamos el estado del jugador.
-      if (msg.input) {
-        p.pos = msg.input.pos || p.pos
-        p.yaw = msg.input.yaw ?? p.yaw
-        p.pitch = msg.input.pitch ?? p.pitch
-        p.weapon = msg.input.weapon || p.weapon
-        p.firing = !!msg.input.firing
-        p.alive = msg.input.alive !== undefined ? msg.input.alive : p.alive
-        p.health = msg.input.health ?? p.health
-      }
-      break
-    case 'kill':
-      // Un cliente reporta una kill. El servidor valida mínimamente
-      // (que víctima exista y esté viva).
-      {
-        const victim = players.get(msg.victim)
-        const killer = players.get(msg.killer)
-        if (victim && killer && victim.alive) {
-          victim.alive = false
-          victim.health = 0
-          victim.deaths++
-          killer.kills++
-          killer.score += 100
-          teams[killer.team]++
-          broadcast({
-            type: 'kill',
-            killer: killer.id,
-            killerName: killer.name,
-            victim: victim.id,
-            victimName: victim.name,
-            weapon: msg.weapon || 'm4',
-            headshot: !!msg.headshot
-          })
-          // Respawn de la víctima tras 3s.
-          setTimeout(() => {
-            if (players.has(victim.id)) {
-              const spawn = spawnPoint(victim.team)
-              victim.pos = { x: spawn.x, y: spawn.y, z: spawn.z }
-              victim.alive = true
-              victim.health = 100
-              broadcast({ type: 'respawn', id: victim.id, pos: spawn })
-            }
-          }, 3000)
-          // Check victoria.
-          if (teams[killer.team] >= SCORE_LIMIT) {
-            matchOver = true
-            broadcast({ type: 'matchOver', winner: killer.team, teams: { ...teams } })
-          }
+    case 'input': {
+      if (!msg.input) return
+      const last = lastInputState.get(clientId)
+      const dt = TICK_INTERVAL / 1000
+      const v = validator.validate(clientId, msg.input, last, dt)
+      if (!v.ok) {
+        if (validator.shouldBan(clientId)) {
+          antiCheat.ban(p.ip, BAN_REASONS.CHEATING, 3600 * 1000)
+          p.ws.send(JSON.stringify({ type: 'error', message: 'Banned for cheating' }))
+          p.ws.close()
+          return
         }
+        return
+      }
+      p.pos = msg.input.pos || p.pos
+      p.yaw = msg.input.yaw ?? p.yaw
+      p.pitch = msg.input.pitch ?? p.pitch
+      p.weapon = msg.input.weapon || p.weapon
+      p.firing = !!msg.input.firing
+      p.alive = msg.input.alive !== undefined ? msg.input.alive : p.alive
+      if (typeof msg.input.health === 'number') {
+        p.health = msg.input.health
+      }
+      lastInputState.set(clientId, {
+        pos: { ...p.pos },
+        yaw: p.yaw,
+        pitch: p.pitch,
+        health: p.health
+      })
+      lagComp.recordSnapshot(clientId, snapshotPlayer(p))
+      break
+    }
+    case 'kill': {
+      const victim = players.get(msg.victim)
+      const killer = players.get(msg.killer)
+      if (!victim || !killer) return
+      if (killer.id !== clientId) return
+      if (!victim.alive) return
+
+      const shotTime = msg.t || Date.now()
+      const fireCheck = validator.validateFireRate(clientId, killer.weapon, lastShotTime.get(clientId))
+      if (!fireCheck.ok) {
+        if (validator.shouldBan(clientId)) {
+          antiCheat.ban(p.ip, BAN_REASONS.CHEATING, 3600 * 1000)
+          p.ws.close()
+        }
+        return
+      }
+      lastShotTime.set(clientId, shotTime)
+
+      const rewindState = lagComp.rewind(victim.id, shotTime)
+      if (!rewindState || !rewindState.alive) return
+
+      victim.alive = false
+      victim.health = 0
+      victim.deaths++
+      killer.kills++
+      killer.score += 100
+      teams[killer.team]++
+      antiCheat.recordPlayerAction(killer.id, { type: 'kill', headshot: !!msg.headshot })
+
+      broadcast({
+        type: 'kill',
+        killer: killer.id,
+        killerName: killer.name,
+        victim: victim.id,
+        victimName: victim.name,
+        weapon: msg.weapon || 'm4',
+        headshot: !!msg.headshot
+      })
+
+      setTimeout(() => {
+        if (players.has(victim.id)) {
+          const spawn = spawnPoint(victim.team)
+          victim.pos = { x: spawn.x, y: spawn.y, z: spawn.z }
+          victim.alive = true
+          victim.health = 100
+          broadcast({ type: 'respawn', id: victim.id, pos: spawn })
+        }
+      }, 3000)
+
+      if (teams[killer.team] >= SCORE_LIMIT) {
+        matchOver = true
+        broadcast({ type: 'matchOver', winner: killer.team, teams: { ...teams } })
       }
       break
+    }
     case 'name':
       if (msg.name && typeof msg.name === 'string' && msg.name.length <= 16) {
         p.name = msg.name
       }
+      break
+    case 'shot':
+      if (msg.weapon) {
+        const t = msg.t || Date.now()
+        const fr = validator.validateFireRate(clientId, msg.weapon, lastShotTime.get(clientId))
+        if (fr.ok) {
+          lastShotTime.set(clientId, t)
+          antiCheat.recordPlayerAction(clientId, { type: 'shot' })
+        }
+      }
+      break
+    case 'hit':
+      antiCheat.recordPlayerAction(clientId, { type: 'hit' })
       break
   }
 }
@@ -195,32 +319,46 @@ function broadcast(msg) {
   }
 }
 
-// Snapshot loop: 20Hz.
-setInterval(() => {
-  if (matchOver) return
-  matchTime += TICK_INTERVAL / 1000
-  const snapshot = {
-    type: 'snapshot',
+function buildSnapshot() {
+  return {
     time: matchTime,
     teams: { axis: teams.axis, allies: teams.allies },
-    players: Array.from(players.values()).map((p) => ({
-      id: p.id,
-      name: p.name,
-      team: p.team,
-      pos: p.pos,
-      yaw: p.yaw,
-      pitch: p.pitch,
-      weapon: p.weapon,
-      firing: p.firing,
-      alive: p.alive,
-      health: p.health,
-      kills: p.kills,
-      deaths: p.deaths,
-      score: p.score
-    }))
+    players: Array.from(players.values()).map(snapshotPlayer)
   }
-  broadcast(snapshot)
-}, TICK_INTERVAL)
+}
 
+setInterval(() => {
+  if (matchOver) return
+  matchTime += SNAPSHOT_INTERVAL / 1000
+  const snap = buildSnapshot()
+  const delta = snapshotDelta.diff(snap)
+  if (delta.type === 'full') {
+    broadcast({ type: 'snapshot', ...delta.snapshot })
+  } else {
+    broadcast({
+      type: 'snapshotDelta',
+      time: delta.time,
+      teams: delta.teams,
+      players: delta.players,
+      removed: delta.removed || []
+    })
+  }
+}, SNAPSHOT_INTERVAL)
+
+setInterval(() => {
+  for (const p of players.values()) {
+    if (antiCheat.isSuspicious(p.id, p.deaths) && !antiCheat.isBanned(p.ip)) {
+      console.warn(`[server] Player ${p.id} flagged as suspicious`)
+      antiCheat.ban(p.ip, BAN_REASONS.CHEATING, 3600 * 1000)
+      try {
+        p.ws.send(JSON.stringify({ type: 'error', message: 'Banned: suspicious activity' }))
+        p.ws.close()
+      } catch (e) { /* ignore */ }
+    }
+  }
+}, 10000)
+
+const modeInfo = getGameMode(MODE)
 console.log(`[server] Modern Warfare server listening on :${PORT}`)
-console.log(`[server] TDM, score limit: ${SCORE_LIMIT}, max players: ${MAX_PLAYERS}`)
+console.log(`[server] mode=${MODE} tick=${TICK_RATE}Hz snap=${NETCODE_CONFIG.SNAPSHOT_RATE}Hz max=${MAX_PLAYERS} scoreLimit=${SCORE_LIMIT}`)
+console.log(`[server] antiCheat+suspiciousScan enabled, rateLimit=${RATE_LIMIT_PER_SECOND}/s ${RATE_LIMIT_PER_MINUTE}/min`)
