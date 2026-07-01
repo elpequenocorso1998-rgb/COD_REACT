@@ -1888,6 +1888,12 @@ del menú queda pendiente.
 
 ## Progreso Fase 18
 
+> **Resumen de sesión (10 commits)**: 22 sub-fases pendientes completadas
+> (18.8, 18.21, 18.23, 18.26, 18.27, 18.20, 18.32, 18.34-37, 18.38, 18.40,
+> 18.41, 18.42-45, 18.47, 18.48, 18.50, 18.51, 18.53, 18.54, 18.55). Sólo
+> queda 18.52 (main menu polish) como parcial por requerir refactor UI React.
+> **Tests**: 473 → 624 (+151 tests nuevos). **Lint**: limpio. **Build**: OK.
+
 - [x] 18.0 — Setup (lint fix + PLAN.md)
 - [x] 18.1 — Killfeed en HUD
 - [x] 18.2 — Accessibility manager + keybind UI
@@ -1940,7 +1946,7 @@ del menú queda pendiente.
 - [x] 18.49 — Prestige UI + flow
 - [x] 18.50 — Ranked Play UI
 - [x] 18.51 — Social/party
-- [~] 18.52 — Main menu polish
+- [~] 18.52 — Main menu polish (parcial: requiere refactor UI React)
 - [x] 18.53 — Firing Range mode
 - [x] 18.54 — Ping system / ping wheel
 - [x] 18.55 — Objective markers HUD
