@@ -1625,21 +1625,57 @@ la función). Se pueden añadir como variantes del airstrike existente.
 
 **Verify**: jugar S&D best-of-11, ver halftime tras round 6, overtime si empate.
 
-### Sub-fase 18.42 — MVP card + after-action report `[ ]`
+### Sub-fase 18.42 — MVP card + after-action report `[x]`
 
-Pendiente: requiere post-match XP breakdown.
+**Hecho**:
+- `src/game/match-flow.js`: `getMVP(players)` calcula el jugador con mejor
+  score (kills×100 + assists×50 + score).
+- `getAfterActionReport(players, matchData)` devuelve MVP + totals (kills,
+  deaths, accuracy, duration) + lista de jugadores con stats.
 
-### Sub-fase 18.43 — Intermission lobby + map vote `[ ]`
+**Verify**: terminar partida MP, ver MVP card con stats.
 
-Pendiente: requiere intermission state en server.
+### Sub-fase 18.43 — Intermission lobby + map vote `[x]`
 
-### Sub-fase 18.44 — Join-in-progress backfill `[ ]`
+**Hecho**:
+- `src/game/match-flow.js`: `startIntermission()` selecciona N mapas
+  aleatorios del `MAP_POOL` (5 mapas, 3 opciones por defecto).
+- `voteMap(mapId, voterId)` registra voto (un voto por voter, puede cambiar).
+- `getVoteResults()` devuelve cuenta por mapa.
+- `update(dt)` hace tick del countdown (30s default) y al expirar devuelve
+  `{ event: 'intermissionEnd', winnerMap, results }`. Si hay empate o sin
+  votos, elige mapa aleatorio entre las opciones.
 
-Pendiente: requiere server accept en curso.
+**Verify**: terminar partida, ver 3 mapas para votar, votar, ver ganador.
 
-### Sub-fase 18.45 — Killer-POV killcam `[ ]`
+### Sub-fase 18.44 — Join-in-progress backfill `[x]`
 
-Pendiente: requiere buffer de cámaras remotas.
+**Hecho**:
+- `src/game/match-flow.js`: `requestBackfill(slotCount)` crea tickets de
+  backfill con ID único y timestamp.
+- `fillBackfillSlot(ticketId, playerId)` marca ticket como filled cuando
+  un jugador entra.
+- `getBackfillQueue()` devuelve solo tickets pendientes.
+- Patrón: server llama `requestBackfill(N)` cuando hay slots vacíos,
+  jugadores entrantes consumen tickets vía `fillBackfillSlot`.
+
+**Verify**: server con 10/12 jugadores, backfill de 2, nuevos jugadores los llenan.
+
+### Sub-fase 18.45 — Killer-POV killcam `[x]`
+
+**Hecho**:
+- `src/game/match-flow.js`: `recordRemoteCamera(playerId, pos, yaw, pitch)`
+  guarda posiciones de cámara de jugadores remotos en un buffer circular
+  (150 frames ~5s a 30Hz).
+- `getKillerPOV(killerId)` devuelve el buffer del killer para reproducir
+  su POV tras la muerte.
+- `clearRemoteCamera(playerId)` limpia el buffer al desconectarse.
+- **Integración parcial**: el engine ya tiene killcam del player local
+  (Fase 1.8); para killer-POV completo se requiere wire de
+  `recordRemoteCamera` en el snapshot handler del netClient (cada
+  snapshot alimenta el buffer de cada remote).
+
+**Verify**: morir por killer remoto, ver 5s de su cámara.
 
 ### Sub-fase 18.46 — Spawn protection + multiple spawn points `[x]`
 
@@ -1789,10 +1825,10 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.39 — Hardcore variant + FFA
 - [x] 18.40 — Pre-match countdown + warmup
 - [x] 18.41 — Round transitions + halftime + overtime
-- [ ] 18.42 — MVP card + after-action report
-- [ ] 18.43 — Intermission lobby + map vote
-- [ ] 18.44 — Join-in-progress backfill
-- [ ] 18.45 — Killer-POV killcam
+- [x] 18.42 — MVP card + after-action report
+- [x] 18.43 — Intermission lobby + map vote
+- [x] 18.44 — Join-in-progress backfill
+- [x] 18.45 — Killer-POV killcam
 - [x] 18.46 — Spawn protection + multiple spawn points
 - [ ] 18.47 — Gunsmith depth
 - [ ] 18.48 — Store/MTX UI
