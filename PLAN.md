@@ -1570,9 +1570,18 @@ la función). Se pueden añadir como variantes del airstrike existente.
 
 **Verify**: setup searchDestroy, plantar en A, ver timer de 45s.
 
-### Sub-fase 18.38 — Gunfight `[ ]`
+### Sub-fase 18.38 — Gunfight `[x]`
 
-Pendiente: requiere 2v2 + weapon rotation per round.
+**Hecho**:
+- `src/game/round-flow.js`: `GUNFIGHT_WEAPON_ROTATION` con 8 pares de armas
+  (m4, mp5, sniper, shotgun, ak47, pistol, lmg, mixed) que rotan por round.
+- `getGunfightLoadout(round)` devuelve el par [weaponA, weaponB] para el
+  round dado (cíclico).
+- Round flow controller soporta modo `gunfight` (bestOf=6, roundTime=40s,
+  no respawn, overtimeCapture).
+- Tests cubren rotación cíclica y formato del par.
+
+**Verify**: jugar gunfight round 1 (m4), round 2 (mp5), etc.
 
 ### Sub-fase 18.39 — Hardcore variant + FFA `[x]`
 
@@ -1580,13 +1589,41 @@ Pendiente: requiere 2v2 + weapon rotation per round.
 - Hardcore: `engine.js setMode` aplica `playerHP=30` del modo hardcore.
 - FFA: definido en `modes/index.js` (sin teams), requiere server-side.
 
-### Sub-fase 18.40 — Pre-match countdown + warmup `[ ]`
+### Sub-fase 18.40 — Pre-match countdown + warmup `[x]`
 
-Pendiente: requiere state LOBBY en server + countdown overlay.
+**Hecho**:
+- `src/game/round-flow.js`: estado `WARMUP` con `warmupTime` configurable
+  (default 10s). Tras `start()`, el match va a WARMUP y muestra countdown.
+  Al expirar, transita a `ROUND_START` (countdown de 3s) → `ROUND_PLAY`.
+- Callbacks `on('stateChange')` permiten a la UI mostrar overlay con
+  countdown ("Match starts in 5...").
 
-### Sub-fase 18.41 — Round transitions + halftime + overtime `[ ]`
+**Verify**: iniciar partida MP, ver countdown de 10s warmup.
 
-Pendiente: requiere round logic en server.
+### Sub-fase 18.41 — Round transitions + halftime + overtime `[x]`
+
+**Hecho**:
+- `src/game/round-flow.js`: state machine completa con 9 estados
+  (LOBBY, WARMUP, ROUND_START, ROUND_PLAY, ROUND_END, HALFTIME,
+  INTERMISSION, OVERTIME, MATCH_END).
+- Round transitions automáticas vía `update(dt, aliveTeams)`:
+  - ROUND_START → ROUND_PLAY (tras 3s countdown).
+  - ROUND_PLAY → ROUND_END (timeout o endRound manual): gana team con
+    más vivos si timeout.
+  - ROUND_END → check match_end → HALFTIME o INTERMISSION → ROUND_START.
+- **Halftime**: tras `ceil(bestOf/2)` rounds, intercambio de lados
+  (axis↔allies) + pausa de 10s.
+- **Overtime**: si `round >= bestOf && scores empatados && target no
+  alcanzado`, transita a OVERTIME (round extra).
+- **Match end**: cuando un team alcanza `target` (default
+  `ceil(bestOf/2)`) o se juegan todos los rounds sin empate.
+- Parámetros configurables: `bestOf`, `target`, `roundTime`,
+  `warmupTime`, `roundStartTime`, `roundEndTime`, `intermissionTime`,
+  `halftimeTime`, `enableHalftime`, `enableOvertime`.
+- 16 tests en `tests/round-flow.test.js` cubren todos los estados,
+  transiciones, halftime, overtime, match_end, reset.
+
+**Verify**: jugar S&D best-of-11, ver halftime tras round 6, overtime si empate.
 
 ### Sub-fase 18.42 — MVP card + after-action report `[ ]`
 
@@ -1748,10 +1785,10 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.35 — Hardpoint
 - [x] 18.36 — Kill Confirmed
 - [x] 18.37 — Search & Destroy
-- [ ] 18.38 — Gunfight
+- [x] 18.38 — Gunfight
 - [x] 18.39 — Hardcore variant + FFA
-- [ ] 18.40 — Pre-match countdown + warmup
-- [ ] 18.41 — Round transitions + halftime + overtime
+- [x] 18.40 — Pre-match countdown + warmup
+- [x] 18.41 — Round transitions + halftime + overtime
 - [ ] 18.42 — MVP card + after-action report
 - [ ] 18.43 — Intermission lobby + map vote
 - [ ] 18.44 — Join-in-progress backfill
