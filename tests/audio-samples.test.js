@@ -125,4 +125,28 @@ describe('audio sample bank + reverb', () => {
     audio.dispose()
     expect(audio.hasSample('shoot')).toBe(false)
   })
+
+  it('playVoiceCallout expone API', () => {
+    const audio = createAudioSystem()
+    expect(typeof audio.playVoiceCallout).toBe('function')
+  })
+
+  it('playVoiceCallout no rompe con tipos válidos', () => {
+    const audio = createAudioSystem()
+    audio.init()
+    const types = ['enemySpotted', 'reloading', 'enemyDown', 'takingFire',
+      'uavOnline', 'enemyUav', 'airstrikeIncoming', 'heliIncoming',
+      'objective', 'matchStart', 'victory', 'defeat', 'friendlyDown', 'lastEnemy']
+    for (const t of types) {
+      expect(() => audio.playVoiceCallout(t)).not.toThrow()
+    }
+    audio.dispose()
+  })
+
+  it('playVoiceCallout ignora tipo desconocido', () => {
+    const audio = createAudioSystem()
+    audio.init()
+    expect(() => audio.playVoiceCallout('nonexistent_callout')).not.toThrow()
+    audio.dispose()
+  })
 })

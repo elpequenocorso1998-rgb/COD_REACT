@@ -87,6 +87,7 @@ export function createEngine() {
   let killcamActive = false
   let killcamPlaybackIndex = 0
   let killcamPlaybackTimer = 0
+  let lastEnemyCalloutPlayed = false
   let cinematicPass = null
   let ssaoPass = null
   let rafId = null
@@ -411,12 +412,16 @@ export function createEngine() {
         player.exitPointerLock()
         // Fase 19.3: cancelar cook grenade al pausar/morir.
         if (grenades) grenades.cancelCook()
+        if (state === GAME_STATES.GAMEOVER) {
+          audio.playVoiceCallout('defeat')
+        }
       }
       // Fase 18.5: en SPECTATING liberamos pointer para que el jugador pueda
       // ciclar targets con Q/E, pero seguimos renderizando el mundo.
       if (state === GAME_STATES.SPECTATING) {
         player.exitPointerLock()
         if (grenades) grenades.cancelCook()
+        audio.playVoiceCallout('friendlyDown')
       }
       prevState = state
     }
@@ -427,6 +432,14 @@ export function createEngine() {
       // del anterior (reduce latencia de hit-detection 1 frame).
       const st = store.getState()
       enemies.update(dt, player.getPosition())
+      // Fase 18.21: callout "last enemy" cuando queda 1 vivo.
+      const aliveCount = enemies.count
+      if (aliveCount === 1 && !lastEnemyCalloutPlayed) {
+        lastEnemyCalloutPlayed = true
+        audio.playVoiceCallout('lastEnemy')
+      } else if (aliveCount > 1) {
+        lastEnemyCalloutPlayed = false
+      }
       player.update(dt, clock.elapsedTime)
       // Fase 1.8: graba posiciones de cámara para killcam (buffer circular).
       killcamSampleTimer += dt
@@ -689,6 +702,7 @@ export function createEngine() {
       if (!st.reloading && st.ammo < st.magSize && st.reserve > 0) {
         st.reload()
         audio.playReload()
+        audio.playVoiceCallout('reloading')
       }
     }
     if (isAction(e, 'pause') && st.gameState === GAME_STATES.PLAYING) {
@@ -727,6 +741,9 @@ export function createEngine() {
         const streak = st.availableStreaks.find((s) => s.type === type)
         if (streak && st.useStreak(streak.id)) {
           streaks.activate(type, player.getPosition())
+          if (type === 'uav') audio.playVoiceCallout('uavOnline')
+          else if (type === 'airstrike') audio.playVoiceCallout('airstrikeIncoming')
+          else if (type === 'heli') audio.playVoiceCallout('heliIncoming')
         }
       }
     }
@@ -856,6 +873,7 @@ export function createEngine() {
     player.setWeapon(store.getState().getCurrentWeapon())
     spawnWave(1)
     gameStartedAt = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    audio.playVoiceCallout('matchStart')
     player.requestPointerLock()
   }
 
@@ -925,6 +943,7 @@ export function createEngine() {
       audio.playHitMarker('kill')
       const label = st.multikillLabel
       if (label) audio.playCallout(label)
+      else audio.playVoiceCallout('enemyDown')
       if (store.getState().levelUpFlash) audio.playLevelUp()
       if (pickups) pickups.onEnemyKilled(enemy.group.position)
     }
@@ -937,6 +956,7 @@ export function createEngine() {
       const relAngle = worldAngle - playerYaw
       store.getState().takeDamage(damage, relAngle)
       audio.playDamage()
+      audio.playVoiceCallout('takingFire')
       enemies.markShot(enemy)
     }
     enemies.onEnemyShoot = (origin, dir) => {

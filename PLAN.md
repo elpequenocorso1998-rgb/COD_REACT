@@ -1414,9 +1414,27 @@ paredes.
 Implementado: shared state via store (reloading, suppression) que los bots
 leen individualmente.
 
-### Sub-fase 18.21 — Callouts verbales procedurales `[ ]`
+### Sub-fase 18.21 — Callouts verbales procedurales `[x]`
 
-Pendiente: requiere síntesis de audio procedural para callouts.
+**Hecho**:
+- `src/game/audio.js`: nueva función `playVoiceCallout(type)` que sintetiza
+  callouts verbales vía formantes (F1 ~800Hz + F2 ~1400Hz bandpass sobre
+  oscilador sawtooth). 14 callouts disponibles:
+  `enemySpotted, reloading, enemyDown, takingFire, uavOnline, enemyUav,
+  airstrikeIncoming, heliIncoming, objective, matchStart, victory, defeat,
+  friendlyDown, lastEnemy`.
+- Throttle 600ms entre callouts para no saturar.
+- `src/game/engine.js` wire de callouts en eventos clave:
+  - `enemyDown` al matar (si no hay multikill callout).
+  - `takingFire` al recibir daño de bot.
+  - `reloading` al recargar.
+  - `matchStart` al iniciar partida.
+  - `defeat` al transitar a GAMEOVER.
+  - `friendlyDown` al entrar en SPECTATING.
+  - `lastEnemy` cuando queda 1 enemigo vivo (tracking con flag reseteable).
+  - `uavOnline/airstrikeIncoming/heliIncoming` al activar killstreaks.
+- Tests en `tests/audio-samples.test.js`: API expuesta, 14 tipos válidos,
+  tipo desconocido ignorado.
 
 ### Sub-fase 18.22 — Cover peeking + reload-seeking cover `[x]`
 
@@ -1661,7 +1679,7 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.18 — 11 granadas faltantes
 - [x] 18.19 — 10 perks nuevos
 - [~] 18.20 — Squad blackboard AI
-- [ ] 18.21 — Callouts verbales procedurales
+- [x] 18.21 — Callouts verbales procedurales
 - [x] 18.22 — Cover peeking + reload-seeking cover
 - [ ] 18.23 — Uso de granadas por AI
 - [x] 18.24 — Suppression afecta AI accuracy

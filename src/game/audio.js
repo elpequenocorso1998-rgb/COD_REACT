@@ -358,6 +358,73 @@ export function createAudioSystem() {
     osc.stop(t + 0.7)
   }
 
+  // --- Callouts verbales procedurales (Fase 18.21) ---
+  // Síntesis por formantes: cada callout es una secuencia de "sílabas"
+  // (cada una = tono + 2 formantes de banda estrecha). No es voz real,
+  // pero es distinguible por el patrón rítmico/frecuencial.
+  const VOICE_CALLOUTS = {
+    enemySpotted: { syllables: [{ f: 220, d: 0.08 }, { f: 280, d: 0.08 }, { f: 200, d: 0.12 }] },
+    reloading: { syllables: [{ f: 180, d: 0.10 }, { f: 200, d: 0.10 }, { f: 160, d: 0.10 }] },
+    enemyDown: { syllables: [{ f: 260, d: 0.08 }, { f: 200, d: 0.08 }, { f: 140, d: 0.16 }] },
+    takingFire: { syllables: [{ f: 280, d: 0.06 }, { f: 320, d: 0.06 }, { f: 280, d: 0.06 }, { f: 220, d: 0.10 }] },
+    uavOnline: { syllables: [{ f: 320, d: 0.08 }, { f: 400, d: 0.08 }, { f: 480, d: 0.12 }] },
+    enemyUav: { syllables: [{ f: 240, d: 0.10 }, { f: 200, d: 0.10 }, { f: 160, d: 0.16 }] },
+    airstrikeIncoming: { syllables: [{ f: 360, d: 0.06 }, { f: 300, d: 0.06 }, { f: 240, d: 0.06 }, { f: 180, d: 0.16 }] },
+    heliIncoming: { syllables: [{ f: 280, d: 0.08 }, { f: 240, d: 0.08 }, { f: 200, d: 0.16 }] },
+    objective: { syllables: [{ f: 260, d: 0.10 }, { f: 340, d: 0.10 }, { f: 420, d: 0.14 }] },
+    matchStart: { syllables: [{ f: 200, d: 0.10 }, { f: 260, d: 0.10 }, { f: 320, d: 0.10 }, { f: 400, d: 0.20 }] },
+    victory: { syllables: [{ f: 320, d: 0.10 }, { f: 400, d: 0.10 }, { f: 480, d: 0.10 }, { f: 600, d: 0.25 }] },
+    defeat: { syllables: [{ f: 320, d: 0.10 }, { f: 260, d: 0.10 }, { f: 200, d: 0.10 }, { f: 140, d: 0.25 }] },
+    friendlyDown: { syllables: [{ f: 240, d: 0.10 }, { f: 200, d: 0.10 }, { f: 160, d: 0.20 }] },
+    lastEnemy: { syllables: [{ f: 320, d: 0.08 }, { f: 380, d: 0.08 }, { f: 440, d: 0.08 }, { f: 500, d: 0.20 }] }
+  }
+  let lastVoiceCallout = 0
+  function playVoiceCallout(type) {
+    if (!alive()) return
+    const cfg = VOICE_CALLOUTS[type]
+    if (!cfg) return
+    // Throttle: no más de un callout cada 600ms.
+    const now = performance.now()
+    if (now - lastVoiceCallout < 600) return
+    lastVoiceCallout = now
+    let t = ctx.currentTime
+    for (const syl of cfg.syllables) {
+      // Oscilador fundamental (voz).
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sawtooth'
+      osc.frequency.value = syl.f
+      // Filtro formante F1 (~800Hz banda estrecha).
+      const f1 = ctx.createBiquadFilter()
+      f1.type = 'bandpass'
+      f1.frequency.value = 800
+      f1.Q.value = 8
+      // Filtro formante F2 (~1400Hz).
+      const f2 = ctx.createBiquadFilter()
+      f2.type = 'bandpass'
+      f2.frequency.value = 1400
+      f2.Q.value = 10
+      const f2Gain = ctx.createGain()
+      f2Gain.gain.value = 0.5
+      gain.gain.setValueAtTime(0.0001, t)
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.01)
+      gain.gain.linearRampToValueAtTime(0.20, t + syl.d * 0.7)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + syl.d)
+      osc.connect(gain)
+      gain.connect(f1)
+      f1.connect(masterGain)
+      gain.connect(f2Gain)
+      f2Gain.connect(f2)
+      f2.connect(masterGain)
+      osc.start(t)
+      osc.stop(t + syl.d + 0.02)
+      osc.onended = () => {
+        try { osc.disconnect(); gain.disconnect(); f1.disconnect(); f2.disconnect(); f2Gain.disconnect() } catch (e) {}
+      }
+      t += syl.d
+    }
+  }
+
   function playExplosion() {
     if (!alive()) return
     const t = ctx.currentTime
@@ -616,7 +683,7 @@ export function createAudioSystem() {
   return {
     init, playShoot, playReload, playHitFlesh, playHitWall,
     playDamage, playKill, setMuted, setMasterVolume, dispose,
-    playHitMarker, playCallout,
+    playHitMarker, playCallout, playVoiceCallout,
     playAirstrike, playExplosion, playHeliIncoming, playHeliShoot, playGunshipIncoming,
     playLevelUp, playEnemyShoot, playFootstep,
     startMusic, stopMusic, setMusicIntensity,
