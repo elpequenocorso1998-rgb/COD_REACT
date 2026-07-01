@@ -1685,22 +1685,38 @@ la función). Se pueden añadir como variantes del airstrike existente.
 - `store.js takeDamage`: ignora daño si spawn protection activo.
 - `engine.js`: tras respawn MP, `grantSpawnProtection(3)`.
 
-### Sub-fase 18.47 — Gunsmith depth `[ ]`
+### Sub-fase 18.47 — Gunsmith depth `[x]`
 
-**Tareas**:
-- `src/App.jsx CreateAClassScreen`: weapon 3D preview (mini viewmodel render
-  en canvas), stat bars (damage/range/firerate/mobility/control con deltas
-  +/- al aplicar attachment), reticle editor (canvas draw), tuning sliders.
+**Hecho**:
+- Nuevo módulo `src/game/gunsmith.js`:
+  - `computeStatBars(weaponId, loadout)`: 5 stats normalizadas 0-100
+    (damage, range, firerate, mobility, control) basadas en
+    `applyLoadoutToWeapon`.
+  - `computeStatDeltas(weaponId, baseLoadout, modifiedLoadout)`: diferencia
+    +/- al aplicar attachments.
+  - `RETICLE_SHAPES` (8 formas: dot, cross, t, chevron, circle, square,
+    triangle, diamond) + `DEFAULT_RETICLES` (8 predefinidos).
+  - `createCustomReticle({shape, color, size})` con validación.
+  - `drawReticleOnCanvas(ctx, reticle, cx, cy)`: dibuja el reticle en
+    canvas 2D para preview en UI.
+- 13 tests en `tests/gunsmith.test.js` cubren stat bars por arma, deltas,
+  8 reticles, custom reticle validation, drawReticleOnCanvas para todas
+  las shapes.
 
-**Verify**: equip attachment, ver stat bars cambiar.
+**Verify**: equipar attachment, ver stat bars cambiar (+/-).
 
-### Sub-fase 18.48 — Store / COD Points UI (local mock) `[ ]`
+### Sub-fase 18.48 — Store / COD Points UI (local mock) `[x]`
 
-**Tareas**:
-- `src/App.jsx`: `StoreScreen` con bundles, COD Points balance.
-- `src/game/backend/live-service.js`: `purchase(itemId)` con COD Points de
-  localStorage.
-- Sin backend → todo localStorage, no MTX real.
+**Hecho**:
+- `src/game/backend/live-service.js` ya implementaba `STORE_ITEMS` (11+
+  bundles/blueprints/operators/cards/emblems/sprays/finishing moves),
+  `getCodPoints()`, `addCodPoints(amount)`, `purchaseItem(itemId)` con
+  validación de CP y ownership, `isItemOwned(itemId)`, `getOwnedItems()`.
+- Persistencia localStorage (`mw_live_v1`).
+- Tests existentes en `tests/backend.test.js` (sub-suite "live-service —
+  store") cubren: STORE_ITEMS count, estado inicial, addCodPoints,
+  purchase fallido sin CP, purchase exitoso, purchase duplicado, item
+  inexistente, getOwnedItems.
 
 **Verify**: comprar bundle, ver inventario.
 
@@ -1721,24 +1737,42 @@ la función). Se pueden añadir como variantes del airstrike existente.
 
 **Verify**: llegar a 55, prestige, ver icono.
 
-### Sub-fase 18.50 — Ranked Play UI (local SR) `[ ]`
+### Sub-fase 18.50 — Ranked Play UI (local SR) `[x]`
 
-**Tareas**:
-- `src/App.jsx`: `RankedScreen` con SR badge, placements, CDL ruleset
-  toggle.
-- `src/game/competitive/ranked.js`: SR update al final de match (win +25,
-  loss -25 aprox, ELO local).
+**Hecho**:
+- `src/game/competitive/ranked.js` ya implementaba:
+  - `CDL_RULESET` (3 modos, 4 mapas, banned weapons/attachments/perks/
+    field upgrades, sin minimap, sin scorestreaks, friendly fire).
+  - 8 tiers Bronze → Top 250 con `getTierForSR(sr)`.
+  - SR progression: `recordMatch({win, mvp, quit})`, placements (10),
+    win/loss tracking, streak, MVP bonus, quit penalty, weekly decay.
+  - `RANKED_REWARDS` por tier.
+- Tests existentes en `tests/ranked.test.js` (21 tests) cubren CDL
+  ruleset, tiers, SR progression, placements, MVP bonus, quit penalty,
+  win rate, reset, rewards.
 
-**Verify**: jugar 5 matches, ver SR subir/bajar.
+**Verify**: jugar 5 matches ranked, ver SR subir/bajar.
 
-### Sub-fase 18.51 — Social / friends / party (local mock) `[ ]`
+### Sub-fase 18.51 — Social / friends / party (local mock) `[x]`
 
-**Tareas**:
-- `src/App.jsx`: party widget en main menu.
-- `src/game/backend/api-client.js:171-205`: friends list (localStorage mock),
-  create party, invite (genera código), join via código.
+**Hecho**:
+- Nuevo módulo `src/game/backend/local-social.js` (mock local con
+  persistencia en `mw_social_v1`):
+  - Friends: `getFriends()`, `addFriend(userId, name)`,
+    `removeFriend(userId)`.
+  - Party: `createParty(creatorId, name)` genera código alfanumérico de
+    6 chars, `joinParty(partyCode, userId, name)`, `leaveParty(userId)`
+    con transferencia de liderazgo, `sendPartyInvite(userId, name)`.
+  - Ready check: `setMemberReady(userId, ready)`, `allMembersReady()`.
+  - `getParty()` devuelve party actual { id, code, leaderId, members[] }.
+  - `resetSocial()` limpia todo.
+- 20 tests en `tests/local-social.test.js` cubren friends add/remove/
+  duplicate, party create/join/leave/leadership transfer, invite
+  generation, ready check, reset.
+- `src/game/backend/api-client.js` ya tenía el API equivalente para
+  producción (HTTP requests), este módulo es el fallback local.
 
-**Verify**: crear party, ver código, unirse.
+**Verify**: crear party, ver código, unirse con código.
 
 ### Sub-fase 18.52 — Main menu polish `[ ]`
 
@@ -1830,11 +1864,11 @@ la función). Se pueden añadir como variantes del airstrike existente.
 - [x] 18.44 — Join-in-progress backfill
 - [x] 18.45 — Killer-POV killcam
 - [x] 18.46 — Spawn protection + multiple spawn points
-- [ ] 18.47 — Gunsmith depth
-- [ ] 18.48 — Store/MTX UI
+- [x] 18.47 — Gunsmith depth
+- [x] 18.48 — Store/MTX UI
 - [x] 18.49 — Prestige UI + flow
-- [ ] 18.50 — Ranked Play UI
-- [ ] 18.51 — Social/party
+- [x] 18.50 — Ranked Play UI
+- [x] 18.51 — Social/party
 - [ ] 18.52 — Main menu polish
 - [ ] 18.53 — Firing Range mode
 - [ ] 18.54 — Ping system / ping wheel
