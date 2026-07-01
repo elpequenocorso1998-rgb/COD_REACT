@@ -185,7 +185,10 @@ export const useGameStore = create((set, get) => {
     mpKillfeed: [],                // últimos kills [{killer, victim, weapon, headshot, t}]
     mpRemotePlayers: [],           // estado de jugadores remotos (del último snapshot)
     mpMatchOver: false,            // partida terminada
-    mpWinner: null                 // equipo ganador
+    mpWinner: null,                // equipo ganador
+    // Fase 18.34-37: objetivos PvP.
+    objectiveNotice: null,         // texto del último evento de objetivo
+    objectiveNoticeAt: 0           // timestamp del último notice
     }
   }
 
@@ -322,6 +325,24 @@ export const useGameStore = create((set, get) => {
 
     // Fase 4: marca el gunship como activo/inactivo (player.update lo lee).
     setGunshipActive: (active) => set({ gunshipActive: active }),
+
+    // Fase 18.34-37: objetivos PvP (Domination/Hardpoint/KC/S&D).
+    setObjectiveNotice: (text) => {
+      set({ objectiveNotice: text, objectiveNoticeAt: Date.now() })
+      trackTimeout(() => {
+        const s = get()
+        if (s.objectiveNotice === text && Date.now() - s.objectiveNoticeAt >= 4000) {
+          set({ objectiveNotice: null })
+        }
+      }, 5000)
+    },
+    awardObjectivePoint: (team, points) => {
+      set((s) => {
+        const scores = { ...s.mpTeamScores }
+        scores[team] = (scores[team] || 0) + points
+        return { mpTeamScores: scores }
+      })
+    },
 
     // Fase 18.4: field upgrades — charge, cooldown, active.
     setActiveFieldUpgrade: (fuId) => set({ activeFieldUpgrade: fuId }),

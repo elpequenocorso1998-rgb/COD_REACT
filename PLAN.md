@@ -1535,15 +1535,40 @@ la función). Se pueden añadir como variantes del airstrike existente.
 - Persistencia en localStorage (`mw_selected_mode`).
 - `onStart(mapId, modeId)` pasa el modo al engine.
 
-### Sub-fase 18.34-36 — Domination / Hardpoint / Kill Confirmed `[ ]`
+### Sub-fase 18.34-36 — Domination / Hardpoint / Kill Confirmed `[x]`
 
-Pendiente: requieren entities de flag/hill/dog-tag + lógica de captura.
-El sistema de modos está cableado pero los modos objetivo no están
-implementados a nivel de gameplay.
+**Hecho**:
+- Nuevo módulo `src/game/objectives.js` con `createObjectiveSystem(scene, store)`:
+  - **Domination**: 3 flags A/B/C, captura por proximidad (mayoría de team),
+    progreso de 100 en ~3.3s, +1 punto/seg al equipo dueño.
+  - **Hardpoint**: 5 hills rotatorios cada 60s, solo 1 activa, puntos
+    escalados por número de jugadores en zona.
+  - **Kill Confirmed**: dog-tags dropeados al morir, expiran en 30s, solo
+    se confirman tags del equipo enemigo.
+  - **Search & Destroy**: 2 bomb sites A/B, plantar 5s, desactivar 7s,
+    bomba explota en 45s.
+- `src/game/store.js`: campos `objectiveNotice` + `objectiveNoticeAt`,
+  acciones `setObjectiveNotice(text)` (con auto-clear 5s) y
+  `awardObjectivePoint(team, points)`.
+- `src/game/engine.js`: wiring de `objectives = createObjectiveSystem`
+  en mount + dispose, `objectives.setup(mpMode, world)` en startMPGame,
+  `objectives.update(dt, playerPos, remotePlayers.all)` cada frame en MP,
+  drop dog-tags en `onKill` del netClient.
+- `src/game/remote-players.js`: añadidos `get all` y `getById(id)`.
+- 16 tests en `tests/objectives.test.js` cubren setup por modo, captura,
+  rotación de hill, dog-tags (drop/collect/expire), plant/defuse bomb,
+  reset y dispose.
 
-### Sub-fase 18.37 — Search & Destroy `[ ]`
+### Sub-fase 18.37 — Search & Destroy `[x]`
 
-Pendiente: requiere round logic + bomb entity.
+**Hecho**: cubierto por `src/game/objectives.js` (sub-fase 18.34-36):
+- 2 bomb sites A/B con `tryPlantBomb(playerPos, team, dt)` (5s para plantar).
+- `tryDefuseBomb(playerPos, dt)` (7s para desactivar).
+- Bomba explota a los 45s (`updateBomb` decrementa `bombTimer`).
+- Modo marcado como `respawn: false, rounds: true, bestOf: 11` en
+  `modes/index.js` (la lógica de rounds completa requiere Fase 18.41).
+
+**Verify**: setup searchDestroy, plantar en A, ver timer de 45s.
 
 ### Sub-fase 18.38 — Gunfight `[ ]`
 
@@ -1719,10 +1744,10 @@ Pendiente: requiere buffer de cámaras remotas.
 - [x] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
 - [~] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
 - [x] 18.33 — Mode system wiring
-- [ ] 18.34 — Domination
-- [ ] 18.35 — Hardpoint
-- [ ] 18.36 — Kill Confirmed
-- [ ] 18.37 — Search & Destroy
+- [x] 18.34 — Domination
+- [x] 18.35 — Hardpoint
+- [x] 18.36 — Kill Confirmed
+- [x] 18.37 — Search & Destroy
 - [ ] 18.38 — Gunfight
 - [x] 18.39 — Hardcore variant + FFA
 - [ ] 18.40 — Pre-match countdown + warmup

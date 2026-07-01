@@ -18,6 +18,7 @@ import { createGrenadeSystem } from './grenades.js'
 import { createDecalSystem } from './decals.js'
 import { createPickupSystem } from './pickups.js'
 import { createFieldUpgradeSystem } from './field-upgrades.js'
+import { createObjectiveSystem } from './objectives.js'
 import { NavMesh } from './navmesh.js'
 import { createRemotePlayerManager } from './remote-players.js'
 import { createSpectator } from './competitive/spectator.js'
@@ -68,6 +69,7 @@ export function createEngine() {
   let fieldUpgrades = null
   let fieldUpgradeCooldownTimer = null
   let spectator = null
+  let objectives = null
   let profiler = null
   let profilerOverlay = null
   let gameStartedAt = 0 // Fase 19.4: timestamp del último startGame
@@ -260,6 +262,8 @@ export function createEngine() {
     fieldUpgrades = createFieldUpgradeSystem(scene, enemies, particles, audio, player, store)
     // Fase 18.5: spectator mode (para MP death).
     spectator = createSpectator(camera, scene)
+    // Fase 18.34-37: objetivo system (Domination/Hardpoint/KC/S&D).
+    objectives = createObjectiveSystem(scene, store)
     // Fase 18.7: frame profiler (toggle F8).
     profiler = createFrameProfiler({ sampleSize: 120 })
     // Fase 18.2: accessibility manager (keybinds, colorblind, subtitles).
@@ -484,6 +488,10 @@ export function createEngine() {
       // Fase 2: actualiza jugadores remotos (interpolación entre snapshots).
       if (remotePlayers) {
         remotePlayers.update(dt)
+        // Fase 18.34-37: tick de objetivos PvP.
+        if (objectives && objectives.getMode()) {
+          objectives.update(dt, player.getPosition(), remotePlayers.all)
+        }
         // Fase 9: remotos disparando al local. Si un remote está firing y
         // dentro de rango + línea de visión, aplica daño al local.
         if (netClientRef && netClientRef.connected) {
@@ -886,6 +894,7 @@ export function createEngine() {
     if (decals) { decals.dispose(); decals = null }
     if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
     if (streaks) { streaks.dispose(); streaks = null }
+    if (objectives) { objectives.dispose(); objectives = null }
     if (enemies) { enemies.dispose(); enemies = null }
     if (player) { player.dispose(); player = null }
     if (navmesh) { navmesh = null }
@@ -1055,15 +1064,29 @@ export function createEngine() {
     if (grenades) grenades.reset()
     if (decals) decals.reset()
     if (pickups) pickups.reset()
+    if (objectives) objectives.reset()
     player.reset()
     player.setWeapon(store.getState().getCurrentWeapon())
     // Crea el manager de jugadores remotos si no existe.
     if (!remotePlayers) {
       remotePlayers = createRemotePlayerManager(scene)
     }
+    // Fase 18.34-37: inicializa objetivos según modo MP.
+    const mpMode = (store && store.getState().selectedMode) || 'tdm'
+    if (objectives && ['domination', 'hardpoint', 'killConfirmed', 'searchDestroy'].includes(mpMode)) {
+      objectives.setup(mpMode, world)
+    }
     // Registra callbacks del netClient.
     netClient.on('onSnapshot', ({ players }) => {
       if (remotePlayers) remotePlayers.updateSnapshot(players)
+    })
+    netClient.on('onKill', (msg) => {
+      // Fase 18.36: Kill Confirmed drop dog-tags.
+      if (objectives && objectives.getMode() === 'killConfirmed') {
+        const victim = remotePlayers?.getById?.(msg.victim)
+        const pos = victim?.pos || victim?.position
+        if (pos) objectives.onPlayerKill(msg.victim, msg.killer, pos, victim?.team)
+      }
     })
     netClient.on('onRespawn', (msg) => {
       if (msg.id === netClient.clientId) {
@@ -1076,6 +1099,7 @@ export function createEngine() {
         }
       }
     })
+    audio.playVoiceCallout('matchStart')
     player.requestPointerLock()
   }
 
@@ -1223,6 +1247,7 @@ export function createEngine() {
     if (fieldUpgrades) { fieldUpgrades.dispose(); fieldUpgrades = null }
     if (fieldUpgradeCooldownTimer) { clearTimeout(fieldUpgradeCooldownTimer); fieldUpgradeCooldownTimer = null }
     if (spectator) { spectator.dispose(); spectator = null }
+    if (objectives) { objectives.dispose(); objectives = null }
     if (profilerOverlay) { profilerOverlay.remove(); profilerOverlay = null }
     profiler = null
     if (accessibility) { accessibility.dispose(); accessibility = null }

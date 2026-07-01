@@ -150,6 +150,7 @@ export function createRemotePlayerManager(scene) {
 
   return { updateSnapshot, update, reset, dispose, handleShot, setOnHitRemote,
     get count() { return remotes.size },
+    get all() { return remotes },
     forEach(fn) { for (const entry of remotes.values()) fn(entry) },
     getPlayer(id) {
       const entry = remotes.get(id)
@@ -159,6 +160,17 @@ export function createRemotePlayerManager(scene) {
         getYaw: () => entry.targetYaw,
         hp: entry.hp,
         dead: entry.dead
+      }
+    },
+    getById(id) {
+      const entry = remotes.get(id)
+      if (!entry) return null
+      return {
+        id,
+        team: entry.team,
+        pos: entry.group.position,
+        alive: !entry.dead,
+        hp: entry.hp
       }
     }
   }
