@@ -271,6 +271,50 @@ export function createStreakManager(scene, enemies, particles, audio, player, ca
         }
         if (audio) audio.playExplosion?.()
         break
+      // Fase 18.32: variantes de airstrike.
+      case 'clusterStrike':
+        // Múltiples explosiones en área (3 salvas de 5 impacts cada una).
+        if (enemies) {
+          for (let cluster = 0; cluster < 3; cluster++) {
+            const cx = playerPos.x + (Math.random() - 0.5) * 20
+            const cz = playerPos.z + (Math.random() - 0.5) * 20
+            enemies.forEachAlive((epos, _t, _ls, e) => {
+              const d = Math.hypot(epos.x - cx, epos.z - cz)
+              if (d < 10) {
+                e.hp -= 100
+                if (e.hp <= 0) { e.dead = true; e.dyingT = 0 }
+              }
+            })
+          }
+        }
+        if (audio) audio.playExplosion?.()
+        if (particles) {
+          for (let i = 0; i < 3; i++) {
+            particles.spawnSmoke(playerPos, 5)
+          }
+        }
+        break
+      case 'precisionAirstrike':
+        // Airstrike direccional con 2 pases paralelos.
+        airstrike(playerPos)
+        airstrike({ x: playerPos.x + 10, y: playerPos.y, z: playerPos.z + 10 })
+        break
+      case 'whitePhosphorus':
+        // Área de fuego persistente (10s, 15 dmg/s en radio 15m).
+        if (enemies) {
+          let burnTimer = 10
+          const burnInterval = setInterval(() => {
+            burnTimer -= 1
+            if (burnTimer <= 0) { clearInterval(burnInterval); return }
+            enemies.forEachAlive((epos, _t, _ls, e) => {
+              const d = Math.hypot(epos.x - playerPos.x, epos.z - playerPos.z)
+              if (d < 15) e.hp -= 15
+            })
+            if (particles) particles.spawnSmoke(playerPos, 1)
+          }, 1000)
+        }
+        if (audio) audio.playExplosion?.()
+        break
       default: break
     }
   }

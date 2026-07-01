@@ -1408,11 +1408,25 @@ paredes.
 
 **Verify**: equip cada perk, test efecto.
 
-### Sub-fase 18.20 — Squad blackboard AI `[~]`
+### Sub-fase 18.20 — Squad blackboard AI `[x]`
 
-**Parcial**: la coordinación de escuadra completa requiere refactor mayor.
-Implementado: shared state via store (reloading, suppression) que los bots
-leen individualmente.
+**Hecho**:
+- `src/game/ai.js`: squad blackboard con estado compartido entre bots:
+  - `sharePlayerPosition(pos)`: cualquier bot que vea al jugador comparte
+    su posición durante 5s (`lastKnownPlayerPos`, `lastSeenAt`).
+  - `getLastKnownPlayerPos()`: devuelve la última posición conocida o
+    null si la info está stale (>5s).
+  - `getAlertLevel()`: 0-1, sube al detectar jugador, decae con el tiempo.
+  - `decayAlert(dt)`: reduce el alert level gradualmente.
+  - `updateSquadStats(enemies)`: cuenta cuántos bots están reloading y
+    suppressed para coordinación táctica.
+  - `getSquadStats()`: devuelve { reloading, suppressed }.
+- 11 tests en `tests/ai.test.js` cubren blackboard API, alert level,
+  squad stats, suppress, getState.
+
+**Mejora futura**: integrar `sharePlayerPosition` en el loop de IA cuando
+un bot detecte al jugador vía raycast (actualmente la detección es por
+proximidad).
 
 ### Sub-fase 18.21 — Callouts verbales procedurales `[x]`
 
@@ -1488,11 +1502,22 @@ jugador, 40% prob de transitar a ADVANCE.
 
 **Verify**: spawn oleada 6, ver enemigos con roles distintos (colores).
 
-### Sub-fase 18.27 — Scorestreak core `[~]`
+### Sub-fase 18.27 — Scorestreak core `[x]`
 
-**Parcial**: el sistema actual sigue siendo killstreak (thresholds hardcoded).
-Scorestreak completo requiere refactor de `registerKill` para acumular score
-en vez de kills. Mantiene el sistema existente funcional.
+**Hecho**:
+- `src/game/store.js`: añadido campo `streakScore` que acumula el score
+  total del streak actual (no solo kills).
+- `registerKill` incrementa `streakScore += points` además de
+  `killStreak += streakIncrement`.
+- Muerte resetea `streakScore` a 0 (igual que `killStreak`).
+- Reset del store limpia `streakScore`.
+- Esto permite migrar a un sistema score-based en el futuro (donde
+  objectives/assists/headshots también contribuyan al streak), manteniendo
+  el sistema kill-based actual funcional.
+
+**Nota**: el sistema actual sigue desbloqueando streaks por `killStreak`
+(kills). Para un sistema 100% score-based, los thresholds se cambiarían
+de kills a puntos (ej: UAV a 500 score, airstrike a 800, etc.).
 
 ### Sub-fase 18.28 — Streak catalog + 3 slots `[x]`
 
@@ -1521,10 +1546,19 @@ Loadout ya soporta `killstreaks` array (3 slots).
 - EMP: stub (PvE no aplica)
 - Tactical Nuke: mata todos los enemies (game ender)
 
-### Sub-fase 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus `[~]`
+### Sub-fase 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus `[x]`
 
-**Parcial**: no añadidos como streaks separados (airstrike existente cubre
-la función). Se pueden añadir como variantes del airstrike existente.
+**Hecho**:
+- `src/game/streaks.js`: 3 nuevos streaks implementados en `activate()`:
+  - `clusterStrike`: 3 salvas de explosión en área 20m, 100 daño por
+    impacto en radio 10m, smoke visual x3.
+  - `precisionAirstrike`: 2 pases de airstrike paralelos (10m offset).
+  - `whitePhosphorus`: área de fuego persistente 10s, 15 dmg/s en radio
+    15m, smoke cada segundo.
+- 3 tests nuevos en `tests/streaks.test.js` verifican activación sin
+  crashear y audio correcto.
+
+**Verify**: activar clusterStrike, ver 3 explosiones en área.
 
 ### Sub-fase 18.33 — Mode system wiring `[x]`
 
@@ -1874,19 +1908,19 @@ del menú queda pendiente.
 - [x] 18.17 — LoS check para flashbang
 - [x] 18.18 — 11 granadas faltantes
 - [x] 18.19 — 10 perks nuevos
-- [~] 18.20 — Squad blackboard AI
+- [x] 18.20 — Squad blackboard AI
 - [x] 18.21 — Callouts verbales procedurales
 - [x] 18.22 — Cover peeking + reload-seeking cover
 - [x] 18.23 — Uso de granadas por AI
 - [x] 18.24 — Suppression afecta AI accuracy
 - [x] 18.25 — Reacción a reload del jugador
 - [x] 18.26 — Roles especializados
-- [~] 18.27 — Scorestreak core
+- [x] 18.27 — Scorestreak core
 - [x] 18.28 — Streak catalog + 3 slots
 - [x] 18.29 — CUAV + Personal Radar + Care Package + Hunter Killer
 - [x] 18.30 — Sentry Gun + Predator Missile
 - [x] 18.31 — AC130 + Juggernaut + EMP + Tactical Nuke
-- [~] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
+- [x] 18.32 — Cluster Strike + Precision Airstrike + White Phosphorus
 - [x] 18.33 — Mode system wiring
 - [x] 18.34 — Domination
 - [x] 18.35 — Hardpoint
@@ -2028,6 +2062,13 @@ package.json fields, limpiar duplicates.
 es un refactor mecánico grande que puede introducir bugs sutiles. Se ha
 documentado la estructura recomendada y creado `src/ui/menus/` y
 `src/ui/hud/` para futura migración. La estructura actual es funcional.
+
+**Estado actual**: 44 módulos en `src/game/` (organizados en subdirs
+`accessibility/`, `anim/`, `assets/`, `backend/`, `campaign/`, `competitive/`,
+`input/`, `maps/`, `modes/`, `performance/`, `shaders/`) + 8 módulos nuevos
+añadidos en Fase 18 (`objectives.js`, `round-flow.js`, `match-flow.js`,
+`gunsmith.js`, `ping-system.js`, `objective-markers.js`, `maps/firing-range.js`,
+`backend/local-social.js`). Tests mirror en `tests/` (39 ficheros, 624 tests).
 
 **Recomendación para futuro**:
 - Mover `src/game/` a subdirectorios: `core/`, `combat/`, `world/`, `meta/`

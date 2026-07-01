@@ -119,6 +119,7 @@ export const useGameStore = create((set, get) => {
     kills: 0,                       // kills totales (scoreboard)
     deaths: 0,                      // muertes totales (scoreboard)
     killStreak: 0,                  // kills consecutivos sin morir
+    streakScore: 0,                 // Fase 18.27: score acumulado del streak actual
     availableStreaks: [],           // killstreaks desbloqueados pendientes de usar
     activeStreaks: [],              // killstreaks activos ahora [{id, type, until}]
     lastKillAt: 0,                  // timestamp de la última kill (ventana multikill)
@@ -436,6 +437,8 @@ export const useGameStore = create((set, get) => {
         // Fase 18.19: killChain cuenta double, hardline reduce threshold.
         const streakIncrement = hasPerk('killChain') ? 2 : 1
         const newStreak = s.killStreak + streakIncrement
+        // Fase 18.27: scorestreak core — acumula score además de kills.
+        const newStreakScore = s.streakScore + points
         // Desbloquea killstreaks al cruzar umbrales.
         // Fase 6: los tipos vienen del loadout (loadout.killstreaks),
         // no de thresholds fijos. Antes loadout.killstreaks era config muerta.
@@ -454,6 +457,7 @@ export const useGameStore = create((set, get) => {
           enemiesRemaining: Math.max(0, s.enemiesRemaining - 1),
           killmarkers: [...s.killmarkers, id],
           killStreak: newStreak,
+          streakScore: newStreakScore,
           availableStreaks: newAvailable,
           lastKillAt: now,
           multikillCount: newMultikill,
@@ -563,6 +567,7 @@ export const useGameStore = create((set, get) => {
           reloading: newHealth <= 0 ? false : s.reloading,
           deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
           killStreak: newHealth <= 0 ? 0 : s.killStreak,
+          streakScore: newHealth <= 0 ? 0 : s.streakScore,
           multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
           multikillLabel: newHealth <= 0 ? null : s.multikillLabel,
           respawnAt: newHealth <= 0 && isMp
@@ -586,6 +591,7 @@ export const useGameStore = create((set, get) => {
           reloading: newHealth <= 0 ? false : s.reloading,
           deaths: newHealth <= 0 ? s.deaths + 1 : s.deaths,
           killStreak: newHealth <= 0 ? 0 : s.killStreak,
+          streakScore: newHealth <= 0 ? 0 : s.streakScore,
           multikillCount: newHealth <= 0 ? 0 : s.multikillCount,
           multikillLabel: newHealth <= 0 ? null : s.multikillLabel,
           respawnAt: newHealth <= 0 && isMp2
@@ -685,6 +691,7 @@ export const useGameStore = create((set, get) => {
         kills: 0,
         deaths: 0,
         killStreak: 0,
+        streakScore: 0,
         availableStreaks: [],
         activeStreaks: [],
         lastKillAt: 0,

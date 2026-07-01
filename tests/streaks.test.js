@@ -102,4 +102,26 @@ describe('StreakManager', () => {
     // El gunship debe desactivarse al dispose.
     expect(streaks.isGunshipActive()).toBe(false)
   })
+
+  // Fase 18.32: variantes de airstrike.
+  it('activate: clusterStrike daña enemies en radio', () => {
+    mocks.enemies.forEachAlive.mockImplementation((fn) => {
+      fn({ x: 5, y: 0, z: 5 }, 'shooter', 0, { hp: 100, dead: false })
+    })
+    expect(() => streaks.activate('clusterStrike', { x: 0, y: 0, z: 0 })).not.toThrow()
+    expect(mocks.audio.playExplosion).toHaveBeenCalled()
+  })
+
+  it('activate: precisionAirstrike hace 2 pases', () => {
+    expect(() => streaks.activate('precisionAirstrike', { x: 0, y: 0, z: 0 })).not.toThrow()
+    expect(mocks.audio.playAirstrike).toHaveBeenCalled()
+  })
+
+  it('activate: whitePhosphorus inicia burn timer', () => {
+    mocks.enemies.forEachAlive.mockImplementation((fn) => {
+      fn({ x: 5, y: 0, z: 5 }, 'shooter', 0, { hp: 100, dead: false })
+    })
+    expect(() => streaks.activate('whitePhosphorus', { x: 0, y: 0, z: 0 })).not.toThrow()
+    expect(mocks.audio.playExplosion).toHaveBeenCalled()
+  })
 })

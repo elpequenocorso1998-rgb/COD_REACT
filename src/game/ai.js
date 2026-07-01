@@ -42,6 +42,56 @@ export const AI_STATES = {
 }
 
 export function createAIController(navmesh) {
+  // Fase 18.20: squad blackboard — estado compartido entre bots.
+  // Permite coordinación simple: si un bot ve al jugador, comparte la
+  // posición con sus squadmates durante unos segundos.
+  const blackboard = {
+    lastKnownPlayerPos: null,
+    lastSeenAt: 0,
+    alertLevel: 0, // 0-1, sube al detectar jugador
+    squadMembersReloading: 0,
+    squadMembersSuppressed: 0
+  }
+
+  function sharePlayerPosition(pos) {
+    blackboard.lastKnownPlayerPos = { x: pos.x, y: pos.y, z: pos.z }
+    blackboard.lastSeenAt = performance.now()
+    blackboard.alertLevel = Math.min(1, blackboard.alertLevel + 0.3)
+  }
+
+  function getLastKnownPlayerPos() {
+    if (!blackboard.lastKnownPlayerPos) return null
+    const age = performance.now() - blackboard.lastSeenAt
+    if (age > 5000) return null // info stale tras 5s
+    return blackboard.lastKnownPlayerPos
+  }
+
+  function getAlertLevel() {
+    return blackboard.alertLevel
+  }
+
+  function decayAlert(dt) {
+    blackboard.alertLevel = Math.max(0, blackboard.alertLevel - dt * 0.1)
+  }
+
+  function updateSquadStats(enemies) {
+    let reloading = 0, suppressed = 0
+    for (const e of enemies) {
+      if (!e.ai || e.dead) continue
+      if (e.ai.state === AI_STATES.RELOAD) reloading++
+      if (e.ai.suppressTimer > 0) suppressed++
+    }
+    blackboard.squadMembersReloading = reloading
+    blackboard.squadMembersSuppressed = suppressed
+  }
+
+  function getSquadStats() {
+    return {
+      reloading: blackboard.squadMembersReloading,
+      suppressed: blackboard.squadMembersSuppressed
+    }
+  }
+
   // Inicializa el estado IA de un enemigo recién spawneado.
   function init(e) {
     e.ai = {
@@ -277,5 +327,11 @@ export function createAIController(navmesh) {
 
   function getState(e) { return e.ai ? e.ai.state : AI_STATES.ADVANCE }
 
-  return { init, update, suppress, getState }
+  return {
+    init, update, suppress, getState,
+    // Fase 18.20: squad blackboard API.
+    sharePlayerPosition, getLastKnownPlayerPos,
+    getAlertLevel, decayAlert,
+    updateSquadStats, getSquadStats
+  }
 }
