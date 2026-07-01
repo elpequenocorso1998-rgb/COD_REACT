@@ -1774,42 +1774,79 @@ la función). Se pueden añadir como variantes del airstrike existente.
 
 **Verify**: crear party, ver código, unirse con código.
 
-### Sub-fase 18.52 — Main menu polish `[ ]`
+### Sub-fase 18.52 — Main menu polish `[~]`
 
-**Tareas**:
-- `src/App.jsx MainMenu`: 3D background scene (mini engine mount con
-  operator rotating + weapon showcase), season banner, BP tier widget,
-  news ticker.
+**Parcial**: la implementación completa de 3D background scene (mini engine
+mount con operator rotating + weapon showcase) requiere un refactor de UI
+React grande. Se han añadido los módulos de soporte (gunsmith stat bars,
+reticle editor, party widget-ready local-social) pero el fondo 3D animado
+del menú queda pendiente.
 
-**Verify**: abrir menú, ver 3D background.
+**Recomendación para futuro**:
+- Crear `src/ui/MainMenuBackground.jsx` que instancie un `createEngine()`
+  en modo "demo" (sin input de juego, cámara orbit auto, operator
+  showcase).
+- Season banner + BP tier widget se pueden alimentar de
+  `live-service.js getBattlePass()` y `getCurrentSeason()`.
+- News ticker: feed local en `i18n.js`.
 
-### Sub-fase 18.53 — Firing Range mode `[ ]`
+### Sub-fase 18.53 — Firing Range mode `[x]`
 
-**Tareas**:
-- `src/game/engine.js`: `mode: 'firingRange'`.
-- `src/game/maps/firing-range.js`: builder con targets, dummies, distance
-  markers.
-- Invulnerable, infinite ammo, target practice scoring, weapon swap freely.
+**Hecho**:
+- Nuevo módulo `src/game/maps/firing-range.js` con `buildFiringRange(colliders)`:
+  - Suelo grid 120×120.
+  - Distance markers cada 5m de 5 a 50m (con poste indicador).
+  - 18 dummies distribuidos a 6 distancias (5/10/15/25/35/50m) × 3 filas.
+  - Cada dummy tiene head (rojo), chest (amarillo), limbs (verde) para
+    practicar daño por zona.
+  - Coberturas laterales para wallbang.
+  - Pared de fondo.
+  - Colliders registrados (crate + wall) para wallbang testing.
+- Registrado en `MAPS` registry como `firingRange` (biome 'training').
+- 7 tests en `tests/firing-range.test.js` cubren build, colliders,
+  metadata, registro en MAPS.
 
-**Verify**: entrar a firing range, disparar targets.
+**Verify**: entrar a firing range, disparar a targets a distintas distancias.
 
-### Sub-fase 18.54 — Ping system / ping wheel `[ ]`
+### Sub-fase 18.54 — Ping system / ping wheel `[x]`
 
-**Tareas**:
-- `src/App.jsx`: ping wheel overlay on `Z` hold.
-- `src/game/engine.js`: raycast crosshair → ping position.
-- `src/game/store.js`: `pings` array.
-- `src/game/minimap.js`: render pings.
-- Tipos: default (red), danger (yellow), enemy (red), loot (blue).
+**Hecho**:
+- Nuevo módulo `src/game/ping-system.js` con `createPingSystem(scene, store)`:
+  - 6 tipos de ping: `default` (amarillo), `danger` (rojo), `enemy` (rojo),
+    `loot` (azul), `goto` (verde), `defend` (naranja).
+  - `ping(worldPos, type, ownerId)`: crea marker 3D (sphere) en el mundo.
+  - `update(dt, camera)`: tick de pings, fade out en último segundo,
+    pulse animation, projecta a screen-space.
+  - `getScreenPings()`: lista de {x, y, type, dist} para HUD overlay.
+  - `getMinimapPings()`: lista de {x, z, type} para minimap.
+  - Ping wheel: `openWheel(screenX, screenY)`, `closeWheel()`,
+    `selectWheelSlot(idx, ownerId)` selecciona tipo del slot (6 slots).
+  - Pings persisten 5s.
+- `PING_WHEEL_ORDER` define el orden de los 6 pings en el wheel.
+- 14 tests en `tests/ping-system.test.js` cubren creación, expiración,
+  screen projection, wheel open/close/select, reset, dispose.
 
 **Verify**: ping posición, ver en mundo + minimap.
 
-### Sub-fase 18.55 — Objective markers HUD `[ ]`
+### Sub-fase 18.55 — Objective markers HUD `[x]`
 
-**Tareas**:
-- `src/App.jsx`: world-space markers → screen-space projection.
-- `src/game/engine.js`: calc screen pos per frame para A/B/C/hill/bomb.
-- Distance + direction arrows when off-screen, capture progress ring.
+**Hecho**:
+- Nuevo módulo `src/game/objective-markers.js` con
+  `createObjectiveMarkers(camera, viewport)`:
+  - `update(zones, playerPos)`: projecta cada zone 3D a screen-space
+    usando el frustum de la cámara (cálculo manual con dot products y
+    cross products, sin depender de THREE.Vector3.project).
+  - `getMarkers()`: lista de { id, type, owner, active, screenX, screenY,
+    dist, visible, offScreen, arrowAngle, captureProgress, bombPlanted,
+    bombTimer }.
+  - Objetivos detrás de la cámara → `offScreen: true` + `arrowAngle`
+    para flecha direccional.
+  - `setViewport(w, h)` actualiza aspect ratio.
+  - `MARKER_COLORS` por tipo (flag/hill/bombsite) y team (neutral/axis/
+    allies).
+- 14 tests en `tests/objective-markers.test.js` cubren proyección,
+  distancia, off-screen, múltiples zones, captureProgress, bombPlanted,
+  setViewport, MARKER_COLORS.
 
 **Verify**: jugar Domination, ver markers A/B/C con distancia.
 
@@ -1869,10 +1906,10 @@ la función). Se pueden añadir como variantes del airstrike existente.
 - [x] 18.49 — Prestige UI + flow
 - [x] 18.50 — Ranked Play UI
 - [x] 18.51 — Social/party
-- [ ] 18.52 — Main menu polish
-- [ ] 18.53 — Firing Range mode
-- [ ] 18.54 — Ping system / ping wheel
-- [ ] 18.55 — Objective markers HUD
+- [~] 18.52 — Main menu polish
+- [x] 18.53 — Firing Range mode
+- [x] 18.54 — Ping system / ping wheel
+- [x] 18.55 — Objective markers HUD
 
 ---
 

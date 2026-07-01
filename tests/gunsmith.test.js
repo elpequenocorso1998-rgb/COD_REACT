@@ -31,7 +31,6 @@ describe('computeStatBars', () => {
   })
 
   it('aplica loadout con attachments', () => {
-    const base = computeStatBars('m4')
     const withLoadout = computeStatBars('m4', {
       primary: 'm4',
       primaryAttachments: { sight: 'redDot' },

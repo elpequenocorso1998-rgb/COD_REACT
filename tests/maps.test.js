@@ -17,16 +17,17 @@ vi.mock('../src/game/textures.js', () => ({
 }))
 
 describe('MAPS registry', () => {
-  it('tiene 5 mapas', () => {
-    expect(MAP_IDS.length).toBe(5)
+  it('tiene 6 mapas', () => {
+    expect(MAP_IDS.length).toBe(6)
   })
 
-  it('incluye pamplona, desert, urban, snow, industrial', () => {
+  it('incluye pamplona, desert, urban, snow, industrial, firingRange', () => {
     expect(MAPS.pamplona).toBeDefined()
     expect(MAPS.desert).toBeDefined()
     expect(MAPS.urban).toBeDefined()
     expect(MAPS.snow).toBeDefined()
     expect(MAPS.industrial).toBeDefined()
+    expect(MAPS.firingRange).toBeDefined()
   })
 
   it('cada mapa tiene metadata completa', () => {

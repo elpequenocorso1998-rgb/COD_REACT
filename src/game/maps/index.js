@@ -2,6 +2,7 @@ import { buildDesert } from './desert.js'
 import { buildUrban } from './urban.js'
 import { buildSnow } from './snow.js'
 import { buildIndustrial } from './industrial.js'
+import { buildFiringRange, FIRING_RANGE_META } from './firing-range.js'
 
 /* =========================================================================
    Registro de mapas.
@@ -101,6 +102,10 @@ export const MAPS = {
     skyTop: 0x4a5a6a,
     skyBottom: 0x7a7a7a,
     builder: buildIndustrial
+  },
+  firingRange: {
+    ...FIRING_RANGE_META,
+    builder: buildFiringRange
   }
 }
 
