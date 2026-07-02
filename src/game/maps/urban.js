@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { mulberry32 } from '../math.js'
-import { makeConcreteTextures, makeCrateTextures } from '../textures.js'
-import { FLOOR_SIZE } from '../constants.js'
+import { mulberry32 } from '@/game/core/math'
+import { makeConcreteTextures, makeCrateTextures } from '@/game/world/textures'
+import { FLOOR_SIZE } from '@/game/core/constants'
 
 /* =========================================================================
    Mapa: Urban Destroyed.

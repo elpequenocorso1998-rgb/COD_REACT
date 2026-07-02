@@ -15,7 +15,7 @@
    DB schema (Postgres) documentado para implementación server-side.
    ========================================================================= */
 
-import { getProgress } from '../progression.js'
+import { getProgress } from '@/game/meta/progression'
 
 const API_BASE = import.meta.env?.VITE_API_URL || '/api'
 const TOKEN_KEY = 'mw_token_v1'

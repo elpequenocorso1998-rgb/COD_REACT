@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createGrenadeSystem } from '../src/game/grenades.js'
+import { createGrenadeSystem } from '@/game/items/grenades'
 
 /* Tests del sistema de granadas.
    Cubre: throwGrenade, física de rebote, fuse, flashbang restore, knife. */

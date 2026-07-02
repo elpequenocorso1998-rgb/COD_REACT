@@ -4,7 +4,7 @@ import {
   ROUND_STATES,
   GUNFIGHT_WEAPON_ROTATION,
   getGunfightLoadout
-} from '../src/game/round-flow.js'
+} from '@/game/match/round-flow'
 
 describe('createRoundFlow', () => {
   let rf

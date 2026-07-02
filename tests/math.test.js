@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mulberry32, clamp, lerp, smoothstep, deg2rad, dist2d } from '../src/game/math.js'
+import { mulberry32, clamp, lerp, smoothstep, deg2rad, dist2d } from '@/game/core/math'
 
 /* Tests de las utilidades matemáticas compartidas. */
 

@@ -1,4 +1,4 @@
-import { WEAPONS, PERKS, ATTACHMENTS, DEFAULT_LOADOUT, PLAYER, FIELD_UPGRADES } from './config.js'
+import { WEAPONS, PERKS, ATTACHMENTS, DEFAULT_LOADOUT, PLAYER, FIELD_UPGRADES } from '@/game/core/config'
 
 /* =========================================================================
    Loadout — sistema de create-a-class.

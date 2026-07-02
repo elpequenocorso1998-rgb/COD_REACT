@@ -13,7 +13,7 @@ const _localStorage = (() => {
 globalThis.localStorage = _localStorage
 globalThis.fetch = vi.fn()
 
-import { createApiClient, OAuth_PROVIDERS as OAUTH_PROVIDERS } from '../src/game/backend/api-client.js'
+import { createApiClient, OAuth_PROVIDERS as OAUTH_PROVIDERS } from '@/game/backend/api-client'
 import {
   STORE_ITEMS,
   PRESTIGE_LEVELS,
@@ -38,7 +38,7 @@ import {
   getSeasonalChallenges,
   progressChallenge,
   resetLive
-} from '../src/game/backend/live-service.js'
+} from '@/game/backend/live-service'
 
 describe('api-client.js', () => {
   beforeEach(() => {

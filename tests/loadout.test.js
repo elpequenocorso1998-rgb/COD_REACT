@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { getLoadout, saveLoadout, applyLoadoutToWeapon, getEffectiveMaxHealth, hasPerk, resetLoadout } from '../src/game/loadout.js'
-import { WEAPONS } from '../src/game/config.js'
+import { getLoadout, saveLoadout, applyLoadoutToWeapon, getEffectiveMaxHealth, hasPerk, resetLoadout } from '@/game/player/loadout'
+import { WEAPONS } from '@/game/core/config'
 
 describe('loadout', () => {
   beforeEach(() => {

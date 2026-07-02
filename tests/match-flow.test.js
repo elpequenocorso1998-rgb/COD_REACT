@@ -3,7 +3,7 @@ import {
   createMatchFlow,
   MAP_POOL,
   KILLER_POV_BUFFER_SIZE
-} from '../src/game/match-flow.js'
+} from '@/game/match/match-flow'
 
 describe('createMatchFlow', () => {
   let mf

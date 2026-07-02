@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { createSkyMesh } from './shaders/sky.js'
-import { SUN_DIR, SUN_MESH_COLOR, SUN_GLOW_COLOR, SUN_COLOR, SUN_INTENSITY } from './constants.js'
+import { createSkyMesh } from '@/game/world/shaders/sky'
+import { SUN_DIR, SUN_MESH_COLOR, SUN_GLOW_COLOR, SUN_COLOR, SUN_INTENSITY } from '@/game/core/constants'
 
 /* =========================================================================
    Generación de environment map procedural.

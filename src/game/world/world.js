@@ -3,7 +3,7 @@ import {
   makeConcreteTextures,
   makeBarrelTexture,
   makeCrateTextures
-} from './textures.js'
+} from '@/game/world/textures'
 import {
   makeSillarTexture,
   makeRoofTexture,
@@ -14,17 +14,17 @@ import {
   buildCityWall,
   buildSanFerdinandBanners,
   buildFountain
-} from './pamplona.js'
-import { mulberry32 } from './math.js'
-import { createSkyMesh } from './shaders/sky.js'
-import { SpatialGrid } from './spatial-grid.js'
-import { getMapConfig } from './maps/index.js'
+} from '@/game/world/pamplona'
+import { mulberry32 } from '@/game/core/math'
+import { createSkyMesh } from '@/game/world/shaders/sky'
+import { SpatialGrid } from '@/game/core/spatial-grid'
+import { getMapConfig } from '@/game/maps/index'
 import {
   SUN_DIR, SUN_DIR_NORMALIZED, SUN_GLOW_COLOR, SUN_MESH_COLOR,
   SHADOW_MAP_SIZE, SHADOW_CAMERA_NEAR, SHADOW_CAMERA_FAR, SHADOW_CAMERA_BOUNDS,
   SHADOW_BIAS, SHADOW_NORMAL_BIAS,
   FLOOR_SIZE, PRNG_SEEDS
-} from './constants.js'
+} from '@/game/core/constants'
 
 /* =========================================================================
    Mundo: Pamplona.

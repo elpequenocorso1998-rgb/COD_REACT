@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   addXP, getProgress, resetProgress, xpForNextLevel, getUnlockForLevel,
   recordKill, recordDeath, recordWave
-} from '../src/game/progression.js'
+} from '@/game/meta/progression'
 
 /* Tests del sistema de progresión: XP, niveles, unlocks, persistencia. */
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createAssetLoader } from '../src/game/assets/loader.js'
+import { createAssetLoader } from '@/game/assets/loader'
 
 describe('createAssetLoader', () => {
   let originalFetch

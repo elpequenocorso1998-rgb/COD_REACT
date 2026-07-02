@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { PICKUPS } from './config.js'
-import { hasPerk } from './loadout.js'
+import { PICKUPS } from '@/game/core/config'
+import { hasPerk } from '@/game/player/loadout'
 
 /* =========================================================================
    Sistema de pickups — items que sueltan los enemigos al morir.

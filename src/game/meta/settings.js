@@ -1,5 +1,5 @@
-import { FOV } from './constants.js'
-import { DEFAULT_KEYBINDINGS } from './accessibility/index.js'
+import { FOV } from '@/game/core/constants'
+import { DEFAULT_KEYBINDINGS } from '@/game/accessibility/index'
 
 /* =========================================================================
    Settings — preferencias del jugador persistidas en localStorage.

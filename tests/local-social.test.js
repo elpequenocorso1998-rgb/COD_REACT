@@ -3,7 +3,7 @@ import {
   getFriends, addFriend, removeFriend,
   createParty, joinParty, leaveParty, sendPartyInvite,
   getParty, setMemberReady, allMembersReady, resetSocial
-} from '../src/game/backend/local-social.js'
+} from '@/game/backend/local-social'
 
 describe('local-social — friends', () => {
   beforeEach(() => {

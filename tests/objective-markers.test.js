@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createObjectiveMarkers, MARKER_COLORS } from '../src/game/objective-markers.js'
+import { createObjectiveMarkers, MARKER_COLORS } from '@/game/match/objective-markers'
 
 function makeFakeCamera(pos = { x: 0, y: 1, z: 0 }, dir = { x: 0, y: 0, z: -1 }) {
   return {

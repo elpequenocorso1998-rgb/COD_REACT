@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createAIController, AI_STATES } from '../src/game/ai.js'
+import { createAIController, AI_STATES } from '@/game/enemies/ai'
 
 function makeEnemy(x = 0, z = 0) {
   return {

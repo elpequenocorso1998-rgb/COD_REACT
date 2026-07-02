@@ -6,7 +6,7 @@
    ========================================================================= */
 
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
-import { SUN_DIR } from '../constants.js'
+import { SUN_DIR } from '@/game/core/constants'
 
 function configureSky(sky) {
   sky.scale.setScalar(500)

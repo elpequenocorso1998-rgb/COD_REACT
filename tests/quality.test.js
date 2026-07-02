@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { classifyQuality, FpsSampler } from '../src/game/quality.js'
-import { QUALITY } from '../src/game/constants.js'
+import { classifyQuality, FpsSampler } from '@/game/effects/quality'
+import { QUALITY } from '@/game/core/constants'
 
 describe('classifyQuality', () => {
   it('LOW para FPS < 30', () => {

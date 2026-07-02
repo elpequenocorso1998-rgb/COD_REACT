@@ -7,7 +7,7 @@ import {
   FIELD_UPGRADES,
   GRENADE_TYPES,
   DEFAULT_LOADOUT
-} from '../src/game/config.js'
+} from '@/game/core/config'
 
 describe('Phase 5 — arsenal expandido', () => {
   it('tiene 28+ armas (7 originales + 21 nuevas)', () => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import './styles.css'
+import App from '@/App'
+import '@/styles.css'
 
 // Punto de entrada de React.
 // Montamos el componente raíz <App /> en el div #root del index.html.

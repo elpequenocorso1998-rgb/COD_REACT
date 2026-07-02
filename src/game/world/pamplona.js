@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { mulberry32 } from './math.js'
-import { PRNG_SEEDS } from './constants.js'
+import { mulberry32 } from '@/game/core/math'
+import { PRNG_SEEDS } from '@/game/core/constants'
 
 /* =========================================================================
    Constructor de edificios de Pamplona.

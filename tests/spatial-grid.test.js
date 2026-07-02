@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { SpatialGrid } from '../src/game/spatial-grid.js'
+import { SpatialGrid } from '@/game/core/spatial-grid'
 import * as THREE from 'three'
 
 /* Tests del SpatialGrid: hash espacial para collidesAt O(k). */

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { FIELD_UPGRADES } from './config.js'
+import { FIELD_UPGRADES } from '@/game/core/config'
 
 /* =========================================================================
    Field upgrades — desplegables con cooldown.

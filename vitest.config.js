@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
   test: {
     // jsdom: los tests de engine/player/etc. que añadamos en el futuro
     // necesitarán requestAnimationFrame, document, HTMLElement. node env
@@ -17,7 +23,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/game/**/*.js'],
-      exclude: ['src/game/shaders/**']
+      exclude: ['src/game/world/shaders/**']
     }
   }
 })

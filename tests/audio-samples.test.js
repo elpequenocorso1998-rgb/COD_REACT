@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createAudioSystem } from '../src/game/audio.js'
+import { createAudioSystem } from '@/game/effects/audio'
 
 class FakeAudioBuffer {}
 if (typeof globalThis.AudioBuffer === 'undefined') {

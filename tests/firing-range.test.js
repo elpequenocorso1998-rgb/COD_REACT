@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { buildFiringRange, FIRING_RANGE_META } from '../src/game/maps/firing-range.js'
-import { MAPS, MAP_IDS, getMapConfig } from '../src/game/maps/index.js'
+import { buildFiringRange, FIRING_RANGE_META } from '@/game/maps/firing-range'
+import { MAPS, MAP_IDS, getMapConfig } from '@/game/maps/index'
 
 describe('buildFiringRange', () => {
   it('devuelve un THREE.Group con dummies y distance markers', () => {

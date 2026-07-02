@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
+import { buildHumanoid, animateWalk, disposeHumanoidShared } from '@/game/enemies/humanoid'
 
 /* =========================================================================
    Remote players — renderiza otros jugadores en multijugador (Fase 2).

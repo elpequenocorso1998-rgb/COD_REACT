@@ -12,13 +12,13 @@ import * as THREE from 'three'
    ========================================================================= */
 
 // Stub de texturas (humanoid.js las usa y jsdom no implementa canvas).
-vi.mock('../src/game/textures.js', () => ({
+vi.mock('@/game/world/textures', () => ({
   makeSkinTexture: () => ({ map: { dispose: () => {} }, normalMap: { dispose: () => {} } }),
   makeUniformTexture: () => ({ map: { dispose: () => {}, repeat: { set: () => {} } }, normalMap: { dispose: () => {}, repeat: { set: () => {} } } })
 }))
 
-import { createEnemyManager } from '../src/game/enemies.js'
-import { WEAPON } from '../src/game/config.js'
+import { createEnemyManager } from '@/game/enemies/enemies'
+import { WEAPON } from '@/game/core/config'
 
 // Escena stub: solo necesitamos add/remove y traverse para encontrar meshes.
 function makeScene() {

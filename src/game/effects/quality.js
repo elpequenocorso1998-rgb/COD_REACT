@@ -9,7 +9,7 @@
    Antes el pipeline completo (SSAO + Bloom + god rays + SMAA + sombras
    2048) corría siempre, incluso en GPUs que no lo soportan → <30 FPS.
    ========================================================================= */
-import { QUALITY, SHADOW_MAP_SIZE } from './constants.js'
+import { QUALITY, SHADOW_MAP_SIZE } from '@/game/core/constants'
 
 // Umbral de FPS para clasificar (medido sobre una ventana de 60 frames).
 const FPS_HIGH = 50

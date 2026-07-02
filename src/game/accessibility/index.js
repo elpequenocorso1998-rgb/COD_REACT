@@ -1,4 +1,4 @@
-import { getSettings, saveSettings } from '../settings.js'
+import { getSettings, saveSettings } from '@/game/meta/settings'
 
 /* =========================================================================
    Accesibilidad (WCAG 2.1 AA).

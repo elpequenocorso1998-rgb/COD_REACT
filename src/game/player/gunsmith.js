@@ -6,8 +6,8 @@
    - Reticle editor: 8 reticles predefinidos + custom (color, shape, size).
    ========================================================================= */
 
-import { WEAPONS } from './config.js'
-import { applyLoadoutToWeapon } from './loadout.js'
+import { WEAPONS } from '@/game/core/config'
+import { applyLoadoutToWeapon } from '@/game/player/loadout'
 
 export const STAT_KEYS = ['damage', 'range', 'firerate', 'mobility', 'control']
 

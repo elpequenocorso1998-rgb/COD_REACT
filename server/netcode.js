@@ -9,7 +9,7 @@
    - Heurísticas anti-cheat (HS rate, K/D, tracking speed).
    ========================================================================= */
 
-import { WEAPONS } from '../src/game/config.js'
+import { WEAPONS } from '../src/game/core/config.js'
 import { getMaxPlayers, getGameMode } from '../src/game/modes/index.js'
 
 export const NETCODE_CONFIG = {

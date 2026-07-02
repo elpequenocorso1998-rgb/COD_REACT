@@ -3,7 +3,7 @@ import {
   SPECTATOR_MODES,
   createSpectator,
   createTheater
-} from '../src/game/competitive/spectator.js'
+} from '@/game/competitive/spectator'
 import {
   TOUCH_ACTIONS,
   INPUT_TYPES,
@@ -13,7 +13,7 @@ import {
   isMobile,
   detectInputType,
   getMatchmakingPool
-} from '../src/game/input/touch-controls.js'
+} from '@/game/player/input/touch-controls'
 
 describe('spectator.js', () => {
   it('SPECTATOR_MODES tiene 4 modos', () => {

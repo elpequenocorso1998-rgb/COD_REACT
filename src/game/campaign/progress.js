@@ -1,4 +1,4 @@
-import { MISSIONS, getMission, getNextMission, getDifficultyConfig } from './missions.js'
+import { MISSIONS, getMission, getNextMission, getDifficultyConfig } from '@/game/campaign/missions'
 
 /* =========================================================================
    Estado y progreso de campaña.

@@ -1,9 +1,9 @@
 import * as THREE from 'three'
-import { buildViewModel, disposeViewModelShared } from './viewmodels.js'
-import { MOVEMENT, WEAPON, PLAYER, STAMINA } from './config.js'
-import { FOV, SPRINT_FOV } from './constants.js'
-import { hasPerk } from './loadout.js'
-import { getSettings } from './settings.js'
+import { buildViewModel, disposeViewModelShared } from '@/game/player/viewmodels'
+import { MOVEMENT, WEAPON, PLAYER, STAMINA } from '@/game/core/config'
+import { FOV, SPRINT_FOV } from '@/game/core/constants'
+import { hasPerk } from '@/game/player/loadout'
+import { getSettings } from '@/game/meta/settings'
 
 /* =========================================================================
    Jugador (FPS controller) con controles suaves y responsivos.

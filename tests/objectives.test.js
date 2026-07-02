@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as THREE from 'three'
-import { createObjectiveSystem } from '../src/game/objectives.js'
+import { createObjectiveSystem } from '@/game/match/objectives'
 
-vi.mock('../src/game/textures.js', () => ({
+vi.mock('@/game/world/textures', () => ({
   makeSkinTexture: () => ({}),
   makeUniformTexture: () => ({})
 }))

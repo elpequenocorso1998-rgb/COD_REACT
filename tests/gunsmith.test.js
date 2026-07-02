@@ -7,7 +7,7 @@ import {
   DEFAULT_RETICLES,
   createCustomReticle,
   drawReticleOnCanvas
-} from '../src/game/gunsmith.js'
+} from '@/game/player/gunsmith'
 
 describe('computeStatBars', () => {
   it('devuelve 5 stats para m4', () => {

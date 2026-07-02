@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { getSettings, saveSettings, resetSettings } from '../src/game/settings.js'
+import { getSettings, saveSettings, resetSettings } from '@/game/meta/settings'
 
 describe('settings', () => {
   beforeEach(() => {

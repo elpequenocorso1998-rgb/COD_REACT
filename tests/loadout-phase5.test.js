@@ -26,8 +26,8 @@ import {
   getFieldUpgrade,
   applyLoadoutToWeapon,
   resetLoadout
-} from '../src/game/loadout.js'
-import { WEAPONS } from '../src/game/config.js'
+} from '@/game/player/loadout'
+import { WEAPONS } from '@/game/core/config'
 
 describe('Phase 5 — custom classes', () => {
   beforeEach(() => {

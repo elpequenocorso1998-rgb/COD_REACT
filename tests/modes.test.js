@@ -10,7 +10,7 @@ import {
   isPvE,
   getTeamCount,
   getMaxPlayers
-} from '../src/game/modes/index.js'
+} from '@/game/modes/index'
 
 describe('modes/index.js', () => {
   it('tiene 14 modos de juego', () => {

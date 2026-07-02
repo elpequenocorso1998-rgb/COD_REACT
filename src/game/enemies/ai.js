@@ -28,7 +28,7 @@ const RETREAT_HP_PERCENT = 0.25 // bajo 25% HP → retreat
 const SUPPRESS_DURATION = 2.0  // duración del estado suppress
 
 // Fase 18.25: import del store para leer estado del jugador.
-import { useGameStore } from './store.js'
+import { useGameStore } from '@/game/core/store'
 
 export const AI_STATES = {
   ENGAGE: 'engage',

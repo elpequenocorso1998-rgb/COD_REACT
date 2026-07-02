@@ -12,14 +12,14 @@ const _localStorage = (() => {
 
 globalThis.localStorage = _localStorage
 
-import { resetSettings } from '../src/game/settings.js'
+import { resetSettings } from '@/game/meta/settings'
 import {
   COLORBLIND_TYPES,
   SUBTITLE_SIZES,
   MOTION_SICKNESS_PRESETS,
   DEFAULT_KEYBINDINGS,
   createAccessibilityManager
-} from '../src/game/accessibility/index.js'
+} from '@/game/accessibility/index'
 
 describe('accessibility — config', () => {
   it('COLORBLIND_TYPES tiene 4 tipos', () => {

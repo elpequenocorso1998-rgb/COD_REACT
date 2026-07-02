@@ -4,7 +4,7 @@ import {
   createPingSystem,
   PING_TYPES,
   PING_WHEEL_ORDER
-} from '../src/game/ping-system.js'
+} from '@/game/match/ping-system'
 
 function makeScene() {
   const items = []

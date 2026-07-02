@@ -14,7 +14,7 @@
 import {
   getWeaponLevel, getWeaponXP, getWeaponCamos, weaponXpForLevel,
   getBattlePass, getDailies, getProgress
-} from './progression.js'
+} from '@/game/meta/progression'
 
 // Devuelve un resumen completo del meta para mostrar en Barracks.
 export function getMetaSummary() {

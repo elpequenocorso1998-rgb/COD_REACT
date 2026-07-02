@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createStreakManager } from '../src/game/streaks.js'
+import { createStreakManager } from '@/game/items/streaks'
 
 /* Tests del sistema de killstreaks (Fase 4-9).
    Cubre: airstrike, heli, gunship (arreglo del bug de cámara), dispose. */

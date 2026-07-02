@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as THREE from 'three'
-import { createFieldUpgradeSystem } from '../src/game/field-upgrades.js'
-import { FIELD_UPGRADES } from '../src/game/config.js'
+import { createFieldUpgradeSystem } from '@/game/items/field-upgrades'
+import { FIELD_UPGRADES } from '@/game/core/config'
 
-vi.mock('../src/game/textures.js', () => ({
+vi.mock('@/game/world/textures', () => ({
   makeConcreteTextures: () => ({ map: {}, normalMap: {}, roughnessMap: {} }),
   makeUniformTexture: () => ({ map: {}, normalMap: {} }),
   makeSkinTexture: () => ({ map: {}, normalMap: {} }),

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createPickupSystem } from '../src/game/pickups.js'
+import { createPickupSystem } from '@/game/items/pickups'
 
 /* Tests del sistema de pickups (Fase 5).
    Cubre: onEnemyKilled (drop), update (proximidad), applyPickup, scavenger. */
@@ -25,7 +25,7 @@ vi.mock('three', () => {
 })
 
 // Mock de loadout.hasPerk.
-vi.mock('../src/game/loadout.js', () => ({
+vi.mock('@/game/player/loadout', () => ({
   hasPerk: vi.fn(() => false)
 }))
 
@@ -90,7 +90,7 @@ describe('PickupSystem', () => {
   })
 
   it('scavenger: 100% drop de munición', async () => {
-    const { hasPerk } = await import('../src/game/loadout.js')
+    const { hasPerk } = await import('@/game/player/loadout')
     hasPerk.mockReturnValue(true)
     // Con scavenger, cada kill suelta munición (100%).
     sys.onEnemyKilled({ x: 0, y: 0, z: 0 })

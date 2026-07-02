@@ -6,7 +6,7 @@ import {
   createLODSystem,
   createMemoryTracker,
   createQualityScaler
-} from '../src/game/performance/profiler.js'
+} from '@/game/performance/profiler'
 import * as THREE from 'three'
 
 describe('profiler.js — config', () => {

@@ -31,7 +31,7 @@ import {
   isAttachmentBanned,
   isPerkBanned,
   isFieldUpgradeBanned
-} from '../src/game/competitive/ranked.js'
+} from '@/game/competitive/ranked'
 
 describe('ranked.js — CDL ruleset', () => {
   it('CDL_RULESET tiene 3 modos y 4 mapas', () => {

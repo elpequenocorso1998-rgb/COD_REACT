@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import { buildHumanoid, animateWalk, disposeHumanoidShared } from './humanoid.js'
-import { WEAPON, ENEMY_TYPES, WAVE_SCALING, DAMAGE_MULTIPLIERS, PENETRATION, DEFAULT_DAMAGE_RANGE } from './config.js'
-import { createAIController } from './ai.js'
-import { createRagdoll } from './ragdoll.js'
+import { buildHumanoid, animateWalk, disposeHumanoidShared } from '@/game/enemies/humanoid'
+import { WEAPON, ENEMY_TYPES, WAVE_SCALING, DAMAGE_MULTIPLIERS, PENETRATION, DEFAULT_DAMAGE_RANGE } from '@/game/core/config'
+import { createAIController } from '@/game/enemies/ai'
+import { createRagdoll } from '@/game/enemies/ragdoll'
 
 /* =========================================================================
    Manager de enemigos (usando el humanoide anatómico).

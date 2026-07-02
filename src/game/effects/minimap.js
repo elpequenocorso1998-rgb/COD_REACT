@@ -10,7 +10,7 @@
    - Referencias estáticas: borde del mapa y plaza de toros.
    - Rango configurable (típicamente 80 unidades del mundo = todo el mapa).
    ========================================================================= */
-import { FLOOR_SIZE } from './constants.js'
+import { FLOOR_SIZE } from '@/game/core/constants'
 
 const MAP_RANGE = 100             // unidades del mundo visibles en el minimap
 const CANVAS_SIZE = 140           // px del canvas

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { makeGunMetalTexture } from './textures.js'
-import { WEAPONS } from './config.js'
+import { makeGunMetalTexture } from '@/game/world/textures'
+import { WEAPONS } from '@/game/core/config'
 
 /* =========================================================================
    Viewmodels en primera persona — UNO por arma.

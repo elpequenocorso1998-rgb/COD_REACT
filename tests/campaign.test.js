@@ -9,7 +9,7 @@ import {
   getNextMission,
   getDifficultyConfig,
   getTotalMissions
-} from '../src/game/campaign/missions.js'
+} from '@/game/campaign/missions'
 
 const _localStorage = (() => {
   let store = {}
@@ -36,7 +36,7 @@ import {
   resetCampaign,
   getAllMissionsWithStatus,
   getDifficultyConfigForCurrent
-} from '../src/game/campaign/progress.js'
+} from '@/game/campaign/progress'
 
 describe('missions.js', () => {
   it('tiene 5 misiones', () => {

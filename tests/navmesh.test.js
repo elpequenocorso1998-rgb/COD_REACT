@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { NavMesh } from '../src/game/navmesh.js'
+import { NavMesh } from '@/game/enemies/navmesh'
 
 /* Tests del NavMesh y A* pathfinding.
    Cubre: findPath, _reconstruct (regresión del bug de ciclo infinito),

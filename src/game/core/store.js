@@ -1,8 +1,8 @@
 import { create } from 'zustand'
-import { PLAYER, WEAPONS, GRENADES } from './config.js'
+import { PLAYER, WEAPONS, GRENADES } from '@/game/core/config'
 import { addXP, recordKill, recordDeath, recordWave, getProgress,
-  addWeaponXP, addBattlePassXP, progressDaily } from './progression.js'
-import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon, hasPerk } from './loadout.js'
+  addWeaponXP, addBattlePassXP, progressDaily } from '@/game/meta/progression'
+import { getLoadout, getPrimaryWeapon, getEffectiveMaxHealth, applyLoadoutToWeapon, hasPerk } from '@/game/player/loadout'
 
 /* =========================================================================
    Store global del juego (Zustand).

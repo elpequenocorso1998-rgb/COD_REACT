@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { makeSkinTexture, makeUniformTexture } from './textures.js'
+import { makeSkinTexture, makeUniformTexture } from '@/game/world/textures'
 
 /* =========================================================================
    Humanoide anatómico.

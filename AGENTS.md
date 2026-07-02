@@ -72,23 +72,41 @@ kubectl apply -k k8s/
 
 ### Núcleo del motor (`src/game/`)
 
+Los módulos se agrupan por dominio en subcarpetas. Imports internos siempre
+con el alias `@` (→ `src`, configurado en `vite.config.js`,
+`vitest.config.js` y `jsconfig.json`); no usar rutas relativas.
+
+#### `core/` — motor, estado y balance
 - `engine.js` — motor Three.js + post-procesado (SSAO + bloom + god rays +
   chromatic aberration + film grain + SMAA) + game loop rAF.
-- `player.js` — FPS controller (input kb/mouse/gamepad, cámara, disparo,
-  ADS, slide, prone, lean, mantle, stamina, hold-breath).
-- `viewmodels.js` — modelo 3D propio por arma (M4, AK, MP5, sniper, shotgun,
-  LMG, pistol) con muzzle flash + sight dot.
-- `enemies.js` — manager de enemigos (IA melee + shooters, hit-testing por
-  zonas, wallbang, dispose).
-- `humanoid.js` — humanoide anatómico con bone hierarchy + animación de caminar.
-- `ragdoll.js` — simulación verlet (13 partículas, 3 iter constraints).
-- `ai.js` — state machine táctica (8 estados: engage/flank/cover/suppress/
-  retreat/advance/reload/dead).
-- `navmesh.js` — pathfinding A* con MinHeap binary heap + string pulling.
 - `store.js` — estado global Zustand (HUD + acciones de juego + MP state).
 - `config.js` — balance data-driven (ÚNICA fuente de verdad) + catálogo
   WEAPONS / PERKS / ATTACHMENTS / ENEMY_TYPES / DEFAULT_LOADOUT.
 - `constants.js` — constantes de render/motor (sun, fog, FOV, shadow map).
+- `math.js` — `mulberry32`, `clamp`, `lerp`, `smoothstep` (con NaN guard),
+  `deg2rad`, `dist2d`.
+- `spatial-grid.js` — hash 2D para broadphase de colisiones (O(k) lookups).
+
+#### `player/` — jugador y arsenal
+- `player.js` — FPS controller (input kb/mouse/gamepad, cámara, disparo,
+  ADS, slide, prone, lean, mantle, stamina, hold-breath).
+- `viewmodels.js` — modelo 3D propio por arma (M4, AK, MP5, sniper, shotgun,
+  LMG, pistol) con muzzle flash + sight dot.
+- `loadout.js` — create-a-class (perks, attachments, secondary) + persistencia
+  (`mw_loadout_v1`) + `applyLoadoutToWeapon` (no muta el arma base).
+- `gunsmith.js` — gunsmith depth (tuning fino de attachments).
+- `input/touch-controls.js` — controles táctiles para móvil.
+
+#### `enemies/` — IA, humanoides y pathfinding
+- `enemies.js` — manager de enemigos (IA melee + shooters, hit-testing por
+  zonas, wallbang, dispose).
+- `ai.js` — state machine táctica (8 estados: engage/flank/cover/suppress/
+  retreat/advance/reload/dead).
+- `humanoid.js` — humanoide anatómico con bone hierarchy + animación de caminar.
+- `ragdoll.js` — simulación verlet (13 partículas, 3 iter constraints).
+- `navmesh.js` — pathfinding A* con MinHeap binary heap + string pulling.
+
+#### `world/` — mundo procedural y texturas
 - `world.js` — mundo procedural Pamplona (plaza, casas, murallas, fuente,
   lámparas, árboles InstancedMesh) + SpatialGrid para colisiones.
 - `pamplona.js` — builder de casas (con interiores), fuente, plaza de toros,
@@ -96,28 +114,51 @@ kubectl apply -k k8s/
 - `textures.js` — PBR textures procedurales (concrete, barrel, crate, gun
   metal, uniform, skin) vía canvas + mulberry32 PRNG.
 - `shaders/sky.js` — sky shader + sun material.
-- `spatial-grid.js` — hash 2D para broadphase de colisiones (O(k) lookups).
-- `math.js` — `mulberry32`, `clamp`, `lerp`, `smoothstep` (con NaN guard),
-  `deg2rad`, `dist2d`.
-- `minimap.js` — minimap canvas 2D (rotate-with-player, UAV reveal).
-- `streaks.js` — killstreaks (UAV, airstrike, heli orbit, gunship cámara aérea).
-- `grenades.js` — granadas (frag, flash, smoke, knife) con física de rebote AABB.
-- `pickups.js` — sistema de drops (salud, munición, granadas) + scavenger perk.
-- `decals.js` — decals de impacto de bala y splatter de sangre (pool FIFO).
-- `progression.js` — XP/niveles/unlocks/weapon mastery/camos/battle pass/
-  dailies con persistencia localStorage (`mw_progress_v1`).
-- `loadout.js` — create-a-class (perks, attachments, secondary) + persistencia
-  (`mw_loadout_v1`) + `applyLoadoutToWeapon` (no muta el arma base).
-- `settings.js` — preferencias del jugador (FOV, sens, volúmenes, quality,
-  colorblind, aimAssist) en localStorage (`mw_settings_v1`).
-- `meta.js` — stats, battle pass, weapon mastery, dailies para la UI Barracks.
+
+#### `effects/` — audio, partículas y feedback
 - `audio.js` — audio 100% procedural (Web Audio API) + 3D posicional
   (PanerNode HRTF) + música dinámica (3 niveles de intensidad).
 - `particles.js` — pool de partículas (sangre, chispas, humo, muzzle burst)
   con free-list O(1).
+- `decals.js` — decals de impacto de bala y splatter de sangre (pool FIFO).
 - `environment.js` — env map procedural PMREM (reflections PBR).
+- `minimap.js` — minimap canvas 2D (rotate-with-player, UAV reveal).
 - `quality.js` — escalado de calidad dinámico por FPS (FpsSampler 60f warmup).
+
+#### `items/` — killstreaks y pickups
+- `streaks.js` — killstreaks (UAV, airstrike, heli orbit, gunship cámara aérea).
+- `grenades.js` — granadas (frag, flash, smoke, knife) con física de rebote AABB.
+- `pickups.js` — sistema de drops (salud, munición, granadas) + scavenger perk.
+- `field-upgrades.js` — field upgrades (jugador decide cuándo activar).
+
+#### `meta/` — progresión y ajustes
+- `progression.js` — XP/niveles/unlocks/weapon mastery/camos/battle pass/
+  dailies con persistencia localStorage (`mw_progress_v1`).
+- `settings.js` — preferencias del jugador (FOV, sens, volúmenes, quality,
+  colorblind, aimAssist) en localStorage (`mw_settings_v1`).
+- `meta.js` — stats, battle pass, weapon mastery, dailies para la UI Barracks.
+
+#### `match/` — flujo de partida y objetivos
+- `match-flow.js` — after-action report, intermission, map vote, JIP backfill.
+- `round-flow.js` — Gunfight, warmup, halftime, overtime.
+- `objectives.js` — Domination/Hardpoint/KC/S&D.
+- `objective-markers.js` — markers HUD de objetivos.
+- `ping-system.js` — ping system (spotting).
+
+#### `competitive/` — multijugador y ranked
 - `remote-players.js` — renderizado + hit detection de jugadores MP.
+- `spectator.js` — modo espectador.
+- `ranked.js` — ladder ranked.
+
+#### Carpetas transversales (ya agrupadas)
+- `accessibility/` — manager de accesibilidad + keybindings por defecto.
+- `anim/` — animation graph (stances).
+- `assets/` — asset loader (GLTF/DRACO/KTX2).
+- `backend/` — api-client, live-service, local-social.
+- `campaign/` — missions, progress.
+- `maps/` — map builders (desert, urban, snow, industrial, firing-range) + index.
+- `modes/` — game modes + index.
+- `performance/` — frame profiler.
 
 ### UI / Net / Server
 
@@ -133,7 +174,7 @@ kubectl apply -k k8s/
 
 ### Soporte
 
-- `tests/` — 14 ficheros, 151 tests (Vitest + jsdom).
+- `tests/` — 39 ficheros, 624 tests (Vitest + jsdom).
 - `Dockerfile` / `Dockerfile.dev` / `Dockerfile.server` — builds.
 - `docker-compose.yml` — game + dev profile.
 - `nginx.conf` — CSP + headers + SPA + cache.
@@ -275,12 +316,12 @@ globales, pero los timers hay que gestionarlos a mano.
 
 ### Nueva arma
 
-1. Añade entrada en `WEAPONS` (en `src/game/config.js`) con todos los campos
+1. Añade entrada en `WEAPONS` (en `src/game/core/config.js`) con todos los campos
    (ver `m4` como plantilla). Indica `minWave` o nivel de unlock.
-2. Si quieres modelo propio: añade `buildXxx` en `src/game/viewmodels.js`
+2. Si quieres modelo propio: añade `buildXxx` en `src/game/player/viewmodels.js`
    con `track()` para registrar geometries. Añade caso en `buildViewModel`.
 3. Si es unlocks por nivel: añade entrada en `UNLOCK_CATALOG`
-   (`src/game/progression.js`).
+   (`src/game/meta/progression.js`).
 4. Si tiene comportamiento especial (proyectil físico, etc.): modifica
    `player.js` `onShoot` con `freeShot` o tipo de munición distinto.
 5. Test: añade caso en `loadout.test.js` si tiene perk/attachment interactions.

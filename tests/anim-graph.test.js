@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as THREE from 'three'
-import { createAnimGraph, STANCES } from '../src/game/anim/graph.js'
+import { createAnimGraph, STANCES } from '@/game/anim/graph'
 
 function makeMesh() {
   return new THREE.Object3D()

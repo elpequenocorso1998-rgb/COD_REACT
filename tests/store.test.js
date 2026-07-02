@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { useGameStore, GAME_STATES } from '../src/game/store.js'
+import { useGameStore, GAME_STATES } from '@/game/core/store'
 
 /* Tests del store: cubren acciones puras y el fix de timeouts cancelables. */
 
 // Mockeamos progression para que el store no toque localStorage real
 // (que persistiría entre tests y causaría flakiness).
-vi.mock('../src/game/progression.js', () => {
+vi.mock('@/game/meta/progression', () => {
   let level = 1, xp = 0, xpNeeded = 1000
   return {
     addXP: vi.fn((amt) => {

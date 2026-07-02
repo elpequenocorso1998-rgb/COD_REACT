@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import * as THREE from 'three'
-import { MAPS, MAP_IDS, getMapConfig, getDefaultMapId } from '../src/game/maps/index.js'
-import { buildDesert } from '../src/game/maps/desert.js'
-import { buildUrban } from '../src/game/maps/urban.js'
-import { buildSnow } from '../src/game/maps/snow.js'
-import { buildIndustrial } from '../src/game/maps/industrial.js'
+import { MAPS, MAP_IDS, getMapConfig, getDefaultMapId } from '@/game/maps/index'
+import { buildDesert } from '@/game/maps/desert'
+import { buildUrban } from '@/game/maps/urban'
+import { buildSnow } from '@/game/maps/snow'
+import { buildIndustrial } from '@/game/maps/industrial'
 
-vi.mock('../src/game/textures.js', () => ({
+vi.mock('@/game/world/textures', () => ({
   makeConcreteTextures: () => ({
     map: { repeat: { set: vi.fn() }, colorSpace: 0 },
     normalMap: { repeat: { set: vi.fn() } },
